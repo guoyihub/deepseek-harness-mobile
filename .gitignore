@@ -22,6 +22,7 @@ tmp/
 .claude/launch.json
 .claude/settings.json
 .vscode/
+metacode-cli.code-workspace
 .DS_Store
 .idea
 mise.toml
