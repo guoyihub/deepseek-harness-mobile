@@ -60,6 +60,7 @@ External packages that a workspace package resolves at runtime. The tier covers 
 | [`fflate`](https://github.com/101arrowz/fflate) | MIT |
 | [`immer`](https://github.com/immerjs/immer) | MIT |
 | [`js-yaml`](https://github.com/nodeca/js-yaml) | MIT |
+| [`jsqr`](https://github.com/cozmo/jsQR) | Apache-2.0 |
 | [`katex`](https://github.com/KaTeX/KaTeX) | MIT |
 | [`koffi`](https://github.com/Koromix/koffi) | MIT |
 | [`mdast-util-from-markdown`](https://github.com/syntax-tree/mdast-util-from-markdown) | MIT |
@@ -77,6 +78,7 @@ External packages that a workspace package resolves at runtime. The tier covers 
 | [`node-addon-require-builtin`](https://www.npmjs.com/package/node-addon-require-builtin) | MIT |
 | [`node-pty`](https://github.com/microsoft/node-pty) | MIT |
 | [`picomatch`](https://github.com/micromatch/picomatch) | MIT |
+| [`qrcode`](https://github.com/soldair/node-qrcode) | MIT |
 | [`react`](https://github.com/facebook/react) | MIT |
 | [`react-dom`](https://github.com/facebook/react) | MIT |
 | [`sharp`](https://github.com/lovell/sharp) | Apache-2.0 |
@@ -131,6 +133,7 @@ External packages **directly declared** only by repository tooling, test infrast
 | [`@types/jsdom`](https://github.com/DefinitelyTyped/DefinitelyTyped) | MIT |
 | [`@types/node`](https://github.com/DefinitelyTyped/DefinitelyTyped) | MIT |
 | [`@types/picomatch`](https://github.com/DefinitelyTyped/DefinitelyTyped) | MIT |
+| [`@types/qrcode`](https://github.com/DefinitelyTyped/DefinitelyTyped) | MIT |
 | [`@types/react`](https://github.com/DefinitelyTyped/DefinitelyTyped) | MIT |
 | [`@types/react-dom`](https://github.com/DefinitelyTyped/DefinitelyTyped) | MIT |
 | [`@types/spdx-expression-parse`](https://github.com/DefinitelyTyped/DefinitelyTyped) | MIT |
@@ -163,6 +166,7 @@ External packages **directly declared** only by repository tooling, test infrast
 | [`tsdown`](https://github.com/rolldown/tsdown) | MIT |
 | [`typescript-language-server`](https://github.com/typescript-language-server/typescript-language-server) | Apache-2.0 |
 | [`vite`](https://github.com/vitejs/vite) | MIT |
+| [`vite-plugin-pwa`](https://github.com/vite-pwa/vite-plugin-pwa) | MIT |
 | [`vite-tsconfig-paths`](https://github.com/aleclarson/vite-tsconfig-paths) | MIT |
 | [`vitepress`](https://github.com/vuejs/vitepress) | MIT |
 | [`vitepress-plugin-mermaid`](https://github.com/emersonbottero/vitepress-plugin-mermaid) | MIT |

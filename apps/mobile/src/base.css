@@ -1,0 +1,27 @@
+@import '@deepseek-ai/dsh-client-ui-theme/styles/base.css';
+@import '@deepseek-ai/dsh-client-ui-theme/styles/design-platform.css';
+@import '@deepseek-ai/dsh-client-ui-theme/styles/scrollbar.css';
+@import '@deepseek-ai/dsh-client-ui-theme/styles/gradient-shadow-text.css';
+@import '@deepseek-ai/dsh-client-ui-theme/styles/shiki.css';
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: var(--dsw-font-family);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color: var(--dsw-alias-label-primary);
+  background: var(--dsw-alias-bg-base);
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}

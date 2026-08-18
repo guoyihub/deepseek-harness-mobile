@@ -1,0 +1,41 @@
+{
+  "name": "@deepseek-ai/dsh-client-mobile-shell",
+  "description": "Mobile PWA shell: pairing, task list, and minimal chat over the Host LAN API",
+  "version": "0.1.0-rc.5",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "directory": "packages/client/mobile-shell"
+  },
+  "type": "module",
+  "exports": {
+    "./client": {
+      "types": "./src/client/index.ts",
+      "default": "./src/client/index.ts"
+    },
+    "./invariant": {
+      "types": "./src/invariant.ts",
+      "default": "./src/invariant.ts"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@deepseek-ai/dsh-client-connection": "workspace:^",
+    "@deepseek-ai/dsh-client-ui-primitives": "workspace:^",
+    "jsqr": "^1.4.0",
+    "react": "^18.2.0"
+  },
+  "devDependencies": {
+    "@deepseek-ai/dsh-invariants": "workspace:^",
+    "@types/react": "~18.3.1",
+    "typescript": "^6.0.3"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "workspace:^"
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "id": "/",
+  "name": "MetaCode Mobile",
+  "short_name": "MetaCode",
+  "description": "MetaCode Mobile PWA — continue Agent tasks from your phone over LAN",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}

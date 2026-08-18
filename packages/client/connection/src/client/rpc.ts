@@ -7,6 +7,7 @@ import {
 } from '@deepseek-ai/dsh-host-apiproxy/api'
 import type { ClientConnectionRpc } from '../rpc.ts'
 import { randomUuid } from './random-uuid.ts'
+import { readSessionToken, readStoredHostBase } from './mobile-session.ts'
 
 const INTERNAL_BASE = 'http://dsh.internal'
 const CHANNEL_PATTERN = /^\/[A-Za-z0-9._~-]+$/
@@ -27,11 +28,14 @@ export function createWebConnectionRpc(): ClientConnectionRpc {
         method: endpoint,
         payload,
       }
+      const headers: Record<string, string> = { 'content-type': 'application/json' }
+      const token = readSessionToken()
+      if (token !== undefined) headers.authorization = `Bearer ${token}`
       const response = await globalThis.fetch(
         new URL(`${channel}/${endpoint}`, resolveBase()),
         {
           method: 'POST',
-          headers: { 'content-type': 'application/json' },
+          headers,
           body: JSON.stringify(message),
           ...signal === undefined ? {} : { signal },
         },
@@ -49,6 +53,8 @@ export function createWebConnectionRpc(): ClientConnectionRpc {
 }
 
 function resolveBase(): string {
+  const stored = readStoredHostBase()
+  if (stored !== undefined) return stored
   const location = (globalThis as { location?: { origin?: string } }).location
   return location?.origin !== undefined && location.origin !== 'null' ? location.origin : INTERNAL_BASE
 }

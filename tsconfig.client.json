@@ -85,6 +85,7 @@
     { "path": "./packages/client/ui-settings-plugins" },
     { "path": "./packages/client/ui-user-questions" },
     { "path": "./packages/client/ui-trajectory" },
+    { "path": "./packages/client/ui-mobile-pairing" },
     { "path": "./packages/session-query/session-log-export" },
     { "path": "./packages/client/ui-theme" },
     { "path": "./packages/client/ui-settings" },
@@ -92,6 +93,7 @@
     { "path": "./packages/client/ui-settings-models" },
     { "path": "./packages/client/ui-settings-plugin-inventory" },
     { "path": "./packages/client/locale" },
+    { "path": "./packages/client/mobile-shell" },
     { "path": "./packages/client/web" },
     { "path": "./apps/web" }
   ]

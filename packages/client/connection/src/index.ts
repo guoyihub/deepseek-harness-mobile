@@ -8,6 +8,11 @@ import { toFetchHandler } from '@deepseek-ai/dsh-host-apiproxy'
 import { API_PATH, HOST_EVENTS_PATH, MUX_EVENTS_PATH } from './api-path.ts'
 import { bridge, DEFAULT_MAX_REQUEST_BODY_BYTES } from './http-bridge.ts'
 import { assertTrustedAuthority, isTrustedApiRequest } from './api-request-trust.ts'
+import {
+  isMobileSessionAuthorized,
+  parseAccessTokenFromUrl,
+  parseBearerToken,
+} from './mobile-auth.ts'
 import { HostConnectionService } from './rpc-host.ts'
 import { rejectWebSocketUpgrade, WebSocketDownlinks } from './websocket-downlink.ts'
 
@@ -22,6 +27,14 @@ export type {
 export { HostConnectionService } from './rpc-host.ts'
 
 export { API_PATH, HOST_EVENTS_PATH, MUX_EVENTS_PATH } from './api-path.ts'
+export { assertTrustedAuthority, isTrustedApiRequest } from './api-request-trust.ts'
+export { isLoopbackHostname } from './loopback-hostname.ts'
+export {
+  isMobileSessionAuthorized,
+  parseAccessTokenFromUrl,
+  parseBearerToken,
+} from './mobile-auth.ts'
+export type { MobileSessionValidator } from './mobile-auth.ts'
 
 /** Stable Cordis plugin name. */
 export const name = 'client-connection'
@@ -138,6 +151,11 @@ export function apply(ctx: Context, config?: ConnectionConfig): void {
   const connection = new HostConnectionService(ctx, trustedHosts)
   const fetchHandler = connection.createSharedFetchHandler(API_PATH, {
     async fetch(request) {
+      const mobilePairing = ctx.get('mobilePairing') as { validateSessionToken(token: string): unknown } | undefined
+      const bearer = parseBearerToken(request.headers)
+      if (!isMobileSessionAuthorized(mobilePairing, bearer)) {
+        return new Response('unauthorized', { status: 401 })
+      }
       const pathname = new URL(request.url).pathname
       const method = pathname.startsWith(`${API_PATH}/`)
         ? pathname.slice(API_PATH.length + 1)
@@ -182,6 +200,12 @@ export function apply(ctx: Context, config?: ConnectionConfig): void {
         path,
         handler: (req, socket, head) => {
           if (!isTrustedApiRequest(req, trustedHosts)) {
+            rejectWebSocketUpgrade(socket)
+            return
+          }
+          const mobilePairing = apiCtx.get('mobilePairing') as { validateSessionToken(token: string): unknown } | undefined
+          const accessToken = parseAccessTokenFromUrl(req.url ?? '/')
+          if (!isMobileSessionAuthorized(mobilePairing, accessToken)) {
             rejectWebSocketUpgrade(socket)
             return
           }

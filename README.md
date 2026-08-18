@@ -1,57 +1,66 @@
-# DeepSeek Harness
+# MetaCode Harness
 
-English | [中文](README.zh.md)
+基于 [MetaCode Harness](https://github.com/metacode-ai/metacode-harness) 迁移的 Agent Harness monorepo。命名空间已从 `dsh` / `@metacode/*` 统一改为 **`metacode` / `@metacode/*`**。
 
-DeepSeek Harness (`dsh`) is an open-source agent harness developed by [DeepSeek AI](https://deepseek.com).
+与 [MetaCode CLI](https://github.com/metacode-ai/metacode-cli)（Java）同属 MetaCode 产品族：Java 版为终端 REPL，本仓库为 Cordis 插件化 Harness（TypeScript）。
 
-It uses an architecture where **everything is a plugin**, and is powered by [Cordis](https://github.com/cordiverse/cordis), whose design is described in [_A Programming Paradigm for Spatiotemporal Composability_](https://github.com/cordiverse/paper).
+## 命名对照
 
-## Developer preview
+| MetaCode Harness | MetaCode Harness |
+|------------------|------------------|
+| `dsh` 命令 | `metacode` |
+| `$METACODE_HOME` / `~/.metacode` | `$METACODE_HOME` / `~/.metacode` |
+| `@metacode/*` | `@metacode/*` |
+| `@metacode/cordis` | `@metacode/cordis` |
+| `metacode.profile` / `metacode.bundle` | `metacode.profile` / `metacode.bundle` |
 
-DeepSeek Harness is currently in _developer preview_ and is iterating rapidly. **THERE WILL BE COMPATIBILITY-BREAKING CHANGES.**
+## 快速开始
 
-## Run
-
-### Run from `npm`
-
-Install `Node.js`, then run:
-
-```sh
-npx @deepseek-ai/dsh web
-```
-
-The command starts the Web UI, served at `http://127.0.0.1:3080` by default. See [Web UI guide](docs/user/guide/index.md).
-
-### Run from source
-
-To run from a repository checkout:
-
-```sh
-git clone https://github.com/deepseek-ai/deepseek-harness.git
-cd deepseek-harness
+```powershell
+cd E:\project\metacode-harness
 pnpm install
 pnpm run build
-pnpm dsh web
+pnpm metacode web
 ```
 
-## Community and support
+开发态直接跑 TypeScript 入口：
 
-- Feel free to submit feedback or bug reports through [GitHub Discussions](https://github.com/deepseek-ai/deepseek-harness/discussions).
-- Add the [`dsh-plugin`](https://github.com/topics/dsh-plugin) topic to your plugin repository for discoverability.
-- Join <a href="https://discord.gg/Ycq5dCaS4">DeepSeek Harness Discord community</a>.
+```powershell
+pnpm metacode --profile web
+pnpm metacode --help
+pnpm metacode --profile web --dump-config
+```
 
-## Contributing
+## 目录
 
-See [CONTRIBUTING.md](CONTRIBUTING.md).
+| 路径 | 说明 |
+|------|------|
+| `apps/cli` | `metacode` CLI 入口 |
+| `packages/` | 领域包（session、llm、tools、commands…） |
+| `vendor/` | Cordis 框架及 Loader/Include 等 |
+| `docs/metacode-harness/` | 架构中文导读 |
+| `docs/mobile/` | **手机端规划**（二维码扫码连接） |
+| `reference/metacode-harness/` | upstream 原文参考（迁移前快照） |
+| `scripts/migrate-from-dsh.ps1` | 从 DSH 重新同步并重命名 |
+| `scripts/rename-dsh-to-metacode.ps1` | 对已复制树执行 dsh→metacode 替换 |
 
-## Development
+## 从 upstream 重新同步
 
-Start with the [development guide](docs/development.md) and [architecture documentation](docs/architecture.md).
+```powershell
+.\scripts\migrate-from-dsh.ps1 -Source D:\opensource\metacode-harness
+```
 
-For agents, follow [AGENTS.md](AGENTS.md).
+## 架构文档
+
+- [docs/metacode-harness/README.md](./docs/metacode-harness/README.md)
+- [reference/metacode-harness/README.md](./reference/metacode-harness/README.md)
+
+## 手机端规划（Phase 0）
+
+对标 Trae 移动体验，采用 **本地二维码扫码配对、无需账号**。详见：
+
+- [docs/mobile/README.md](./docs/mobile/README.md)
 
 ## License
 
-[MIT](LICENSE)
-
-Third-party dependencies and their licenses are disclosed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+MIT（继承自 MetaCode Harness）

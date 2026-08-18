@@ -153,6 +153,13 @@
 
     # Owns both ends of the web transport: node half binds the gateway to the
     # webserver under /api; browser half is the fetch/SSE client.
+    - id: mobile-pairing
+      name: '@deepseek-ai/dsh-host-mobile-pairing'
+      inject: [webRuntime]
+      config:
+        confirmMode: off
+        trustedHosts: !!js ctx.webRuntime.trustedHosts
+
     - id: connection
       name: '@deepseek-ai/dsh-client-connection'
       inject: [webRuntime]
@@ -272,6 +279,9 @@
 
     - id: ui-trajectory
       name: '@deepseek-ai/dsh-client-ui-trajectory'
+
+    - id: ui-mobile-pairing
+      name: '@deepseek-ai/dsh-client-ui-mobile-pairing'
 
 # ── the agent plane moves behind agent presets ─────────────────────────────
 #

@@ -1,13 +1,13 @@
 /**
- * `dsh plugin --profile <name> <args...>` — profile plugin management as a
+ * `metacode plugin --profile <name> <args...>` — profile plugin management as a
  * thin pnpm forwarder: initialize the profile on first use, run
  * `pnpm <args...>` in the profile directory, then reconcile the
- * `dsh.profile.bundles` layer list against the installed state (a dependency
- * resolving to a package that declares `dsh.bundle` joins the layer stack; a
+ * `metacode.profile.bundles` layer list against the installed state (a dependency
+ * resolving to a package that declares `metacode.bundle` joins the layer stack; a
  * removed or bundle-less dependency leaves it). Reconciling by installed
  * state, not by dependency diff, means `update` activates a package that
- * gained its `dsh.bundle` declaration in a newer version.
- * @module @deepseek-ai/dsh/plugin
+ * gained its `metacode.bundle` declaration in a newer version.
+ * @module @metacode/cli/plugin
  */
 
 import { spawnSync } from 'node:child_process'
@@ -25,13 +25,13 @@ import {
 } from '@deepseek-ai/dsh-app-boot'
 import { INSTALL_ANCHOR } from './profile-boot.ts'
 
-const NAME = 'dsh'
+const NAME = 'metacode'
 
 /**
  * Whether a resolved dependency exports a profile patch, i.e. is a bundle.
  * @param packageName - the dependency's package name.
  * @param profileDir - the profile directory (resolution anchor).
- * @returns true when the package manifest declares `dsh.bundle`.
+ * @returns true when the package manifest declares `metacode.bundle`.
  */
 function exportsPatch(packageName: string, profileDir: string): boolean {
   let dir: string
@@ -45,10 +45,10 @@ function exportsPatch(packageName: string, profileDir: string): boolean {
 }
 
 /**
- * Reconcile `dsh.profile.bundles` against the installed state: pnpm has
+ * Reconcile `metacode.profile.bundles` against the installed state: pnpm has
  * already written the real installed names (so a git/path/tarball/alias spec
  * on the command line reconciles by its true package name) and materialized
- * the packages. A dependency that resolves to a `dsh.bundle`-declaring
+ * the packages. A dependency that resolves to a `metacode.bundle`-declaring
  * package joins the layer stack (appended in dependency order); a
  * dependency-listed name that no longer does — removed, or the installed
  * version dropped the declaration — leaves it. In-box bundles from the
@@ -77,7 +77,7 @@ function reconcilePlugins(before: ProfileManifest, profileDir: string): void {
   const dependencySet = new Set(dependencies)
   for (const packageName of [...plugins]) {
     // Only dependency-managed entries are subject to removal; template
-    // bundles (dsh-base and friends) are not dependencies.
+    // bundles (metacode-base and friends) are not dependencies.
     const wasDependency = beforeDeps.has(packageName) || dependencySet.has(packageName)
     const stillBundle = dependencySet.has(packageName) && exportsPatch(packageName, profileDir)
     if (wasDependency && !stillBundle) {
@@ -98,7 +98,7 @@ function reconcilePlugins(before: ProfileManifest, profileDir: string): void {
  * specs, registry names, and every other pnpm argument pass through
  * untouched.
  * @param argument - one pnpm argument, verbatim from argv.
- * @param cwd - the directory `dsh` was invoked from.
+ * @param cwd - the directory `metacode` was invoked from.
  * @returns the argument with a relative path spec anchored to `cwd`.
  */
 function anchorPathSpec(argument: string, cwd: string): string {
@@ -112,7 +112,7 @@ function anchorPathSpec(argument: string, cwd: string): string {
 }
 
 /**
- * Run one `dsh plugin` invocation: init if needed, forward to pnpm, reconcile.
+ * Run one `metacode plugin` invocation: init if needed, forward to pnpm, reconcile.
  * @param profile - the profile name.
  * @param args - pnpm arguments with relative path specs anchored to the invoking directory.
  * @returns the pnpm exit code.

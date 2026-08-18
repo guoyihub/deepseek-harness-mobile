@@ -8,6 +8,17 @@ import type { HostDescription, IApiClient } from './api.ts'
 import { ConnectionController, type ConnectionConfig, type ConnectionSinks, type ConnectionState } from './connection.ts'
 import { FixtureApiClient } from './fixture.ts'
 import { WebApiClient } from './web-api-client.ts'
+export { WebApiClient } from './web-api-client.ts'
+export { ConnectionController } from './connection.ts'
+export {
+  MOBILE_STORAGE_KEYS,
+  clearPairingStorage,
+  readSessionToken,
+  readStoredHostBase,
+  writePairingResult,
+  writeStoredHostBase,
+} from './mobile-session.ts'
+export { normalizeHostBaseUrl, resolveMobileApiBase } from './mobile-origin.ts'
 import { createWebConnectionRpc } from './rpc.ts'
 import { isLoopbackHostname } from '../loopback-hostname.ts'
 import type { ClientConnectionRpc } from '../rpc.ts'

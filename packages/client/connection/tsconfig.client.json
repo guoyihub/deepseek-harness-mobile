@@ -12,6 +12,8 @@
     "src/client/fixture.ts",
     "src/client/index.ts",
     "src/client/random-uuid.ts",
+    "src/client/mobile-session.ts",
+    "src/client/mobile-origin.ts",
     "src/client/rpc.ts",
     "src/client/web-api-client.ts",
     "src/loopback-hostname.ts",

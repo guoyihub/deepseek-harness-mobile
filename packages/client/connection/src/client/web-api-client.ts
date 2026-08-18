@@ -5,14 +5,27 @@ import { AbstractApiClient } from './api.ts'
 import { hostFrameSchema, muxFrameSchema } from '@deepseek-ai/dsh-host-apiproxy/api/events.schema'
 import { serverRequestSchema } from '@deepseek-ai/dsh-host-apiproxy/api/rpc.schema'
 import { HOST_EVENTS_PATH, MUX_EVENTS_PATH } from '../api-path.ts'
+import { resolveMobileApiBase } from './mobile-origin.ts'
+import { readSessionToken, readStoredHostBase } from './mobile-session.ts'
 
 type SocketItem<F> = { kind: 'frame'; envelope: RpcRequest<F> } | { kind: 'end' }
 type Parser<F> = { parse(value: unknown): F }
 
 /** Browser platform subclass: unary/respond use fetch; mux/host use downlink-only WebSockets. */
 export class WebApiClient extends AbstractApiClient {
+  /** @inheritdoc */
+  protected override resolveBase(): string {
+    const stored = readStoredHostBase()
+    if (stored !== undefined) return resolveMobileApiBase(stored)
+    return super.resolveBase()
+  }
+
   protected doFetch(input: URL, init?: RequestInit): Promise<Response> {
-    return globalThis.fetch(input, init)
+    const token = readSessionToken()
+    if (token === undefined) return globalThis.fetch(input, init)
+    const headers = new Headers(init?.headers)
+    headers.set('authorization', `Bearer ${token}`)
+    return globalThis.fetch(input, { ...init, headers })
   }
 
   protected override openMux(
@@ -39,6 +52,8 @@ export class WebApiClient extends AbstractApiClient {
   ): AsyncGenerator<RpcRequest<F>> {
     const url = new URL(path, this.resolveBase())
     url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:'
+    const token = readSessionToken()
+    if (token !== undefined) url.searchParams.set('access_token', token)
     const socket = new WebSocket(url)
     const inbox: SocketItem<F>[] = []
     let wake: (() => void) | undefined
