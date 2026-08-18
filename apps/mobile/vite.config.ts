@@ -25,10 +25,16 @@ export default defineConfig({
     proxy: {
       '/api': {
         target: 'http://127.0.0.1:3080',
-        changeOrigin: false,
+        // Rewrite Host to the local Host so the browser-trust fence sees loopback.
+        // Strip Origin/Referer so tunnel/LAN page origins do not fail the Origin check.
+        changeOrigin: true,
         ws: true,
         configure: (proxy) => {
           proxy.on('proxyReq', (proxyReq: ClientRequest) => {
+            proxyReq.removeHeader('origin')
+            proxyReq.removeHeader('referer')
+          })
+          proxy.on('proxyReqWs', (proxyReq: ClientRequest) => {
             proxyReq.removeHeader('origin')
             proxyReq.removeHeader('referer')
           })
@@ -49,6 +55,26 @@ export default defineConfig({
       {
         find: /^@deepseek-ai\/dsh-client-connection\/client$/,
         replacement: src('../../packages/client/connection/src/client/index.ts'),
+      },
+      {
+        find: /^@deepseek-ai\/dsh-host-apiproxy\/client$/,
+        replacement: src('../../packages/host/apiproxy/src/fetch/client.ts'),
+      },
+      {
+        find: /^@deepseek-ai\/dsh-host-apiproxy\/api\/(.*)$/,
+        replacement: src('../../packages/host/apiproxy/src/api/$1'),
+      },
+      {
+        find: /^@deepseek-ai\/dsh-client-runtime\/client$/,
+        replacement: src('../../packages/client/runtime/src/client/index.ts'),
+      },
+      {
+        find: /^@deepseek-ai\/dsh-client-runtime\/src\/(.*)$/,
+        replacement: src('../../packages/client/runtime/src/$1'),
+      },
+      {
+        find: /^@deepseek-ai\/dsh-llm\/types$/,
+        replacement: src('../../packages/llm/llm/src/types.ts'),
       },
     ],
   },

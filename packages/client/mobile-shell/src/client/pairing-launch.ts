@@ -11,6 +11,9 @@ export interface PairingLaunchContext {
 /**
  * Read pairing parameters from the current location.
  * Supports paths like `/mobile/pair?t=<token>&e=…&f=…`.
+ *
+ * Keep the page origin as-is: Mobile Vite (LAN or tunnel) proxies `/api` and
+ * WebSocket upgrades to Host, so rewriting to `:3080` would break phones.
  */
 export function readPairingLaunchContext(): PairingLaunchContext {
   const location = globalThis.location
@@ -20,8 +23,5 @@ export function readPairingLaunchContext(): PairingLaunchContext {
   const onPairPath = normalizedPath === '/mobile/pair' || normalizedPath.endsWith('/mobile/pair')
   const hasToken = url.searchParams.has('t')
   if (!onPairPath && !hasToken) return { startPairPage: false }
-  const hostUrl = new URL(url.href)
-  // Pairing API lives on the Host (:3080); rewrite mobile dev origin to Host port.
-  if (hostUrl.port === '8030') hostUrl.port = '3080'
-  return { startPairPage: true, initialRaw: hostUrl.href }
+  return { startPairPage: true, initialRaw: url.href }
 }

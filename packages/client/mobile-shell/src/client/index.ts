@@ -1,4 +1,4 @@
-/** MetaCode Mobile PWA shell exports. */
+/** DeepSeek Harness Mobile PWA shell exports. */
 
 export { MobileApp } from './MobileApp.tsx'
 export { MobilePairApp, PairPage } from './PairPage.tsx'

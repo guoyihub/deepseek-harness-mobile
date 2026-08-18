@@ -3,7 +3,7 @@
 /** Persisted mobile appearance preference. */
 export type MobileThemePreference = 'light' | 'dark' | 'system'
 
-const STORAGE_KEY = 'metacode.mobile.theme'
+const STORAGE_KEY = 'dsh.mobile.theme'
 
 /**
  * Read the stored mobile theme preference.
@@ -52,7 +52,7 @@ export function subscribeMobileTheme(preference: MobileThemePreference, listener
   return () => { media.removeEventListener('change', listener) }
 }
 
-const A2HS_DISMISSED_KEY = 'metacode.mobile.a2hsDismissed'
+const A2HS_DISMISSED_KEY = 'dsh.mobile.a2hsDismissed'
 
 /**
  * Whether the add-to-home-screen hint was dismissed.

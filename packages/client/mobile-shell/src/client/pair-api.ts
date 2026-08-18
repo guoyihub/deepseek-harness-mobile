@@ -202,7 +202,7 @@ export async function postPair(
       ...(options.pairPassword !== undefined ? { pairPassword: options.pairPassword } : {}),
     }),
   })
-  return await readPairResponse(response, input.baseUrl)
+  return await readPairResponse(response, resolveMobileApiBase(input.baseUrl))
 }
 
 /**
@@ -226,7 +226,7 @@ export async function postPairWithShortCode(
       ...(options.pairPassword !== undefined ? { pairPassword: options.pairPassword } : {}),
     }),
   })
-  return await readPairResponse(response, input.baseUrl)
+  return await readPairResponse(response, resolveMobileApiBase(input.baseUrl))
 }
 
 /**

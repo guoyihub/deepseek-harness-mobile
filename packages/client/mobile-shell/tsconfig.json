@@ -12,7 +12,34 @@
       "path": "../connection/tsconfig.client.json"
     },
     {
+      "path": "../runtime"
+    },
+    {
       "path": "../ui-primitives"
+    },
+    {
+      "path": "../ui-tool"
+    },
+    {
+      "path": "../../plan/plan-mode"
+    },
+    {
+      "path": "../../goal/goal"
+    },
+    {
+      "path": "../../session/session-projection"
+    },
+    {
+      "path": "../../session/session-stats"
+    },
+    {
+      "path": "../../session/session-title"
+    },
+    {
+      "path": "../../llm/token-meter"
+    },
+    {
+      "path": "../../interaction/permission-presets"
     },
     {
       "path": "../../../vendor/cordis"

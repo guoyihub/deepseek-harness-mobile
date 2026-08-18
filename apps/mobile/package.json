@@ -1,6 +1,6 @@
 {
-  "name": "@deepseek-ai/dsh-mobile-frontend",
-  "description": "Mobile PWA entry: pairing shell over the Host LAN API",
+  "name": "@deepseek-ai/deepseek-harness-mobile",
+  "description": "DeepSeek Harness Mobile PWA: pairing shell over the Host LAN API",
   "version": "0.1.0-rc.5",
   "type": "module",
   "scripts": {

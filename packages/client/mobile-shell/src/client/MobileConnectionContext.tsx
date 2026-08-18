@@ -13,6 +13,7 @@ import {
   clearPairingStorage,
   type ConnectionState,
   type HostDescription,
+  type HostFrame,
   type MuxFrame,
   type RpcRequest,
   type SessionId,
@@ -157,6 +158,13 @@ export function MobileConnectionProvider({ children }: { children: ReactNode }):
     const controller = new ConnectionController(mobileApi, {
       onMuxEnvelope: (envelope: RpcRequest<MuxFrame>) => {
         for (const listener of muxListeners.current) listener(envelope.payload)
+      },
+      onHostEnvelope: (envelope: RpcRequest<HostFrame>) => {
+        const frame = envelope.payload
+        if (frame.type !== 'host/session-status') return
+        setSessions(current => current.map(item =>
+          item.sessionId === frame.sessionId ? { ...item, running: frame.running } : item,
+        ))
       },
       onConnected: (description: HostDescription) => {
         setHostDescription(description)

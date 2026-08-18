@@ -7,13 +7,13 @@
 /** localStorage keys for mobile pairing persistence. */
 export const MOBILE_STORAGE_KEYS = {
   /** Canonical Host base URL (`https://host:port`). */
-  host: 'metacode.mobile.host',
+  host: 'dsh.mobile.host',
   /** Opaque session token. */
-  sessionToken: 'metacode.mobile.sessionToken',
+  sessionToken: 'dsh.mobile.sessionToken',
   /** Registered device id. */
-  deviceId: 'metacode.mobile.deviceId',
+  deviceId: 'dsh.mobile.deviceId',
   /** Last seen Host fingerprint. */
-  fingerprint: 'metacode.mobile.fingerprint',
+  fingerprint: 'dsh.mobile.fingerprint',
 } as const
 
 /**

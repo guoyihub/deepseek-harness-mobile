@@ -14,8 +14,6 @@ import { MobileConnectionProvider } from './MobileConnectionContext.tsx'
 
 import { PairPage } from './PairPage.tsx'
 
-import { TaskListPage } from './TaskListPage.tsx'
-
 import {
   applyMobileTheme,
   dismissA2hsHint,
@@ -27,18 +25,18 @@ import {
 
 import { readPairingLaunchContext } from './pairing-launch.ts'
 
+import { MobileViewportShell } from './MobileViewportShell.tsx'
 import css from './mobile-shell.module.css'
 
 /** Mobile shell route discriminant. */
 type MobileRoute =
   | { page: 'home' }
   | { page: 'pair' }
-  | { page: 'tasks' }
-  | { page: 'chat'; sessionId: SessionId }
+  | { page: 'chat'; sessionId: SessionId; draft?: string }
   | { page: 'connection' }
 
 /**
- * MetaCode Mobile PWA shell: pairing, task list, and minimal chat.
+ * DeepSeek Harness Mobile PWA shell: pairing, task list, and minimal chat.
  */
 export function MobileApp(): JSX.Element {
   const launch = readPairingLaunchContext()
@@ -65,7 +63,6 @@ export function MobileApp(): JSX.Element {
         return (
           <HomePage
             onPair={() => { setRoute({ page: 'pair' }) }}
-            onOpenTasks={() => { setRoute({ page: 'tasks' }) }}
             onOpenChat={(sessionId) => { setRoute({ page: 'chat', sessionId }) }}
             onOpenConnection={() => { setRoute({ page: 'connection' }) }}
           />
@@ -73,27 +70,22 @@ export function MobileApp(): JSX.Element {
       case 'pair':
         return (
           <PairPage
-            initialPairingRaw={pairLaunchRaw}
+            {...(pairLaunchRaw !== undefined ? { initialPairingRaw: pairLaunchRaw } : {})}
             autoStartCamera={pairLaunchRaw === undefined}
             onBack={() => { setRoute({ page: 'home' }) }}
             onPaired={() => {
               if (!isStandaloneDisplayMode() && !isA2hsDismissed()) setShowA2hs(true)
-              setRoute({ page: 'tasks' })
+              setRoute({ page: 'home' })
             }}
-          />
-        )
-      case 'tasks':
-        return (
-          <TaskListPage
-            onBack={() => { setRoute({ page: 'home' }) }}
-            onOpenChat={(sessionId) => { setRoute({ page: 'chat', sessionId }) }}
           />
         )
       case 'chat':
         return (
           <ChatPage
             sessionId={route.sessionId}
-            onBack={() => { setRoute({ page: 'tasks' }) }}
+            {...(route.draft !== undefined ? { initialDraft: route.draft } : {})}
+            onBack={() => { setRoute({ page: 'home' }) }}
+            onSessionChange={(nextSessionId, draft) => { setRoute({ page: 'chat', sessionId: nextSessionId, draft }) }}
           />
         )
       case 'connection':
@@ -108,24 +100,26 @@ export function MobileApp(): JSX.Element {
 
   return (
     <MobileConnectionProvider>
-      {showA2hs && (
-        <div className={css.a2hsBanner}>
-          <p className={css.a2hsText}>添加到主屏幕，获得更接近 App 的体验。</p>
-          <div className={css.actionRow}>
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={() => {
-                dismissA2hsHint()
-                setShowA2hs(false)
-              }}
-            >
-              知道了
-            </Button>
+      <MobileViewportShell>
+        {showA2hs && (
+          <div className={css.a2hsBanner}>
+            <p className={css.a2hsText}>添加到主屏幕，获得更接近 App 的体验。</p>
+            <div className={css.actionRow}>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => {
+                  dismissA2hsHint()
+                  setShowA2hs(false)
+                }}
+              >
+                知道了
+              </Button>
+            </div>
           </div>
-        </div>
-      )}
-      {body}
+        )}
+        {body}
+      </MobileViewportShell>
     </MobileConnectionProvider>
   )
 }
