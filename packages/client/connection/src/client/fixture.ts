@@ -2789,6 +2789,31 @@ function createFixtureWorld(options: FixtureOptions): FixtureWorld {
         })
       },
     },
+    commands: {
+      list: (request) => {
+        const missing = requireSession(request)
+        if (missing !== undefined) return missing
+        return ok(request, {
+          commands: [
+            { name: 'plan', description: 'Enter or leave plan mode', input: { hint: '[off|message]' } },
+            { name: 'goal', description: 'Set or view a long-running goal', input: { hint: '[<objective>|clear|edit <objective>|pause|resume]' } },
+            { name: 'compact', description: 'Compress earlier conversation history' },
+          ],
+        })
+      },
+      execute: (request) => {
+        const missing = requireSession(request)
+        if (missing !== undefined) return missing
+        const line = request.payload.line.trim()
+        const name = line.replace(/^\//, '').split(/\s+/, 1)[0] ?? ''
+        if (name === '') return ok(request, { matched: false as const })
+        return ok(request, {
+          matched: true as const,
+          commandId: `fixture-cmd-${name}`,
+          result: { kind: 'success' as const, text: `fixture ran /${name}` },
+        })
+      },
+    },
     goals: {
       // Compatibility face only: old API Proxy payloads and acknowledgements
       // adapt to the canonical fixture Remote implementation above.
@@ -3106,6 +3131,8 @@ export class FixtureApiClient extends AbstractApiClient {
       case 'workspace.insertSessionBefore': return this.api.workspace.insertSessionBefore(request)
       case 'workspace.archiveSession': return this.api.workspace.archiveSession(request)
       case 'skill.list': return this.api.skills.list(request)
+      case 'command.list': return this.api.commands.list(request)
+      case 'command.execute': return this.api.commands.execute(request, signal ?? new AbortController().signal)
       case 'agentPreset.list': return this.api.agentPresets.list(request)
       case 'agentPreset.select': return this.api.agentPresets.select(request)
       case 'agentPreset.read': return this.api.agentPresets.read(request)

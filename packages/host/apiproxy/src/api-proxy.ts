@@ -132,6 +132,18 @@ function decodeBase64(data: string): Uint8Array {
   return new Uint8Array(decoded)
 }
 
+/**
+ * Slash-command candidate: the composer sends exactly one text block, so only
+ * that exact shape dispatches; multi-block content is never flattened.
+ * @param content - prompt parts from session.prompt.
+ */
+function commandCandidate(content: readonly PromptContentPart[]): string | undefined {
+  const [first, ...rest] = content
+  if (first === undefined || rest.length > 0) return undefined
+  if (first.type !== 'text' || !first.text.startsWith('/')) return undefined
+  return first.text
+}
+
 /** Validate one prompt as a batch before publishing any durable image object. */
 async function durablePromptContent(ctx: Context, content: readonly PromptContentPart[]): Promise<ContentBlock[]> {
   if (content.every(part => part.type === 'text')) {
@@ -1835,6 +1847,58 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
     return { agent }
   }
 
+  type CommandDispatch =
+    | { error: RpcError }
+    | { matched: false }
+    | {
+      matched: true
+      commandId: string
+      result: { kind: 'success'; text?: string } | { kind: 'error'; text: string }
+    }
+
+  /**
+   * Run one slash line through the command registry (same executor as the
+   * Typert `commands.execute` remote the desktop composer uses).
+   */
+  async function executeCommandLine(
+    sessionId: SessionId,
+    line: string,
+    signal: AbortSignal,
+  ): Promise<CommandDispatch> {
+    const found = await agentFor(sessionId)
+    if ('error' in found) return { error: found.error }
+    const registry = ctx.get('commands')
+    if (registry === undefined) {
+      return {
+        error: {
+          code: 'internal',
+          message: 'command registry is absent: this deployment does not mount @deepseek-ai/dsh-commands',
+          details: {},
+        },
+      }
+    }
+    try {
+      const execution = await registry.execute(found.agent, line, signal)
+      if (execution === undefined) return { matched: false }
+      const outcome = execution.result
+      return {
+        matched: true,
+        commandId: String(execution.commandId),
+        result: outcome.kind === 'error'
+          ? { kind: 'error', text: outcome.text }
+          : { kind: 'success', ...outcome.text === undefined ? {} : { text: outcome.text } },
+      }
+    } catch (error: unknown) {
+      return {
+        error: {
+          code: 'command-error',
+          message: error instanceof Error ? error.message : String(error),
+          details: {},
+        },
+      }
+    }
+  }
+
   /** Missing-service report shared by the settings domain (skills-domain stance). */
   function settingsAbsent(): RpcError {
     return { code: 'internal', message: 'settings service is absent: this deployment does not mount a settings provider (e.g. @deepseek-ai/dsh-settings-file) in its composition', details: {} }
@@ -2408,6 +2472,34 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
             code: 'invalid-time-zone',
             message: 'clientTimeZone must be UTC or a valid IANA Area/Location name',
             details: { value: clientTimeZone },
+          })
+        }
+        const commandLine = commandCandidate(content)
+        if (commandLine !== undefined) {
+          const dispatched = await executeCommandLine(sessionId, commandLine, new AbortController().signal)
+          if ('error' in dispatched) return err(request, dispatched.error)
+          if (!dispatched.matched) {
+            const space = commandLine.search(/\s/u)
+            const token = space === -1 ? commandLine : commandLine.slice(0, space)
+            return err(request, {
+              code: 'unknown-command',
+              message: `unknown command: ${token}`,
+              details: {},
+            })
+          }
+          if (dispatched.result.kind === 'error') {
+            return err(request, {
+              code: 'command-error',
+              message: dispatched.result.text,
+              details: {},
+            })
+          }
+          return ok(request, {
+            accepted: true as const,
+            command: {
+              kind: 'success' as const,
+              ...dispatched.result.text === undefined ? {} : { text: dispatched.result.text },
+            },
           })
         }
         const resolved = await turnAgentFor<{ accepted: true }>(request, sessionId)
@@ -3194,6 +3286,40 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
         } catch (error: unknown) {
           return err(request, { code: 'internal', message: `skill listing failed: ${String(error)}`, details: {} })
         }
+      },
+    },
+
+    commands: {
+      async list(request) {
+        const { sessionId } = request.payload
+        const found = await agentFor(sessionId)
+        if ('error' in found) return err(request, found.error)
+        const registry = ctx.get('commands')
+        if (registry === undefined) {
+          return err(request, {
+            code: 'internal',
+            message: 'command registry is absent: this deployment does not mount @deepseek-ai/dsh-commands',
+            details: {},
+          })
+        }
+        return ok(request, {
+          commands: registry.list(found.agent).map(command => ({
+            name: command.name,
+            description: command.description,
+            ...command.input === undefined ? {} : { input: command.input },
+          })),
+        })
+      },
+      async execute(request, signal) {
+        const { sessionId, line } = request.payload
+        const dispatched = await executeCommandLine(sessionId, line, signal)
+        if ('error' in dispatched) return err(request, dispatched.error)
+        if (!dispatched.matched) return ok(request, { matched: false as const })
+        return ok(request, {
+          matched: true as const,
+          commandId: dispatched.commandId,
+          result: dispatched.result,
+        })
       },
     },
 

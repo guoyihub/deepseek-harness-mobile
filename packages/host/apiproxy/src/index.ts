@@ -62,9 +62,28 @@ export interface Config {
 }
 
 /**
+ * Install every `createApiProxy` surface onto the gateway service.
+ * New ApiProxy domains are copied automatically; do not hand-mirror fields.
+ *
+ * @param target - Gateway service instance that Cordis publishes as `ctx.apiProxy`.
+ * @param api - Full ApiProxy from `createApiProxy`.
+ */
+export function installApiProxy(target: ApiProxy, api: ApiProxy): void {
+  Object.assign(target, api)
+  // createApiProxy returns closures (no `this` capture), so the bind is
+  // behavior-neutral and keeps `respond` callable after assign.
+  target.respond = api.respond.bind(api)
+}
+
+/**
  * The API gateway service: implements the ApiProxy contract over the composed
  * host context and provides it as `ctx.apiProxy`. The Host cwd is the default
  * project directory.
+ *
+ * Domain fields are definite-assignment placeholders; `installApiProxy` fills
+ * them from `createApiProxy`. Adding a domain to {@link ApiProxy} fails
+ * typecheck here until the matching `readonly` field is declared — runtime
+ * wiring itself stays automatic via {@link installApiProxy}.
  */
 export class ApiProxyService extends Service implements ApiProxy {
   static inject = [
@@ -79,23 +98,24 @@ export class ApiProxyService extends Service implements ApiProxy {
     coldBlankProbeMaxBytes: z.natural().default(DEFAULT_COLD_BLANK_PROBE_MAX_BYTES),
   })
 
-  readonly sessions: ApiProxy['sessions']
-  readonly subagents: ApiProxy['subagents']
-  readonly workspace: ApiProxy['workspace']
-  readonly host: ApiProxy['host']
-  readonly goals: ApiProxy['goals']
-  readonly skills: ApiProxy['skills']
-  readonly agentPresets: ApiProxy['agentPresets']
-  readonly settings: ApiProxy['settings']
-  readonly credentials: ApiProxy['credentials']
-  readonly llm: ApiProxy['llm']
-  readonly events: ApiProxy['events']
-  readonly downloads: ApiProxy['downloads']
-  readonly respond: ApiProxy['respond']
+  readonly sessions!: ApiProxy['sessions']
+  readonly subagents!: ApiProxy['subagents']
+  readonly workspace!: ApiProxy['workspace']
+  readonly host!: ApiProxy['host']
+  readonly goals!: ApiProxy['goals']
+  readonly skills!: ApiProxy['skills']
+  readonly commands!: ApiProxy['commands']
+  readonly agentPresets!: ApiProxy['agentPresets']
+  readonly settings!: ApiProxy['settings']
+  readonly credentials!: ApiProxy['credentials']
+  readonly llm!: ApiProxy['llm']
+  readonly events!: ApiProxy['events']
+  readonly downloads!: ApiProxy['downloads']
+  readonly respond!: ApiProxy['respond']
 
   constructor(ctx: Context, config: Config) {
     super(ctx, 'apiProxy')
-    const api = createApiProxy(ctx, {
+    installApiProxy(this, createApiProxy(ctx, {
       defaultModelSelection: () => ctx.agentDefaultModel.currentSelection(),
       saveDefaultModelSelection: selection => ctx.agentDefaultModel.saveSelection(selection),
       cwd: process.cwd(),
@@ -106,22 +126,7 @@ export class ApiProxyService extends Service implements ApiProxy {
       ...(config.coldBlankProbeMaxBytes === undefined
         ? {}
         : { coldBlankProbeMaxBytes: config.coldBlankProbeMaxBytes }),
-    })
-    this.sessions = api.sessions
-    this.subagents = api.subagents
-    this.workspace = api.workspace
-    this.host = api.host
-    this.goals = api.goals
-    this.skills = api.skills
-    this.agentPresets = api.agentPresets
-    this.settings = api.settings
-    this.credentials = api.credentials
-    this.llm = api.llm
-    this.events = api.events
-    this.downloads = api.downloads
-    // createApiProxy returns closures (no `this` capture), so the bind is
-    // behavior-neutral.
-    this.respond = api.respond.bind(api)
+    }))
   }
 }
 

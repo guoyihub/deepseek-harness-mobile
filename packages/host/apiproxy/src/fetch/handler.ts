@@ -44,6 +44,7 @@ import {
   workspaceRenameRequestSchema,
 } from '../api/workspace.schema.ts'
 import { skillListRequestSchema } from '../api/skills.schema.ts'
+import { commandExecuteRequestSchema, commandListRequestSchema } from '../api/commands.schema.ts'
 import {
   agentPresetCopyRequestSchema, agentPresetListRequestSchema, agentPresetOpenDocumentRequestSchema,
   agentPresetReadRequestSchema, agentPresetRemoveRequestSchema, agentPresetSelectRequestSchema,
@@ -117,6 +118,8 @@ const UNARY_ROUTES: UnaryRoutes = {
   'workspace.insertSessionBefore': { schema: workspaceInsertSessionBeforeRequestSchema, invoke: (api, r) => api.workspace.insertSessionBefore(r) },
   'workspace.archiveSession': { schema: workspaceArchiveSessionRequestSchema, invoke: (api, r) => api.workspace.archiveSession(r) },
   'skill.list': { schema: skillListRequestSchema, invoke: (api, r) => api.skills.list(r) },
+  'command.list': { schema: commandListRequestSchema, invoke: (api, r) => api.commands.list(r) },
+  'command.execute': { schema: commandExecuteRequestSchema, invoke: (api, r, signal) => api.commands.execute(r, signal) },
   'agentPreset.list': { schema: agentPresetListRequestSchema, invoke: (api, r) => api.agentPresets.list(r) },
   'agentPreset.select': { schema: agentPresetSelectRequestSchema, invoke: (api, r) => api.agentPresets.select(r) },
   'agentPreset.read': { schema: agentPresetReadRequestSchema, invoke: (api, r) => api.agentPresets.read(r) },
