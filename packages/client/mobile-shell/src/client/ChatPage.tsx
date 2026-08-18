@@ -324,6 +324,7 @@ export function ChatPage({
                 draft={draft}
                 variant="header"
                 onSessionChange={onSessionChange}
+                onError={setError}
               />
             </header>
           )

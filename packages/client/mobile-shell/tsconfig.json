@@ -18,6 +18,9 @@
       "path": "../ui-primitives"
     },
     {
+      "path": "../ui-directory-picker-browse"
+    },
+    {
       "path": "../ui-tool"
     },
     {

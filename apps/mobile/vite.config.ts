@@ -53,6 +53,10 @@ export default defineConfig({
         replacement: src('../../packages/client/ui-primitives/src/index.ts'),
       },
       {
+        find: /^@deepseek-ai\/dsh-client-ui-directory-picker-browse\/src\/(.*)$/,
+        replacement: src('../../packages/client/ui-directory-picker-browse/src/$1'),
+      },
+      {
         find: /^@deepseek-ai\/dsh-client-connection\/client$/,
         replacement: src('../../packages/client/connection/src/client/index.ts'),
       },
