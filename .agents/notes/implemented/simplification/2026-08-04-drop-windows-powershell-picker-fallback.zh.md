@@ -12,7 +12,7 @@ Status: implemented
 - 「上古 Windows」不可能出现：本仓库支持的 Node 版本运行在远比 Vista 时代 `IFileOpenDialog` ABI 新的 Windows 世代上。
 - koffi/COM 缺陷只崩对话框子进程（crash isolation）；对我们自己 bug 的正确反应是上报失败，而不是静默降级到旧版对话框。
 
-这条链还付出了真实的复杂度：两个 spawn 层运行同一脚本、把回退触发从 `ENOENT` 拓宽为 pwsh 的任何失败以修复 PowerShell 6（无 WinForms）回归问题、携带全部三个原因的三连败 `AggregateError`，以及每层的 abort 重检。seam 早已拥有唯一重要的回退——组合层面的 `browse` 后端，由 `directory-picker-auto` 在启动时选择一次。
+这条链还付出了真实的复杂度：两个 spawn 层运行同一脚本、把回退触发从 `ENOENT` 拓宽为 pwsh 的任何失败以修复 PowerShell 6（无 WinForms）回归问题、携带全部三个原因的三连败 `AggregateError`，以及每层的 abort 重检。seam 早已拥有唯一重要的回退——组合层面的 `browse` 后端。
 
 ## 决策
 

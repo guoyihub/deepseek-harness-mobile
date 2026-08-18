@@ -12,7 +12,7 @@ The win32 branch of the native directory picker kept a two-tier PowerShell fallb
 - "Ancient Windows" cannot occur: the Node versions this repo supports run on Windows generations far newer than the Vista-era `IFileOpenDialog` ABI the dialog needs.
 - A koffi/COM defect crashes only the dialog child process (crash isolation); the correct response to our own bug is a surfaced failure, not a silent downgrade to a legacy dialog.
 
-The chain also cost real complexity: two spawn tiers running one identical script, a fallback trigger widened from `ENOENT` to any pwsh failure to close the PowerShell 6 (no WinForms) regression, a triple-miss `AggregateError` carrying all three causes, and per-tier abort re-checks. The seam already owns the only fallback that matters — the `browse` backend at the composition level, chosen once at boot by `directory-picker-auto`.
+The chain also cost real complexity: two spawn tiers running one identical script, a fallback trigger widened from `ENOENT` to any pwsh failure to close the PowerShell 6 (no WinForms) regression, a triple-miss `AggregateError` carrying all three causes, and per-tier abort re-checks. The seam already owns the only fallback that matters — the `browse` backend at the composition level.
 
 ## Decision
 

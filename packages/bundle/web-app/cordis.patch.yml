@@ -84,11 +84,11 @@
     - id: session-stats
       name: '@deepseek-ai/dsh-session-stats'
 
-    # Resolve bind host, SSH launch, and display once at boot, then mount the
-    # matching dual-face directory picker. Mount -native or -browse directly in
-    # an overlay to pin the interaction.
+    # Pin the in-app folder browser for every Web operator (loopback and
+    # remote). Overlay `-native` or `-auto` to restore the OS chooser or
+    # boot-time adaptivity. The matching client row is `ui-directory-picker`.
     - id: directory-picker
-      name: '@deepseek-ai/dsh-host-directory-picker-auto'
+      name: '@deepseek-ai/dsh-host-directory-picker-browse'
 
     # Read-only projection of current Loader entries for trusted client RPCs.
     - id: plugin-inventory
@@ -225,6 +225,9 @@
 
     - id: ui-workspace
       name: '@deepseek-ai/dsh-client-ui-workspace'
+
+    - id: ui-directory-picker
+      name: '@deepseek-ai/dsh-client-ui-directory-picker-browse'
 
     # Input triggers: the '/' | '@' pipeline (ui-input-trigger), the command surface over
     # it (ui-commands), and the two reference sources (ui-skill / ui-subagent).

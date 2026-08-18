@@ -1340,9 +1340,6 @@ importers:
       '@deepseek-ai/dsh-client-ui-directory-picker-browse':
         specifier: workspace:^
         version: link:../../client/ui-directory-picker-browse
-      '@deepseek-ai/dsh-client-ui-directory-picker-native':
-        specifier: workspace:^
-        version: link:../../client/ui-directory-picker-native
       '@deepseek-ai/dsh-client-ui-goal':
         specifier: workspace:^
         version: link:../../client/ui-goal
@@ -1427,15 +1424,9 @@ importers:
       '@deepseek-ai/dsh-host-apiproxy':
         specifier: workspace:^
         version: link:../../host/apiproxy
-      '@deepseek-ai/dsh-host-directory-picker-auto':
-        specifier: workspace:^
-        version: link:../../host/directory-picker-auto
       '@deepseek-ai/dsh-host-directory-picker-browse':
         specifier: workspace:^
         version: link:../../host/directory-picker-browse
-      '@deepseek-ai/dsh-host-directory-picker-native':
-        specifier: workspace:^
-        version: link:../../host/directory-picker-native
       '@deepseek-ai/dsh-host-frontend-static':
         specifier: workspace:^
         version: link:../../host/frontend-static
@@ -1608,9 +1599,36 @@ importers:
       '@deepseek-ai/dsh-client-connection':
         specifier: workspace:^
         version: link:../connection
+      '@deepseek-ai/dsh-client-runtime':
+        specifier: workspace:^
+        version: link:../runtime
       '@deepseek-ai/dsh-client-ui-primitives':
         specifier: workspace:^
         version: link:../ui-primitives
+      '@deepseek-ai/dsh-client-ui-tool':
+        specifier: workspace:^
+        version: link:../ui-tool
+      '@deepseek-ai/dsh-goal':
+        specifier: workspace:^
+        version: link:../../goal/goal
+      '@deepseek-ai/dsh-permission-presets':
+        specifier: workspace:^
+        version: link:../../interaction/permission-presets
+      '@deepseek-ai/dsh-plan-mode':
+        specifier: workspace:^
+        version: link:../../plan/plan-mode
+      '@deepseek-ai/dsh-session-projection':
+        specifier: workspace:^
+        version: link:../../session/session-projection
+      '@deepseek-ai/dsh-session-stats':
+        specifier: workspace:^
+        version: link:../../session/session-stats
+      '@deepseek-ai/dsh-session-title':
+        specifier: workspace:^
+        version: link:../../session/session-title
+      '@deepseek-ai/dsh-token-meter':
+        specifier: workspace:^
+        version: link:../../llm/token-meter
       jsqr:
         specifier: ^1.4.0
         version: 1.4.0
@@ -1621,6 +1639,9 @@ importers:
       '@deepseek-ai/dsh-invariants':
         specifier: workspace:^
         version: link:../../runtime-diagnostics/invariants
+      '@testing-library/react':
+        specifier: ^16.1.0
+        version: 16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@types/react':
         specifier: ~18.3.1
         version: 18.3.31
@@ -2270,6 +2291,9 @@ importers:
       '@deepseek-ai/dsh-client-ui-primitives':
         specifier: workspace:^
         version: link:../ui-primitives
+      '@deepseek-ai/dsh-client-ui-settings':
+        specifier: workspace:^
+        version: link:../ui-settings
       '@deepseek-ai/dsh-client-ui-sidebar':
         specifier: workspace:^
         version: link:../ui-sidebar
@@ -20500,8 +20524,8 @@ snapshots:
 
   magicast@0.5.3:
     dependencies:
-      '@babel/parser': 7.29.7
-      '@babel/types': 7.29.7
+      '@babel/parser': 7.29.8
+      '@babel/types': 7.29.8
       source-map-js: 1.2.1
 
   make-dir@4.0.0:

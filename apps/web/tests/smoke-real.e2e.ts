@@ -488,9 +488,6 @@ describe.skipIf(!process.env.DEEPSEEK_API_KEY || notReady.length > 0)('web smoke
         '--import', tsxLoader, join(REPO_ROOT, 'apps/cli/src/bin.ts'), 'web',
         // Launcher flags come first: the first token the launcher does not own
         // starts the web app's own arguments.
-        // Pin the in-browser picker: the shipped `-auto` row would resolve to
-        // the native OS chooser on this bind, and no page can drive that.
-        '--patch', fileURLToPath(new URL('./pin-browse-picker.overlay.yml', import.meta.url)),
         '--port', String(port),
       ],
       {
