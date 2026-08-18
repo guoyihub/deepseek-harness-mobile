@@ -2,6 +2,7 @@
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { Button, ConnectionBanner, Input, Menu, Modal, Pill } from '@deepseek-ai/dsh-client-ui-primitives'
+import type { MenuEntry } from '@deepseek-ai/dsh-client-ui-primitives'
 import { POINTER_GRACE_MS } from '../src/pointer-grace.ts'
 
 afterEach(cleanup)
@@ -343,6 +344,88 @@ describe('Menu', () => {
     expect(menu.style.top).not.toBe('')
     expect(menu.style.right).toBe('')
     expect(menu.style.bottom).toBe('')
+  })
+
+  it('portal mode repositions when items grow while open', () => {
+    const rect = {
+      left: 40,
+      right: 72,
+      top: 400,
+      bottom: 428,
+      width: 32,
+      height: 28,
+      x: 40,
+      y: 400,
+      toJSON: () => ({}),
+    } as DOMRect
+    const shortItems: MenuEntry[] = [{ type: 'label', id: 'label:commands', text: '命令' }]
+    const longItems: MenuEntry[] = [
+      ...shortItems,
+      ...Array.from({ length: 8 }, (_, index) => ({ id: `item-${String(index)}`, label: `Item ${String(index)}` })),
+    ]
+    let menuHeight = 32
+    const heightSpy = vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function (this: HTMLElement) {
+      if (this.getAttribute('role') === 'menu') return menuHeight
+      return 0
+    })
+    const { rerender } = render(
+      <Menu
+        portal
+        open
+        side="top"
+        getAnchorRect={() => rect}
+        anchor={null}
+        items={shortItems}
+        onSelect={() => {}}
+        onClose={() => {}}
+      />)
+    expect(Number.parseFloat(screen.getByRole('menu').style.top)).toBe(364)
+    menuHeight = 280
+    rerender(
+      <Menu
+        portal
+        open
+        side="top"
+        getAnchorRect={() => rect}
+        anchor={null}
+        items={longItems}
+        onSelect={() => {}}
+        onClose={() => {}}
+      />)
+    expect(Number.parseFloat(screen.getByRole('menu').style.top)).toBe(116)
+    heightSpy.mockRestore()
+  })
+
+  it('portal mode caps height when a top-side list cannot fit above the anchor', () => {
+    const rect = {
+      left: 40,
+      right: 72,
+      top: 80,
+      bottom: 108,
+      width: 32,
+      height: 28,
+      x: 40,
+      y: 80,
+      toJSON: () => ({}),
+    } as DOMRect
+    const heightSpy = vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function (this: HTMLElement) {
+      return this.getAttribute('role') === 'menu' ? 400 : 0
+    })
+    render(
+      <Menu
+        portal
+        open
+        side="top"
+        getAnchorRect={() => rect}
+        anchor={null}
+        items={items}
+        onSelect={() => {}}
+        onClose={() => {}}
+      />)
+    const menu = screen.getByRole('menu')
+    expect(menu.style.top).toBe('12px')
+    expect(menu.style.maxHeight).toBe('64px')
+    heightSpy.mockRestore()
   })
 
   it('renders footer rows in a pinned section below the items; they still select', () => {

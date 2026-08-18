@@ -1,6 +1,6 @@
 {
   "name": "@deepseek-ai/dsh-client-ui-mobile-pairing",
-  "description": "Desktop Web UI for LAN mobile pairing: QR modal, pending approval, and device management",
+  "description": "Desktop Web UI for LAN mobile pairing: sidebar QR modal and DSH Mobile settings page",
   "version": "0.1.0-rc.5",
   "type": "module",
   "main": "lib/index.js",
@@ -26,6 +26,7 @@
       "inject": [
         "@deepseek-ai/dsh-client-runtime",
         "@deepseek-ai/dsh-client-ui-primitives",
+        "@deepseek-ai/dsh-client-ui-settings",
         "@deepseek-ai/dsh-client-ui-slots"
       ],
       "platform": "web"
@@ -50,6 +51,7 @@
   "peerDependencies": {
     "@deepseek-ai/dsh-client-runtime": "workspace:^",
     "@deepseek-ai/dsh-client-ui-primitives": "workspace:^",
+    "@deepseek-ai/dsh-client-ui-settings": "workspace:^",
     "@deepseek-ai/dsh-client-ui-sidebar": "workspace:^",
     "@deepseek-ai/dsh-client-ui-slots": "workspace:^",
     "@deepseek-ai/dsh-invariants": "workspace:^",
@@ -58,6 +60,7 @@
   "devDependencies": {
     "@deepseek-ai/dsh-client-runtime": "workspace:^",
     "@deepseek-ai/dsh-client-ui-primitives": "workspace:^",
+    "@deepseek-ai/dsh-client-ui-settings": "workspace:^",
     "@deepseek-ai/dsh-client-ui-sidebar": "workspace:^",
     "@deepseek-ai/dsh-client-ui-slots": "workspace:^",
     "@deepseek-ai/dsh-invariants": "workspace:^",

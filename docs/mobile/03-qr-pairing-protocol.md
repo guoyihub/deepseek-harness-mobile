@@ -201,10 +201,10 @@ M1 方案（择一，实现时定稿）：
 
 | 键 | 内容 |
 |----|------|
-| `metacode.mobile.host` | `https://host:port` |
-| `metacode.mobile.sessionToken` | opaque token |
-| `metacode.mobile.deviceId` | 本机 device id |
-| `metacode.mobile.fingerprint` | 上次 Host 指纹 |
+| `dsh.mobile.host` | `https://host:port` |
+| `dsh.mobile.sessionToken` | opaque token |
+| `dsh.mobile.deviceId` | 本机 device id |
+| `dsh.mobile.fingerprint` | 上次 Host 指纹 |
 
 清除存储 = 用户视角「退出连接」，不删除 Host 上 session 数据。
 

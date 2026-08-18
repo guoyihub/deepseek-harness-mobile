@@ -120,6 +120,24 @@ describe('MobilePairingStore', () => {
     vi.useRealTimers()
   })
 
+  it('bakes mobilePublicBaseUrl into QR deep links for tunnels', () => {
+    const store = new MobilePairingStore({
+      publicScheme: 'http',
+      confirmMode: 'off',
+      pairTokenTtlMs: 60_000,
+      sessionTokenTtlMs: 3_600_000,
+      fingerprint: 'abc12345',
+      hostDisplayName: 'test-host',
+    })
+    expect(store.setMobilePublicBaseUrl('https://tunnel.example.com/path')).toBe(true)
+    const offer = store.createPairing('127.0.0.1', 3080)
+    expect(offer.host).toBe('tunnel.example.com')
+    expect(offer.port).toBe(443)
+    expect(offer.qrUrl).toMatch(/^https:\/\/tunnel\.example\.com\/mobile\/pair\?t=/)
+    expect(offer.qrUrl).not.toContain('127.0.0.1')
+    expect(store.pairPasswordSettings().mobilePublicBaseUrl).toBe('https://tunnel.example.com')
+  })
+
   it('enters pending in strict mode until desktop confirmation and phone poll pickup', () => {
     const store = new MobilePairingStore({
       publicScheme: 'http',

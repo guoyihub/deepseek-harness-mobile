@@ -150,11 +150,21 @@ export function Menu({ open, anchor, items, selectedId, selectedIds, onSelect, o
       if (lw > 0) x = Math.min(Math.max(x, MARGIN), vw - lw - MARGIN)
       if (lh > 0) y = Math.min(Math.max(y, MARGIN), vh - lh - MARGIN)
 
-      setFixedPos({ left: x, top: y })
+      let style: CSSProperties = { left: x, top: y }
+      if (side === 'top') {
+        const availableAbove = r.top - MARGIN - 4
+        if (availableAbove > 0 && lh > availableAbove) {
+          style = { left: x, top: MARGIN, maxHeight: availableAbove }
+        }
+      }
+
+      setFixedPos(style)
     }
     // First run measures the hidden pre-render (same commit as `open`), so
     // end/top alignment and clamping use real dimensions before anything
-    // paints — no visible jump from a zero-size first guess.
+    // paints — no visible jump from a zero-size first guess. Item growth
+    // (async catalogs) re-runs this effect so a first open is not stuck at
+    // the label-only height.
     place()
     window.addEventListener('scroll', place, true)
     window.addEventListener('resize', place)
@@ -162,7 +172,7 @@ export function Menu({ open, anchor, items, selectedId, selectedIds, onSelect, o
       window.removeEventListener('scroll', place, true)
       window.removeEventListener('resize', place)
     }
-  }, [open, portal, align, side, getAnchorRect])
+  }, [open, portal, align, side, getAnchorRect, items, footer])
 
   useEffect(() => {
     if (!open) {

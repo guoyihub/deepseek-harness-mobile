@@ -4,6 +4,12 @@
   gap: 16px;
 }
 
+.qrOnly {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
 .qrBlock {
   display: flex;
   flex-direction: column;
@@ -27,6 +33,7 @@
   flex-direction: column;
   gap: 4px;
   width: 100%;
+  margin-top: 8px;
   font-size: 13px;
   color: var(--dsw-alias-label-secondary);
 }
@@ -34,6 +41,26 @@
 .metaStrong {
   color: var(--dsw-alias-label-primary);
   font-weight: 600;
+}
+
+.settingsPage {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 720px;
+}
+
+.settingsLead {
+  margin: 0;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--dsw-alias-label-secondary);
+}
+
+.settingsSection {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .sectionTitle {
@@ -85,11 +112,13 @@
 }
 
 .empty {
+  margin: 0;
   font-size: 13px;
   color: var(--dsw-alias-label-secondary);
 }
 
 .error {
+  margin: 0;
   font-size: 13px;
   color: var(--dsw-alias-label-danger);
 }

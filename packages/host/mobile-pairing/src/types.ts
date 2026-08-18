@@ -86,6 +86,11 @@ export interface PairPasswordSettings {
   mode: PairPasswordMode
   /** Desktop confirmation policy (`off` pairs immediately). */
   confirmMode: ConfirmMode
+  /**
+   * Optional Mobile PWA origin for QR deep links (tunnel / LAN Vite).
+   * Empty string means QR falls back to Host bind authority.
+   */
+  mobilePublicBaseUrl: string
 }
 
 /** LAN-visible pairing policy for the mobile shell. */

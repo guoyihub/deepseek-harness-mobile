@@ -18,6 +18,9 @@
       "path": "../ui-primitives"
     },
     {
+      "path": "../ui-settings"
+    },
+    {
       "path": "../ui-sidebar"
     },
     {

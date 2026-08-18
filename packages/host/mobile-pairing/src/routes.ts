@@ -258,14 +258,23 @@ async function handlePairSettings(req: IncomingMessage, res: ServerResponse, dep
     return
   }
   const mode = stringField(body, 'mode')
-  if (mode !== 'none' && mode !== 'required') {
-    writeJson(res, 400, { error: 'mode must be none or required' })
-    return
+  if (mode !== undefined) {
+    if (mode !== 'none' && mode !== 'required') {
+      writeJson(res, 400, { error: 'mode must be none or required' })
+      return
+    }
+    const password = stringField(body, 'password')
+    if (!deps.store.setPairPasswordSettings(mode, password)) {
+      writeJson(res, 400, { error: 'password required when mode is required' })
+      return
+    }
   }
-  const password = stringField(body, 'password')
-  if (!deps.store.setPairPasswordSettings(mode, password)) {
-    writeJson(res, 400, { error: 'password required when mode is required' })
-    return
+  if (Object.prototype.hasOwnProperty.call(body, 'mobilePublicBaseUrl')) {
+    const raw = stringField(body, 'mobilePublicBaseUrl') ?? ''
+    if (!deps.store.setMobilePublicBaseUrl(raw)) {
+      writeJson(res, 400, { error: 'mobilePublicBaseUrl must be an http(s) origin' })
+      return
+    }
   }
   writeJson(res, 200, deps.store.pairPasswordSettings())
 }

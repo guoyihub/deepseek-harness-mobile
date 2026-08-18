@@ -41,6 +41,8 @@ export type PairPasswordMode = 'none' | 'required'
 export interface PairPasswordSettings {
   mode: PairPasswordMode
   confirmMode: 'strict' | 'trusted-lan' | 'off'
+  /** Mobile PWA origin for QR deep links (tunnel / LAN Vite). */
+  mobilePublicBaseUrl: string
 }
 
 async function loopbackJson<T>(path: string, init?: RequestInit): Promise<T> {
@@ -68,18 +70,24 @@ export async function fetchPairPasswordSettings(): Promise<PairPasswordSettings>
 }
 
 /**
- * Update pair password mode from the desktop modal.
- * @param mode - `none` or `required`.
+ * Update pair password mode and/or Mobile public base URL from the desktop modal.
+ * @param mode - `none` or `required` (optional when only updating the public base).
  * @param password - required when mode is `required`.
+ * @param mobilePublicBaseUrl - Mobile PWA origin for QR deep links; omit to leave unchanged.
  */
 export async function updatePairPasswordSettings(
-  mode: PairPasswordMode,
+  mode?: PairPasswordMode,
   password?: string,
+  mobilePublicBaseUrl?: string,
 ): Promise<PairPasswordSettings> {
+  const body: Record<string, string> = {}
+  if (mode !== undefined) body.mode = mode
+  if (password !== undefined) body.password = password
+  if (mobilePublicBaseUrl !== undefined) body.mobilePublicBaseUrl = mobilePublicBaseUrl
   return await loopbackJson<PairPasswordSettings>('/api/mobile/pair/settings', {
     method: 'PUT',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ mode, password }),
+    body: JSON.stringify(body),
   })
 }
 

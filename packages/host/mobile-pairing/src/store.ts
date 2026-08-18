@@ -61,6 +61,8 @@ export class MobilePairingStore {
   private activePair: PairTokenRecord | undefined
   private pairPasswordMode: PairPasswordMode = 'none'
   private pairPassword = ''
+  /** Mobile PWA origin used in QR deep links (tunnel or LAN Vite). */
+  private mobilePublicBaseUrl = ''
   private readonly sessions = new Map<string, SessionRecord>()
   private readonly pending = new Map<string, PendingDevice>()
   private readonly readyPickup = new Map<string, PairSuccess>()
@@ -84,7 +86,11 @@ export class MobilePairingStore {
 
   /** Loopback pairing password settings for the desktop modal. */
   pairPasswordSettings(): PairPasswordSettings {
-    return { mode: this.pairPasswordMode, confirmMode: this.options.confirmMode }
+    return {
+      mode: this.pairPasswordMode,
+      confirmMode: this.options.confirmMode,
+      mobilePublicBaseUrl: this.mobilePublicBaseUrl,
+    }
   }
 
   /**
@@ -112,6 +118,27 @@ export class MobilePairingStore {
   }
 
   /**
+   * Set the Mobile PWA origin baked into QR deep links.
+   * @param baseUrl - absolute origin such as `https://tunnel.example.com`, or empty to clear.
+   * @returns false when the value is not a valid http(s) origin.
+   */
+  setMobilePublicBaseUrl(baseUrl: string): boolean {
+    const trimmed = baseUrl.trim()
+    if (trimmed === '') {
+      this.mobilePublicBaseUrl = ''
+      return true
+    }
+    try {
+      const url = new URL(trimmed)
+      if (url.protocol !== 'http:' && url.protocol !== 'https:') return false
+      this.mobilePublicBaseUrl = url.origin
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  /**
    * Mint a fresh pairToken for QR display.
    * @param host - reachable host authority (IP or hostname).
    * @param port - listen port.
@@ -122,8 +149,9 @@ export class MobilePairingStore {
     const expiresAt = this.pairTokenExpiresAt(now)
     const shortCode = this.mintShortCode()
     this.activePair = { token: randomUUID(), shortCode, expiresAt, consumed: false }
-    const qrUrl = this.formatQrUrl(host, port, this.activePair.token, this.activePair)
-    return this.offerFromRecord(host, port, this.activePair, qrUrl)
+    const authority = this.resolveOfferAuthority(host, port)
+    const qrUrl = this.formatQrUrl(authority.host, authority.port, this.activePair.token, this.activePair)
+    return this.offerFromRecord(authority.host, authority.port, this.activePair, qrUrl)
   }
 
   /**
@@ -138,8 +166,9 @@ export class MobilePairingStore {
       || this.isPairExpired(this.activePair)
       || this.activePair.consumed
     ) return undefined
-    const qrUrl = this.formatQrUrl(host, port, this.activePair.token, this.activePair)
-    return this.offerFromRecord(host, port, this.activePair, qrUrl)
+    const authority = this.resolveOfferAuthority(host, port)
+    const qrUrl = this.formatQrUrl(authority.host, authority.port, this.activePair.token, this.activePair)
+    return this.offerFromRecord(authority.host, authority.port, this.activePair, qrUrl)
   }
 
   /**
@@ -372,12 +401,28 @@ export class MobilePairingStore {
     return record.expiresAt <= Date.now()
   }
 
+  private resolveOfferAuthority(fallbackHost: string, fallbackPort: number): { host: string; port: number } {
+    if (this.mobilePublicBaseUrl === '') return { host: fallbackHost, port: fallbackPort }
+    try {
+      const url = new URL(this.mobilePublicBaseUrl)
+      const port = url.port !== ''
+        ? Number(url.port)
+        : (url.protocol === 'https:' ? 443 : 80)
+      return { host: url.hostname, port }
+    } catch {
+      return { host: fallbackHost, port: fallbackPort }
+    }
+  }
+
   private formatQrUrl(host: string, port: number, pairToken: string, record: PairTokenRecord): string {
     const passwordFlag = this.pairPasswordMode === 'required' ? '&p=1' : ''
     const expiresUnix = record.expiresAt === PAIR_TOKEN_NO_EXPIRY_MS
       ? 0
       : Math.floor(record.expiresAt / 1000)
-    return `${this.options.publicScheme}://${host}:${String(port)}/mobile/pair?t=${pairToken}`
-      + `&e=${String(expiresUnix)}&f=${this.options.fingerprint}${passwordFlag}`
+    const query = `t=${pairToken}&e=${String(expiresUnix)}&f=${this.options.fingerprint}${passwordFlag}`
+    if (this.mobilePublicBaseUrl !== '') {
+      return `${this.mobilePublicBaseUrl}/mobile/pair?${query}`
+    }
+    return `${this.options.publicScheme}://${host}:${String(port)}/mobile/pair?${query}`
   }
 }
