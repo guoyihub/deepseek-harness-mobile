@@ -1,0 +1,179 @@
+name: Bug report / 问题反馈
+description: Report a reproducible problem with DSH Mobile / 反馈可复现的 DSH Mobile 问题
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve DSH Mobile. Every report is welcome. Reports with exact versions, reproduction steps, and error evidence are usually easier to reproduce and prioritize. You do not need to understand the code or provide a patch.
+
+        感谢你帮助改进 DSH Mobile。所有反馈都会被查看；版本、复现步骤、错误日志等信息越完整，通常越容易被优先复现和处理。你不需要懂代码，也不需要提供补丁。无法获取某项信息时，请填写“Unknown / 不知道”。
+
+        Please remove API keys, tokens, account details, and other sensitive data before attaching logs or screenshots.
+
+  - type: checkboxes
+    id: duplicate_check
+    attributes:
+      label: Existing reports / 提交前查重
+      description: Search open and closed issues before submitting / 请先搜索已打开和已关闭的 Issue
+      options:
+        - label: I searched existing issues and did not find the same problem / 我已搜索现有 Issue，没有发现相同问题
+          required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Affected area / 涉及区域
+      options:
+        - Pairing or QR code / 配对或二维码
+        - Task home / 任务列表
+        - Chat or streaming / 对话或流式输出
+        - Connection or reconnect / 连接或重连
+        - PWA install or browser / PWA 安装或浏览器
+        - Desktop Host pairing UI / 桌面 Host 配对入口
+        - Conversations, models, or tools / 会话、模型或工具
+        - Other or unknown / 其他或不确定
+    validations:
+      required: true
+
+  - type: dropdown
+    id: phone_platform
+    attributes:
+      label: Phone platform / 手机平台
+      options:
+        - iOS Safari
+        - iOS Chrome or other browser / iOS 其他浏览器
+        - Android Chrome
+        - Android other browser / Android 其他浏览器
+        - Desktop browser for testing / 桌面浏览器测试
+        - Other or unknown / 其他或不确定
+    validations:
+      required: true
+
+  - type: dropdown
+    id: host_platform
+    attributes:
+      label: Desktop Host platform / 桌面 Host 平台
+      options:
+        - Windows
+        - macOS
+        - Linux
+        - Other or unknown / 其他或不确定
+    validations:
+      required: true
+
+  - type: dropdown
+    id: installation_method
+    attributes:
+      label: Mobile access method / 手机端访问方式
+      options:
+        - Mobile PWA in browser / 手机浏览器 PWA
+        - LAN IP address / 局域网 IP
+        - Tunnel or reverse proxy / 穿透或反向代理
+        - Built from source / 源码运行
+        - Production build / 生产构建
+        - Other or unknown / 其他或不确定
+    validations:
+      required: true
+
+  - type: input
+    id: mobile_version
+    attributes:
+      label: DSH Mobile version / DSH Mobile 版本
+      description: From package.json or README when unsure / 不确定时可查看 package.json 或 README
+      placeholder: "For example: 0.1.0-rc.5; or Unknown / 不知道"
+    validations:
+      required: true
+
+  - type: input
+    id: dsh_version
+    attributes:
+      label: DSH Host version / DSH Host 版本
+      description: Run `dsh --version` on the desktop Host / 在桌面 Host 运行 `dsh --version`
+      placeholder: "For example: 0.1.0-rc.7; or Unknown / 不知道"
+    validations:
+      required: true
+
+  - type: input
+    id: mobile_url
+    attributes:
+      label: Mobile URL / 手机端访问地址
+      description: The URL opened on the phone, without secrets / 手机浏览器打开的地址，不要包含密钥
+      placeholder: "For example: http://192.168.1.10:8030; or Unknown / 不知道"
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual_behavior
+    attributes:
+      label: What happened? / 实际发生了什么？
+      description: Include the exact error text when possible / 尽量包含准确的错误文字
+      placeholder: Describe what you saw and when it happened / 描述现象及发生时机
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction_steps
+    attributes:
+      label: Reproduction steps / 复现步骤
+      description: Start from Host startup and mobile pairing / 从 Host 启动和手机配对开始描述
+      placeholder: |
+        1. Start Host with ... / 启动 Host……
+        2. Open Mobile at ... / 打开手机端……
+        3. Scan QR or ... / 扫码或……
+        4. Observe ... / 看到……
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected_behavior
+    attributes:
+      label: Expected behavior / 预期结果
+      placeholder: What should have happened? / 正常情况下应该发生什么？
+    validations:
+      required: true
+
+  - type: dropdown
+    id: frequency
+    attributes:
+      label: Reproduction frequency / 复现频率
+      options:
+        - Every time / 每次都能复现
+        - Often / 经常出现
+        - Sometimes / 偶尔出现
+        - Once / 只出现过一次
+        - Unknown / 不确定
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or error details / 日志或错误信息
+      description: Browser console output, Host terminal output, or network errors are helpful / 浏览器控制台、Host 终端输出或网络错误信息都很有帮助
+      placeholder: Paste exact error lines, console output, or terminal logs / 粘贴准确报错、控制台输出或终端日志
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots or recordings / 截图或录屏
+      description: Useful for pairing, UI, and chat problems / 配对、界面和对话问题建议提供
+
+  - type: input
+    id: last_working_version
+    attributes:
+      label: Last known working version / 最后正常版本
+      description: Leave blank if this never worked or you are unsure / 从未正常或不确定时可留空
+
+  - type: textarea
+    id: additional_context
+    attributes:
+      label: Additional context / 补充信息
+      description: Tunnel provider, pairing password, strict confirm mode, installed plugins, or workarounds / 穿透服务、配对密码、严格确认模式、已装插件或临时解决办法
+
+  - type: checkboxes
+    id: privacy_check
+    attributes:
+      label: Sensitive information / 敏感信息
+      options:
+        - label: I removed API keys, tokens, account details, and other sensitive data from my attachments / 我已从附件中移除 API Key、Token、账号信息等敏感内容
+          required: true
