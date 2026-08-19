@@ -1899,6 +1899,21 @@
   border-radius: 0;
 }
 
+.taskHomeGroups {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.taskHomeGroupLabel {
+  margin: 0;
+  padding: 0 0 8px;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 18px;
+}
+
 .taskHomeList {
   margin: 0;
   padding: 0;

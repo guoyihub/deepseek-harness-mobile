@@ -18,6 +18,7 @@ import {
   type RpcRequest,
   type SessionId,
   type SessionSummary,
+  type WorkspaceView,
 } from '@deepseek-ai/dsh-client-connection/client'
 import { mobileApi } from './mobile-api-client.ts'
 import { readSessionToken, readStoredHostBase } from './mobile-session.ts'
@@ -33,6 +34,10 @@ interface MobileConnectionContextValue {
   connectionState: ConnectionState | null
   /** Cached session.list rows. */
   sessions: readonly SessionSummary[]
+  /** Cached workspace.list rows in Host registry order. */
+  workspaces: readonly WorkspaceView[]
+  /** Registry-global archived session ids from workspace.list. */
+  archivedSessionIds: readonly SessionId[]
   /** Whether session.list is in flight. */
   sessionsLoading: boolean
   /** Last list/load error message. */
@@ -73,6 +78,8 @@ export function MobileConnectionProvider({ children }: { children: ReactNode }):
   const [hostDescription, setHostDescription] = useState<HostDescription | undefined>(undefined)
   const [connectionState, setConnectionState] = useState<ConnectionState | null>(null)
   const [sessions, setSessions] = useState<readonly SessionSummary[]>([])
+  const [workspaces, setWorkspaces] = useState<readonly WorkspaceView[]>([])
+  const [archivedSessionIds, setArchivedSessionIds] = useState<readonly SessionId[]>([])
   const [sessionsLoading, setSessionsLoading] = useState(false)
   const [error, setError] = useState<string | undefined>(undefined)
   const [revoked, setRevoked] = useState(false)
@@ -91,6 +98,8 @@ export function MobileConnectionProvider({ children }: { children: ReactNode }):
     setHostDescription(undefined)
     setConnectionState(null)
     setSessions([])
+    setWorkspaces([])
+    setArchivedSessionIds([])
     setError('设备已被桌面吊销或会话已失效，请重新扫码连接')
   }, [])
 
@@ -107,20 +116,34 @@ export function MobileConnectionProvider({ children }: { children: ReactNode }):
   const refreshSessions = useCallback(async (): Promise<void> => {
     if (readSessionToken() === undefined) {
       setSessions([])
+      setWorkspaces([])
+      setArchivedSessionIds([])
       return
     }
     setSessionsLoading(true)
     setError(undefined)
     try {
-      const response = await mobileApi.sessions.list({})
-      if (!response.result.ok) {
-        handleAuthFailure(response.result.error.message)
-        if (!isUnauthorizedError(response.result.error.message)) {
-          setError(response.result.error.message)
+      const [sessionResponse, workspaceResponse] = await Promise.all([
+        mobileApi.sessions.list({}),
+        mobileApi.workspace.list({}),
+      ])
+      if (!sessionResponse.result.ok) {
+        handleAuthFailure(sessionResponse.result.error.message)
+        if (!isUnauthorizedError(sessionResponse.result.error.message)) {
+          setError(sessionResponse.result.error.message)
         }
         return
       }
-      setSessions(response.result.value.items.filter((item: SessionSummary) => !item.blank))
+      if (!workspaceResponse.result.ok) {
+        handleAuthFailure(workspaceResponse.result.error.message)
+        if (!isUnauthorizedError(workspaceResponse.result.error.message)) {
+          setError(workspaceResponse.result.error.message)
+        }
+        return
+      }
+      setSessions(sessionResponse.result.value.items)
+      setWorkspaces(workspaceResponse.result.value.items)
+      setArchivedSessionIds(workspaceResponse.result.value.archivedSessionIds)
     } catch (loadError) {
       const message = loadError instanceof Error ? loadError.message : String(loadError)
       handleAuthFailure(message)
@@ -163,6 +186,8 @@ export function MobileConnectionProvider({ children }: { children: ReactNode }):
     setHostDescription(undefined)
     setConnectionState(null)
     setSessions([])
+    setWorkspaces([])
+    setArchivedSessionIds([])
     setRevoked(false)
     setError(undefined)
   }, [])
@@ -186,10 +211,15 @@ export function MobileConnectionProvider({ children }: { children: ReactNode }):
       },
       onHostEnvelope: (envelope: RpcRequest<HostFrame>) => {
         const frame = envelope.payload
-        if (frame.type !== 'host/session-status') return
-        setSessions(current => current.map(item =>
-          item.sessionId === frame.sessionId ? { ...item, running: frame.running } : item,
-        ))
+        if (frame.type === 'host/session-status') {
+          setSessions(current => current.map(item =>
+            item.sessionId === frame.sessionId ? { ...item, running: frame.running } : item,
+          ))
+          return
+        }
+        if (frame.type === 'host/archived-sessions-changed') {
+          setArchivedSessionIds(frame.archivedSessionIds)
+        }
       },
       onConnected: (description: HostDescription) => {
         setHostDescription(description)
@@ -212,6 +242,8 @@ export function MobileConnectionProvider({ children }: { children: ReactNode }):
     hostDescription,
     connectionState,
     sessions,
+    workspaces,
+    archivedSessionIds,
     sessionsLoading,
     error,
     revoked,
@@ -227,6 +259,8 @@ export function MobileConnectionProvider({ children }: { children: ReactNode }):
     hostDescription,
     connectionState,
     sessions,
+    workspaces,
+    archivedSessionIds,
     sessionsLoading,
     error,
     revoked,

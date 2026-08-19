@@ -10,6 +10,12 @@ import { MobileFab } from './MobileFab.tsx'
 
 import { MobileShellLayout } from './MobileShellLayout.tsx'
 
+import {
+  deriveMobileTaskGroups,
+  groupDisplayLabel,
+  visibleWireSessions,
+} from './mobile-task-groups.ts'
+
 import { StatusPanel } from './StatusPanel.tsx'
 
 import { TaskHomeHeader, type TaskHomeFilter } from './TaskHomeHeader.tsx'
@@ -44,6 +50,8 @@ export function HomePage({
     hostDescription,
     connectionState,
     sessions,
+    workspaces,
+    archivedSessionIds,
     sessionsLoading,
     error,
     revoked,
@@ -60,9 +68,29 @@ export function HomePage({
     return undefined
   }, [hostDescription])
 
-  const visibleSessions = useMemo(
-    () => sessions.filter(item => filter !== 'running' || item.running),
-    [filter, sessions],
+  const sessionById = useMemo(
+    () => new Map(sessions.map(item => [item.sessionId, item])),
+    [sessions],
+  )
+
+  const searchableSessions = useMemo(
+    () => visibleWireSessions(sessions, workspaces, archivedSessionIds),
+    [archivedSessionIds, sessions, workspaces],
+  )
+
+  const visibleGroups = useMemo(() => {
+    const groups = deriveMobileTaskGroups(sessions, workspaces, archivedSessionIds)
+    return groups
+      .map(group => ({
+        ...group,
+        sessions: group.sessions.filter(session => filter !== 'running' || session.running),
+      }))
+      .filter(group => group.sessions.length > 0)
+  }, [archivedSessionIds, filter, sessions, workspaces])
+
+  const visibleSessionCount = useMemo(
+    () => visibleGroups.reduce((count, group) => count + group.sessions.length, 0),
+    [visibleGroups],
   )
 
   const onFabClick = (): void => {
@@ -93,7 +121,7 @@ export function HomePage({
     return (
       <TaskHomeSearchOverlay
         query={searchQuery}
-        sessions={sessions}
+        sessions={searchableSessions}
         onQueryChange={setSearchQuery}
         onClose={closeSearch}
         onOpenChat={onOpenChat}
@@ -131,15 +159,15 @@ export function HomePage({
         </div>
       )}
 
-      {paired && reconnecting && visibleSessions.length === 0 && (
+      {paired && reconnecting && visibleSessionCount === 0 && (
         <div className={css.taskHomeEmpty} role="status">正在重连…</div>
       )}
 
-      {paired && !reconnecting && sessionsLoading && visibleSessions.length === 0 && (
+      {paired && !reconnecting && sessionsLoading && visibleSessionCount === 0 && (
         <div className={css.taskHomeEmpty}>正在加载任务…</div>
       )}
 
-      {paired && !reconnecting && !sessionsLoading && visibleSessions.length === 0 && (
+      {paired && !reconnecting && !sessionsLoading && visibleSessionCount === 0 && (
         <div className={css.taskHomeEmpty}>
           {filter === 'running'
             ? '没有匹配的任务'
@@ -147,17 +175,28 @@ export function HomePage({
         </div>
       )}
 
-      {paired && visibleSessions.length > 0 && (
-        <ul className={css.taskHomeList}>
-          {visibleSessions.map(item => (
-            <TaskHomeRow
-              key={item.sessionId}
-              item={item}
-              hostLabel={hostLabel}
-              onOpen={() => { onOpenChat(item.sessionId) }}
-            />
+      {paired && visibleSessionCount > 0 && (
+        <div className={css.taskHomeGroups}>
+          {visibleGroups.map(group => (
+            <section key={group.key} className={css.taskHomeGroup} aria-label={groupDisplayLabel(group)}>
+              <h2 className={css.taskHomeGroupLabel}>{groupDisplayLabel(group)}</h2>
+              <ul className={css.taskHomeList}>
+                {group.sessions.map((session) => {
+                  const item = sessionById.get(session.id)
+                  if (item === undefined) return null
+                  return (
+                    <TaskHomeRow
+                      key={session.id}
+                      item={item}
+                      hostLabel={hostLabel}
+                      onOpen={() => { onOpenChat(session.id) }}
+                    />
+                  )
+                })}
+              </ul>
+            </section>
           ))}
-        </ul>
+        </div>
       )}
     </MobileShellLayout>
   )
