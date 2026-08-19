@@ -23,6 +23,8 @@ pnpm dsh web
 pnpm dev:mobile
 ```
 
+一键后台启动见根目录 [README — 一键启动](../../README.md#run-from-source)（`deploy/dsh.sh` / `deploy/dsh.bat`）。
+
 | 端 | 本机 | 局域网 |
 |----|------|--------|
 | 桌面 Web | http://127.0.0.1:3080 | `http://<电脑局域网 IP>:3080` |

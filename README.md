@@ -155,6 +155,33 @@ pnpm dsh web
 pnpm dev:mobile
 ```
 
+### 一键启动（后台运行）
+
+`deploy/` 提供跨平台脚本，在后台启动 Host 与 Mobile PWA，并写入日志与 PID 文件（核心逻辑见 `deploy/dsh-runner.mjs`）。
+
+| 平台 | 入口 |
+| --- | --- |
+| Windows | `deploy\dsh.bat` |
+| Linux | `./deploy/dsh.sh` |
+| macOS | `./deploy/dsh.sh` 或双击 `deploy/dsh.command` |
+
+```powershell
+# 启动两者（省略 target 默认为 web + mobile）
+deploy\dsh.bat start
+./deploy/dsh.sh start
+
+# 只启动其中一个
+deploy\dsh.bat start web
+./deploy/dsh.sh start mobile
+
+# 停止、查看状态、跟踪日志
+deploy\dsh.bat stop
+deploy\dsh.bat status
+deploy\dsh.bat logs
+```
+
+日志目录：`deploy/logs/`；运行态 PID：`deploy/.run/`。
+
 生产构建：`pnpm run build:mobile`（输出 `apps/mobile/dist`）。包级测试与更多细节见 [手机端开发文档](docs/mobile/README.md) 与各包 README。
 
 ## 社区与支持

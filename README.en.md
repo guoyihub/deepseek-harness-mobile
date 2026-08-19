@@ -155,6 +155,33 @@ pnpm dsh web
 pnpm dev:mobile
 ```
 
+### One-command start (background)
+
+The `deploy/` scripts start Host and Mobile PWA in the background, with logs and PID files (core logic in `deploy/dsh-runner.mjs`).
+
+| Platform | Entry |
+| --- | --- |
+| Windows | `deploy\dsh.bat` |
+| Linux | `./deploy/dsh.sh` |
+| macOS | `./deploy/dsh.sh` or double-click `deploy/dsh.command` |
+
+```powershell
+# Start both (omit target for web + mobile)
+deploy\dsh.bat start
+./deploy/dsh.sh start
+
+# Start one service
+deploy\dsh.bat start web
+./deploy/dsh.sh start mobile
+
+# Stop, status, tail logs
+deploy\dsh.bat stop
+deploy\dsh.bat status
+deploy\dsh.bat logs
+```
+
+Logs: `deploy/logs/`; runtime PIDs: `deploy/.run/`.
+
 Production build: `pnpm run build:mobile` (output in `apps/mobile/dist`). Package tests and more detail live in the [mobile development guide](docs/mobile/README.md) and package READMEs.
 
 ## Community and support
