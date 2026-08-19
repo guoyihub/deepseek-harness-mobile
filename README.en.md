@@ -10,6 +10,8 @@
 
 <p align="center">
   <img src="assets/mobile-hero.png" alt="DeepSeek Harness Mobile task list" width="360">
+  &nbsp;&nbsp;
+  <img src="assets/mobile-preview.png" alt="DeepSeek Harness Mobile chat UI" width="360">
 </p>
 
 <p align="center">
@@ -17,10 +19,6 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-2EA44F?style=flat" alt="MIT License"></a>
   <img src="https://img.shields.io/badge/iOS%20%7C%20Android-PWA-4493F8?style=flat-square" alt="Supported platforms: iOS and Android PWA">
   <img src="https://img.shields.io/badge/LAN%20pairing-2EA44F?style=flat-square" alt="LAN pairing">
-</p>
-
-<p align="center">
-  <img src="assets/mobile-preview.png" alt="DeepSeek Harness Mobile chat UI" width="360">
 </p>
 
 DSH Mobile brings [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) Agent capabilities to the mobile browser: pair with a desktop Host over LAN via QR code, then browse tasks, open sessions, and follow tool progress and trajectories in a PWA. The Host still runs on your computer; Mobile handles pairing, connection, and the mobile shell UI through the official plugin composition model.

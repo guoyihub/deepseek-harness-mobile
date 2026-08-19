@@ -10,6 +10,8 @@
 
 <p align="center">
   <img src="assets/mobile-hero.png" alt="DeepSeek Harness 手机端任务列表" width="360">
+  &nbsp;&nbsp;
+  <img src="assets/mobile-preview.png" alt="DeepSeek Harness Mobile 对话界面" width="360">
 </p>
 
 <p align="center">
@@ -17,10 +19,6 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-2EA44F?style=flat" alt="MIT License"></a>
   <img src="https://img.shields.io/badge/iOS%20%7C%20Android-PWA-4493F8?style=flat-square" alt="Supported platforms: iOS and Android PWA">
   <img src="https://img.shields.io/badge/LAN%20%E9%85%8D%E5%AF%B9-2EA44F?style=flat-square" alt="LAN pairing">
-</p>
-
-<p align="center">
-  <img src="assets/mobile-preview.png" alt="DeepSeek Harness Mobile 对话界面" width="360">
 </p>
 
 DSH Mobile 把 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 的 Agent 能力带到手机浏览器：通过局域网二维码与桌面 Host 配对，在 PWA 中浏览任务列表、进入会话、查看工具进度与轨迹。Host 仍运行在电脑上；Mobile 负责配对、连接与移动壳 UI，并通过官方插件机制与 Harness 组合。
