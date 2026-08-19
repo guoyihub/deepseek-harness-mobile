@@ -87,7 +87,7 @@
   padding:
     calc(12px + env(safe-area-inset-top, 0px))
     calc(16px + env(safe-area-inset-right, 0px))
-    0
+    8px
     calc(16px + env(safe-area-inset-left, 0px));
   background: var(--dsw-alias-bg-base);
 }
@@ -97,7 +97,7 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 8px;
 }
 
 .chatHeaderTabRow {
@@ -981,7 +981,7 @@
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 16px;
   padding-top: 8px;
   padding-bottom: 20px;
   -webkit-overflow-scrolling: touch;

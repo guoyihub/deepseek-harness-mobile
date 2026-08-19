@@ -1,6 +1,9 @@
 /** Minimal chat row projection from Host history and mux session events. */
 
 import type { ContentBlock, HistoryEntry, MuxFrame, SessionEvent, SessionId } from '@deepseek-ai/dsh-client-connection/client'
+import type { ConversationSnapshot } from '@deepseek-ai/dsh-client-runtime/client'
+import type { ChatNode } from '@deepseek-ai/dsh-client-ui-conversation/client'
+import type {} from '@deepseek-ai/dsh-client-ui-conversation/src/client/conversation-nodes/assistant.ts'
 import type { AssistantBlock, RunningToolCall, ToolCallBlock, ToolResultNode } from '@deepseek-ai/dsh-client-runtime/src/client/sessions/conversation.ts'
 import type { ContextProvenanceView, KnownContextForm } from '@deepseek-ai/dsh-client-runtime/src/client/sessions/context-provenance.ts'
 import { contextForm, contextProvenance } from '@deepseek-ai/dsh-client-runtime/src/client/sessions/context-provenance.ts'
@@ -324,6 +327,28 @@ export function deriveAgentWorking(
   if (sending) return true
   if (running) return true
   return hasRunningTool(rows) || hasStreamingAssistant(rows)
+}
+
+/**
+ * Derive whether the composer should expose stop from a Session snapshot.
+ * @param running - host session.list running flag for the active session.
+ * @param snapshot - conversation snapshot from {@link Session}.
+ * @param sending - whether a prompt submission is still in flight locally.
+ */
+export function deriveAgentWorkingFromSnapshot(
+  running: boolean,
+  snapshot: Pick<ConversationSnapshot, 'running' | 'partial' | 'runningCalls' | 'chat'>,
+  sending: boolean,
+): boolean {
+  if (sending) return true
+  if (running) return true
+  if (snapshot.partial !== null) return true
+  if (snapshot.runningCalls.length > 0) return true
+  for (const key of snapshot.chat.order) {
+    const node = snapshot.chat.nodes.get(key) as ChatNode | undefined
+    if (node?.kind === 'assistant-step' && node.data.status === 'running') return true
+  }
+  return false
 }
 
 /** Prefix for composer-optimistic user rows pending a matching mux event. */

@@ -1,22 +1,19 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import type { SessionId } from '@deepseek-ai/dsh-client-connection/client'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import type { ContentBlock, SessionId } from '@deepseek-ai/dsh-client-connection/client'
+import type { ChatNode } from '@deepseek-ai/dsh-client-ui-conversation/client'
+import type {} from '@deepseek-ai/dsh-client-ui-conversation/src/client/conversation-nodes/message.ts'
 import type { TokenUsageProjection } from '@deepseek-ai/dsh-token-meter/client'
 import type { PermissionSelect as PermissionSelectValue } from '@deepseek-ai/dsh-permission-presets/client'
 import type { GoalProjection } from '@deepseek-ai/dsh-goal/client'
 import type { PlanProjection } from '@deepseek-ai/dsh-plan-mode/client'
-import { MessageText } from '@deepseek-ai/dsh-client-ui-primitives'
-import { applyMuxEvent, deriveAgentWorking, OPTIMISTIC_USER_PREFIX, rowsFromHistory, type ChatRow } from './chat-projection.ts'
-import { MobileAssistantBody } from './MobileAssistantBody.tsx'
+import { deriveAgentWorkingFromSnapshot } from './chat-projection.ts'
 import { MobileBackButton } from './MobileBackButton.tsx'
-import { MobileChatHero } from './MobileChatHero.tsx'
+import { MobileChatFlow } from './MobileChatFlow.tsx'
 import { MobileChatHeader } from './MobileChatHeader.tsx'
-import { MobileCommandRow } from './MobileCommandRow.tsx'
 import { MobileComposer } from './MobileComposer.tsx'
 import { claimExecuteLine, type MobileComposerClaim } from './mobile-composer-claim.ts'
-import { MobileContextRow } from './MobileContextRow.tsx'
 import { MobileSessionTabs, type MobileSessionViewId } from './MobileSessionTabs.tsx'
 import { MobileStatsLine } from './MobileStatsLine.tsx'
-import { MobileToolRow } from './MobileToolRow.tsx'
 import { MobileTrajectoryPane } from './MobileTrajectoryPane.tsx'
 import { MobileWorkspaceSelect } from './MobileWorkspaceSelect.tsx'
 import {
@@ -31,6 +28,7 @@ import { mobileApi } from './mobile-api-client.ts'
 import { sessionChatHeaderMeta, sessionDisplayTitle } from './session-label.ts'
 import { mobileConversationT } from './mobile-locale.ts'
 import { StatusPanel } from './StatusPanel.tsx'
+import { useMobileSession } from './useMobileSession.ts'
 import css from './mobile-shell.module.css'
 
 /** Props for {@link ChatPage}. */
@@ -45,8 +43,12 @@ export interface ChatPageProps {
   onSessionChange: (sessionId: SessionId, draft: string) => void
 }
 
-function hasConversationContent(rows: readonly ChatRow[]): boolean {
-  return rows.some(row => row.role === 'user' || row.role === 'assistant')
+function textFromUserContent(content: readonly ContentBlock[]): string {
+  return content
+    .filter((block): block is Extract<ContentBlock, { type: 'text' }> => block.type === 'text')
+    .map(block => block.text)
+    .join('')
+    .trim()
 }
 
 /**
@@ -60,10 +62,11 @@ export function ChatPage({
   onSessionChange,
 }: ChatPageProps): JSX.Element {
   const { subscribeMux, sessions, refreshSessions, error: connectionError } = useMobileConnection()
-  const [rows, setRows] = useState<ChatRow[]>([])
+  const mobileSession = useMobileSession(sessionId)
+  const { ready, error: sessionError, useSession, loadOlder } = mobileSession
   const [draft, setDraft] = useState(initialDraft)
   const [claim, setClaim] = useState<MobileComposerClaim | undefined>(undefined)
-  const [loading, setLoading] = useState(true)
+  const [optimisticText, setOptimisticText] = useState<string | undefined>(undefined)
   const [sending, setSending] = useState(false)
   const [cancelling, setCancelling] = useState(false)
   const [error, setError] = useState<string | undefined>(undefined)
@@ -71,23 +74,17 @@ export function ChatPage({
   const [projections, setProjections] = useState(createProjectionStore)
   const wasAgentWorkingRef = useRef(false)
   const messageListRef = useRef<HTMLDivElement>(null)
-  /** Session id whose history has already been scrolled to the floor. */
-  const scrolledSessionRef = useRef<SessionId | null>(null)
-  /** Keep the floor in view while the reader has not scrolled away. */
   const stickToBottomRef = useRef(true)
-  const [historySessionId, setHistorySessionId] = useState(sessionId)
+  const [activeSessionId, setActiveSessionId] = useState(sessionId)
 
-  // Reset chat chrome when the active session changes (before paint).
-  if (sessionId !== historySessionId) {
-    setHistorySessionId(sessionId)
-    setLoading(true)
-    setRows([])
+  if (sessionId !== activeSessionId) {
+    setActiveSessionId(sessionId)
     setProjections(createProjectionStore())
     setError(undefined)
     setDraft(initialDraft)
     setClaim(undefined)
+    setOptimisticText(undefined)
     setSessionView('chat')
-    scrolledSessionRef.current = null
     stickToBottomRef.current = true
   }
 
@@ -115,33 +112,28 @@ export function ChatPage({
     return 'Work'
   }, [sessionSummary])
 
-  const showHero = !loading && !hasConversationContent(rows) && draft.trim() === '' && claim === undefined
-  const switchableWorkspace = !hasConversationContent(rows)
+  const blank = useSession(snapshot => snapshot.blank)
+  const chatOrder = useSession(snapshot => snapshot.chat.order)
+  const chatNodes = useSession(snapshot => snapshot.chat.nodes)
+  const agentSnapshot = useSession(snapshot => ({
+    running: snapshot.running,
+    partial: snapshot.partial,
+    runningCalls: snapshot.runningCalls,
+    chat: snapshot.chat,
+  }))
+
+  const showHero = ready
+    && blank
+    && draft.trim() === ''
+    && claim === undefined
+    && optimisticText === undefined
+  const switchableWorkspace = blank && optimisticText === undefined
 
   const planProjection = projectionMap.plan as PlanProjection | undefined
   const planActive = planProjection !== undefined
     && (planProjection.pending ? !planProjection.active : planProjection.active)
   const goalProjection = projectionMap.goal as GoalProjection | null | undefined
   const goalActive = goalProjection !== undefined && goalProjection !== null
-
-  const scrollMessageListToBottom = (): void => {
-    const list = messageListRef.current
-    if (list === null) return
-    list.scrollTop = list.scrollHeight
-  }
-
-  useLayoutEffect(() => {
-    if (loading || showHero) return
-    const list = messageListRef.current
-    if (list === null) return
-    if (scrolledSessionRef.current !== sessionId) {
-      scrollMessageListToBottom()
-      scrolledSessionRef.current = sessionId
-      stickToBottomRef.current = true
-      return
-    }
-    if (stickToBottomRef.current) scrollMessageListToBottom()
-  }, [loading, rows, sessionId, showHero])
 
   const onMessageListScroll = (): void => {
     const list = messageListRef.current
@@ -151,51 +143,16 @@ export function ChatPage({
   }
 
   const agentWorking = useMemo(
-    () => deriveAgentWorking(sessionSummary?.running === true, rows, sending),
-    [rows, sending, sessionSummary?.running],
+    () => deriveAgentWorkingFromSnapshot(
+      sessionSummary?.running === true,
+      agentSnapshot,
+      sending,
+    ),
+    [agentSnapshot, sending, sessionSummary?.running],
   )
 
   const tokenUsage = projectionMap.tokenUsage as TokenUsageProjection | undefined
   const permissions = projectionMap.permissions as PermissionSelectValue | undefined
-
-  useEffect(() => {
-    let cancelled = false
-    const summary = sessions.find(item => item.sessionId === sessionId)
-    const load = async (): Promise<void> => {
-      setLoading(true)
-      setError(undefined)
-      try {
-        const response = await mobileApi.sessions.history({ sessionId, maxMessages: 50 })
-        if (cancelled) return
-        if (!response.result.ok) {
-          setError(response.result.error.message)
-          setRows([])
-          return
-        }
-        const history = response.result.value
-        setRows(rowsFromHistory(history.events))
-        setProjections(() => {
-          let store = createProjectionStore()
-          if (summary?.projections !== undefined) {
-            store = seedProjectionStore(store, summary.projections)
-          }
-          if (history.projections !== undefined) {
-            store = seedProjectionStore(store, history.projections)
-          }
-          return store
-        })
-      } catch (loadError) {
-        if (!cancelled) {
-          setError(loadError instanceof Error ? loadError.message : String(loadError))
-        }
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
-    }
-    void load()
-    return () => { cancelled = true }
-    // History is per-session; session.list refreshes must not reload the transcript.
-  }, [sessionId])
 
   useEffect(() => {
     const summary = sessions.find(item => item.sessionId === sessionId)
@@ -208,11 +165,21 @@ export function ChatPage({
     return subscribeMux((frame) => {
       if (frame.type === 'session/projection' && frame.sessionId === sessionId) {
         setProjections(current => applyProjectionFrame(current, frame.key, frame.value, frame.seq))
-        return
       }
-      setRows(current => applyMuxEvent(current, sessionId, frame))
     })
   }, [sessionId, subscribeMux])
+
+  useEffect(() => {
+    if (optimisticText === undefined) return
+    for (const key of chatOrder) {
+      const node = chatNodes.get(key) as ChatNode | undefined
+      if (node?.kind !== 'user' && node?.kind !== 'steering') continue
+      if (textFromUserContent(node.data.content) === optimisticText) {
+        setOptimisticText(undefined)
+        break
+      }
+    }
+  }, [chatNodes, chatOrder, optimisticText])
 
   useEffect(() => {
     if (agentWorking || sending) {
@@ -268,8 +235,7 @@ export function ChatPage({
     setError(undefined)
     setDraft('')
     stickToBottomRef.current = true
-    const optimisticId = `${OPTIMISTIC_USER_PREFIX}${String(Date.now())}`
-    setRows(current => [...current, { id: optimisticId, role: 'user', text }])
+    setOptimisticText(text)
     try {
       const response = await mobileApi.sessions.prompt({
         sessionId,
@@ -278,12 +244,12 @@ export function ChatPage({
       })
       if (!response.result.ok) {
         setError(response.result.error.message)
-        setRows(current => current.filter(row => row.id !== optimisticId))
+        setOptimisticText(undefined)
         setDraft(text)
       }
     } catch (sendError) {
       setError(sendError instanceof Error ? sendError.message : String(sendError))
-      setRows(current => current.filter(row => row.id !== optimisticId))
+      setOptimisticText(undefined)
       setDraft(text)
     } finally {
       setSending(false)
@@ -338,60 +304,26 @@ export function ChatPage({
       >
         <div className={showHero ? css.chatPageBlank : css.chatPage}>
           {sessionView === 'trajectory' && !showHero
-            ? <MobileTrajectoryPane sessionId={sessionId} />
+            ? (
+              <MobileTrajectoryPane
+                sessionId={sessionId}
+                ready={ready}
+                error={sessionError}
+                useSession={useSession}
+                loadOlder={loadOlder}
+              />
+            )
             : (
-              <div
-                ref={messageListRef}
-                className={css.messageList}
+              <MobileChatFlow
+                sessionId={sessionId}
+                useSession={useSession}
+                ready={ready}
+                error={sessionError}
+                optimisticText={optimisticText}
+                showHero={showHero}
+                listRef={messageListRef}
                 onScroll={onMessageListScroll}
-              >
-                {loading && <div className={css.loadingState}>正在加载历史消息…</div>}
-                {!loading && showHero && <MobileChatHero />}
-                {!loading && !showHero && rows.map((row) => {
-                  if (row.role === 'status') {
-                    return <div key={row.id} className={css.statusRow}>{row.text}</div>
-                  }
-                  if (row.role === 'context') {
-                    return (
-                      <div key={row.id} className={css.contextRow}>
-                        <MobileContextRow
-                          content={row.content}
-                          provenance={row.provenance}
-                          form={row.form}
-                        />
-                      </div>
-                    )
-                  }
-                  if (row.role === 'tool') {
-                    return (
-                      <div key={row.id} className={css.toolRowWrap}>
-                        <MobileToolRow toolName={row.name} block={row.block} />
-                      </div>
-                    )
-                  }
-                  if (row.role === 'command') {
-                    return (
-                      <div key={row.id} className={css.toolRowWrap}>
-                        <MobileCommandRow row={row} />
-                      </div>
-                    )
-                  }
-                  if (row.role === 'user') {
-                    return (
-                      <div key={row.id} className={css.userRow}>
-                        <div className={css.userBubble}>
-                          <MessageText text={row.text} />
-                        </div>
-                      </div>
-                    )
-                  }
-                  return (
-                    <div key={row.id} className={css.assistantRow}>
-                      <MobileAssistantBody blocks={row.blocks} streaming={row.streaming === true} />
-                    </div>
-                  )
-                })}
-              </div>
+              />
             )}
           <div className={showHero ? css.composerDockBlank : css.composerDock}>
             <StatusPanel error={error ?? connectionError} />

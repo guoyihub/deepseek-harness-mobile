@@ -1,6 +1,6 @@
 /**
- * Per-session {@link Session} for mobile Trajectory: opens history, accepts mux
- * frames for this session id, and exposes a uSES selector hook for TrajectoryView.
+ * Per-session {@link Session} for mobile chat and trajectory: opens history,
+ * accepts mux frames for this session id, and exposes a uSES selector hook.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { SessionId, MuxFrame, RpcRequest } from '@deepseek-ai/dsh-client-connection/client'
@@ -89,7 +89,7 @@ export interface MobileSessionHandle {
 }
 
 /**
- * Open a runtime Session for Trajectory assembly while Chat keeps its own fold.
+ * Open a runtime Session for Chat + Trajectory assembly.
  * @param sessionId - active Host session.
  */
 export function useMobileSession(sessionId: SessionId): MobileSessionHandle {
