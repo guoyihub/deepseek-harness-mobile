@@ -14,10 +14,18 @@ export {
   MOBILE_STORAGE_KEYS,
   clearPairingStorage,
   readSessionToken,
+  readStoredDeviceLabel,
+  readDeviceLabelCustomized,
   readStoredHostBase,
   writePairingResult,
+  writeStoredDeviceLabel,
   writeStoredHostBase,
 } from './mobile-session.ts'
+export {
+  DEFAULT_DEVICE_LABEL,
+  resolveDefaultDeviceLabel,
+  resolveDeviceLabel,
+} from './device-label.ts'
 export { normalizeHostBaseUrl, resolveMobileApiBase } from './mobile-origin.ts'
 import { createWebConnectionRpc } from './rpc.ts'
 import { isLoopbackHostname } from '../loopback-hostname.ts'

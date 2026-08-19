@@ -1,7 +1,12 @@
 import { useState } from 'react'
 import { useMobileConnection } from './MobileConnectionContext.tsx'
 import { MobileShellLayout } from './MobileShellLayout.tsx'
-import { clearPairingStorage } from './mobile-session.ts'
+import {
+  clearPairingStorage,
+  resolveDefaultDeviceLabel,
+  resolveDeviceLabel,
+  writeStoredDeviceLabel,
+} from './mobile-session.ts'
 import {
   applyMobileTheme,
   readMobileThemePreference,
@@ -41,6 +46,17 @@ export function ConnectionPage({ onBack, onPair }: ConnectionPageProps): JSX.Ele
     reloadPairing,
   } = useMobileConnection()
   const [theme, setTheme] = useState<MobileThemePreference>(() => readMobileThemePreference())
+  const [deviceLabel, setDeviceLabel] = useState(() => resolveDeviceLabel())
+  const [deviceLabelDirty, setDeviceLabelDirty] = useState(false)
+
+  const onDeviceLabelBlur = (): void => {
+    if (!deviceLabelDirty) return
+    const trimmed = deviceLabel.trim()
+    const next = trimmed === '' ? resolveDefaultDeviceLabel() : trimmed
+    if (next !== deviceLabel) setDeviceLabel(next)
+    writeStoredDeviceLabel(next)
+    setDeviceLabelDirty(false)
+  }
 
   const onThemeChange = (next: MobileThemePreference): void => {
     setTheme(next)
@@ -98,6 +114,28 @@ export function ConnectionPage({ onBack, onPair }: ConnectionPageProps): JSX.Ele
               </div>
             )}
           </dl>
+        </section>
+
+        <section className={css.settingsSection}>
+          <h2 className={css.settingsSectionLabel}>本机</h2>
+          <div className={css.settingsCard}>
+            <label className={css.pairField}>
+              <span className={css.pairFieldLabel}>设备名称</span>
+              <input
+                className={css.pairInput}
+                type="text"
+                value={deviceLabel}
+                maxLength={64}
+                placeholder={resolveDefaultDeviceLabel()}
+                aria-label="设备名称"
+                onChange={(event) => {
+                  setDeviceLabelDirty(true)
+                  setDeviceLabel(event.target.value)
+                }}
+                onBlur={onDeviceLabelBlur}
+              />
+            </label>
+          </div>
         </section>
 
         <section className={css.settingsSection}>

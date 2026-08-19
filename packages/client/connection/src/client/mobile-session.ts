@@ -14,7 +14,18 @@ export const MOBILE_STORAGE_KEYS = {
   deviceId: 'dsh.mobile.deviceId',
   /** Last seen Host fingerprint. */
   fingerprint: 'dsh.mobile.fingerprint',
+  /** User-visible mobile device label (survives disconnect). */
+  deviceLabel: 'dsh.mobile.deviceLabel',
+  /** Whether the user explicitly edited {@link MOBILE_STORAGE_KEYS.deviceLabel}. */
+  deviceLabelCustomized: 'dsh.mobile.deviceLabelCustomized',
 } as const
+
+const PAIRING_ONLY_STORAGE_KEYS = [
+  MOBILE_STORAGE_KEYS.host,
+  MOBILE_STORAGE_KEYS.sessionToken,
+  MOBILE_STORAGE_KEYS.deviceId,
+  MOBILE_STORAGE_KEYS.fingerprint,
+] as const
 
 /**
  * Read the configured Host base URL for cross-origin mobile clients.
@@ -69,9 +80,48 @@ export function writePairingResult(
   globalThis.localStorage?.setItem(MOBILE_STORAGE_KEYS.fingerprint, fingerprint)
 }
 
+/**
+ * Read the stored mobile device label.
+ * @returns saved label, or undefined when unset or storage is unavailable.
+ */
+export function readStoredDeviceLabel(): string | undefined {
+  try {
+    const value = globalThis.localStorage?.getItem(MOBILE_STORAGE_KEYS.deviceLabel)
+    return value === null || value === '' ? undefined : value
+  } catch {
+    return undefined
+  }
+}
+
+/**
+ * Whether the user explicitly saved a custom device label.
+ */
+export function readDeviceLabelCustomized(): boolean {
+  try {
+    return globalThis.localStorage?.getItem(MOBILE_STORAGE_KEYS.deviceLabelCustomized) === '1'
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Persist the user-visible mobile device label after an explicit edit.
+ * @param label - trimmed display name for this phone.
+ */
+export function writeStoredDeviceLabel(label: string): void {
+  const trimmed = label.trim()
+  if (trimmed === '') {
+    globalThis.localStorage?.removeItem(MOBILE_STORAGE_KEYS.deviceLabel)
+    globalThis.localStorage?.removeItem(MOBILE_STORAGE_KEYS.deviceLabelCustomized)
+    return
+  }
+  globalThis.localStorage?.setItem(MOBILE_STORAGE_KEYS.deviceLabel, trimmed)
+  globalThis.localStorage?.setItem(MOBILE_STORAGE_KEYS.deviceLabelCustomized, '1')
+}
+
 /** Clear stored pairing state (user-visible disconnect). */
 export function clearPairingStorage(): void {
-  for (const key of Object.values(MOBILE_STORAGE_KEYS)) {
+  for (const key of PAIRING_ONLY_STORAGE_KEYS) {
     globalThis.localStorage?.removeItem(key)
   }
 }

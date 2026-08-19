@@ -7,7 +7,7 @@ import {
 import { resolveMobileApiBase } from '@deepseek-ai/dsh-client-connection/client'
 
 import { useMobileConnection } from './MobileConnectionContext.tsx'
-import { clearPairingStorage, writePairingResult } from './mobile-session.ts'
+import { clearPairingStorage, resolveDeviceLabel, writePairingResult } from './mobile-session.ts'
 import {
   pairWithPolling,
   parsePairingInput,
@@ -20,9 +20,6 @@ import css from './mobile-shell.module.css'
 
 /** Pairing page phase for UI state machine. */
 type PairPhase = 'idle' | 'pairing' | 'pendingDesktop' | 'success' | 'error'
-
-/** Fixed label sent to the Host for this mobile device. */
-const DEVICE_LABEL = 'Mobile device'
 
 /** Props for {@link PairPage}. */
 export interface PairPageProps {
@@ -83,7 +80,7 @@ export function PairPage({
     setStatus('正在配对…')
     try {
       const options = pairPassword.trim() === '' ? {} : { pairPassword: pairPassword.trim() }
-      const result = await pairWithPolling(input, DEVICE_LABEL, options)
+      const result = await pairWithPolling(input, resolveDeviceLabel(), options)
       setPhase('success')
       setStatus('配对成功，正在验证连接…')
       const storedBase = resolveMobileApiBase(input.baseUrl)
