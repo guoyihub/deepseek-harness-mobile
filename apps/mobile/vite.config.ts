@@ -77,9 +77,36 @@ export default defineConfig({
         replacement: src('../../packages/client/runtime/src/$1'),
       },
       {
+        find: /^@deepseek-ai\/dsh-client-ui-trajectory\/src\/(.*)$/,
+        replacement: src('../../packages/client/ui-trajectory/src/$1'),
+      },
+      {
+        find: /^@deepseek-ai\/dsh-client-ui-conversation\/client$/,
+        replacement: src('../../packages/client/ui-conversation/src/client/index.ts'),
+      },
+      {
+        find: /^@deepseek-ai\/dsh-client-ui-slots$/,
+        replacement: src('../../packages/client/ui-slots/src/index.ts'),
+      },
+      {
+        find: /^@deepseek-ai\/dsh-client-web-react$/,
+        replacement: src('../../packages/client/web-react/src/index.ts'),
+      },
+      {
+        find: /^@deepseek-ai\/cordis$/,
+        replacement: src('../../vendor/cordis/src/index.ts'),
+      },
+      {
         find: /^@deepseek-ai\/dsh-llm\/types$/,
         replacement: src('../../packages/llm/llm/src/types.ts'),
       },
+    ],
+  },
+  optimizeDeps: {
+    include: [
+      '@tanstack/react-virtual',
+      'diff',
+      'use-sync-external-store/shim/with-selector.js',
     ],
   },
   build: {

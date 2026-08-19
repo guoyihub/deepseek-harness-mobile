@@ -45,6 +45,8 @@ interface MobileConnectionContextValue {
   createSession: () => Promise<SessionId | undefined>
   /** Subscribe to mux frames for chat streaming. */
   subscribeMux: (listener: (frame: MuxFrame) => void) => () => void
+  /** Subscribe to mux envelopes (rpcId + frame) for Session.handleMuxEnvelope. */
+  subscribeMuxEnvelope: (listener: (envelope: RpcRequest<MuxFrame>) => void) => () => void
   /** Clear pairing storage and stop the connection loop. */
   disconnect: () => void
   /** Re-read pairing storage after a successful pair flow. */
@@ -72,6 +74,7 @@ export function MobileConnectionProvider({ children }: { children: ReactNode }):
   const [error, setError] = useState<string | undefined>(undefined)
   const [revoked, setRevoked] = useState(false)
   const muxListeners = useRef(new Set<(frame: MuxFrame) => void>())
+  const muxEnvelopeListeners = useRef(new Set<(envelope: RpcRequest<MuxFrame>) => void>())
   const controllerRef = useRef<ConnectionController | undefined>(undefined)
 
   const handleAuthFailure = useCallback((message: string): void => {
@@ -138,6 +141,13 @@ export function MobileConnectionProvider({ children }: { children: ReactNode }):
     return () => { muxListeners.current.delete(listener) }
   }, [])
 
+  const subscribeMuxEnvelope = useCallback((
+    listener: (envelope: RpcRequest<MuxFrame>) => void,
+  ): (() => void) => {
+    muxEnvelopeListeners.current.add(listener)
+    return () => { muxEnvelopeListeners.current.delete(listener) }
+  }, [])
+
   const disconnect = useCallback((): void => {
     controllerRef.current?.stop()
     controllerRef.current = undefined
@@ -158,6 +168,7 @@ export function MobileConnectionProvider({ children }: { children: ReactNode }):
     const controller = new ConnectionController(mobileApi, {
       onMuxEnvelope: (envelope: RpcRequest<MuxFrame>) => {
         for (const listener of muxListeners.current) listener(envelope.payload)
+        for (const listener of muxEnvelopeListeners.current) listener(envelope)
       },
       onHostEnvelope: (envelope: RpcRequest<HostFrame>) => {
         const frame = envelope.payload
@@ -192,6 +203,7 @@ export function MobileConnectionProvider({ children }: { children: ReactNode }):
     refreshSessions,
     createSession,
     subscribeMux,
+    subscribeMuxEnvelope,
     disconnect,
     reloadPairing,
   }), [
@@ -206,6 +218,7 @@ export function MobileConnectionProvider({ children }: { children: ReactNode }):
     refreshSessions,
     createSession,
     subscribeMux,
+    subscribeMuxEnvelope,
     disconnect,
     reloadPairing,
   ])

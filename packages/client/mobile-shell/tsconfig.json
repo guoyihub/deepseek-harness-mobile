@@ -21,6 +21,18 @@
       "path": "../ui-directory-picker-browse"
     },
     {
+      "path": "../ui-conversation"
+    },
+    {
+      "path": "../ui-trajectory"
+    },
+    {
+      "path": "../ui-slots"
+    },
+    {
+      "path": "../web-react"
+    },
+    {
       "path": "../ui-tool"
     },
     {

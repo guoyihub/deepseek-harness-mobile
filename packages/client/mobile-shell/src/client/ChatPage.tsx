@@ -14,8 +14,10 @@ import { MobileCommandRow } from './MobileCommandRow.tsx'
 import { MobileComposer } from './MobileComposer.tsx'
 import { claimExecuteLine, type MobileComposerClaim } from './mobile-composer-claim.ts'
 import { MobileContextRow } from './MobileContextRow.tsx'
+import { MobileSessionTabs, type MobileSessionViewId } from './MobileSessionTabs.tsx'
 import { MobileStatsLine } from './MobileStatsLine.tsx'
 import { MobileToolRow } from './MobileToolRow.tsx'
+import { MobileTrajectoryPane } from './MobileTrajectoryPane.tsx'
 import { MobileWorkspaceSelect } from './MobileWorkspaceSelect.tsx'
 import {
   applyProjectionFrame,
@@ -65,6 +67,7 @@ export function ChatPage({
   const [sending, setSending] = useState(false)
   const [cancelling, setCancelling] = useState(false)
   const [error, setError] = useState<string | undefined>(undefined)
+  const [sessionView, setSessionView] = useState<MobileSessionViewId>('chat')
   const [projections, setProjections] = useState(createProjectionStore)
   const wasAgentWorkingRef = useRef(false)
   const messageListRef = useRef<HTMLDivElement>(null)
@@ -83,6 +86,7 @@ export function ChatPage({
     setError(undefined)
     setDraft(initialDraft)
     setClaim(undefined)
+    setSessionView('chat')
     scrolledSessionRef.current = null
     stickToBottomRef.current = true
   }
@@ -328,61 +332,74 @@ export function ChatPage({
               />
             </header>
           )
-          : <MobileChatHeader title={title} meta={headerMeta} onBack={onBack} />}
+          : (
+            <MobileChatHeader
+              title={title}
+              meta={headerMeta}
+              onBack={onBack}
+              tabs={(
+                <MobileSessionTabs active={sessionView} onChange={setSessionView} />
+              )}
+            />
+          )}
       >
         <div className={showHero ? css.chatPageBlank : css.chatPage}>
-          <div
-            ref={messageListRef}
-            className={css.messageList}
-            onScroll={onMessageListScroll}
-          >
-            {loading && <div className={css.loadingState}>正在加载历史消息…</div>}
-            {!loading && showHero && <MobileChatHero />}
-            {!loading && !showHero && rows.map((row) => {
-              if (row.role === 'status') {
-                return <div key={row.id} className={css.statusRow}>{row.text}</div>
-              }
-              if (row.role === 'context') {
-                return (
-                  <div key={row.id} className={css.contextRow}>
-                    <MobileContextRow
-                      content={row.content}
-                      provenance={row.provenance}
-                      form={row.form}
-                    />
-                  </div>
-                )
-              }
-              if (row.role === 'tool') {
-                return (
-                  <div key={row.id} className={css.toolRowWrap}>
-                    <MobileToolRow toolName={row.name} block={row.block} />
-                  </div>
-                )
-              }
-              if (row.role === 'command') {
-                return (
-                  <div key={row.id} className={css.toolRowWrap}>
-                    <MobileCommandRow row={row} />
-                  </div>
-                )
-              }
-              if (row.role === 'user') {
-                return (
-                  <div key={row.id} className={css.userRow}>
-                    <div className={css.userBubble}>
-                      <MessageText text={row.text} />
+          {sessionView === 'trajectory' && !showHero
+            ? <MobileTrajectoryPane sessionId={sessionId} />
+            : (
+              <div
+                ref={messageListRef}
+                className={css.messageList}
+                onScroll={onMessageListScroll}
+              >
+                {loading && <div className={css.loadingState}>正在加载历史消息…</div>}
+                {!loading && showHero && <MobileChatHero />}
+                {!loading && !showHero && rows.map((row) => {
+                  if (row.role === 'status') {
+                    return <div key={row.id} className={css.statusRow}>{row.text}</div>
+                  }
+                  if (row.role === 'context') {
+                    return (
+                      <div key={row.id} className={css.contextRow}>
+                        <MobileContextRow
+                          content={row.content}
+                          provenance={row.provenance}
+                          form={row.form}
+                        />
+                      </div>
+                    )
+                  }
+                  if (row.role === 'tool') {
+                    return (
+                      <div key={row.id} className={css.toolRowWrap}>
+                        <MobileToolRow toolName={row.name} block={row.block} />
+                      </div>
+                    )
+                  }
+                  if (row.role === 'command') {
+                    return (
+                      <div key={row.id} className={css.toolRowWrap}>
+                        <MobileCommandRow row={row} />
+                      </div>
+                    )
+                  }
+                  if (row.role === 'user') {
+                    return (
+                      <div key={row.id} className={css.userRow}>
+                        <div className={css.userBubble}>
+                          <MessageText text={row.text} />
+                        </div>
+                      </div>
+                    )
+                  }
+                  return (
+                    <div key={row.id} className={css.assistantRow}>
+                      <MobileAssistantBody blocks={row.blocks} streaming={row.streaming === true} />
                     </div>
-                  </div>
-                )
-              }
-              return (
-                <div key={row.id} className={css.assistantRow}>
-                  <MobileAssistantBody blocks={row.blocks} streaming={row.streaming === true} />
-                </div>
-              )
-            })}
-          </div>
+                  )
+                })}
+              </div>
+            )}
           <div className={showHero ? css.composerDockBlank : css.composerDock}>
             <StatusPanel error={error} />
             <MobileComposer
