@@ -319,4 +319,98 @@ describe('connection lifecycle', () => {
       controller.stop()
     }
   })
+
+  it('rejects a non-positive maxAttempts at construction', () => {
+    const api = new FakeApiClient()
+    expect(() => new ConnectionController(api, {}, { maxAttempts: 0 })).toThrow(/maxAttempts must be a positive integer/)
+    expect(() => new ConnectionController(api, {}, { maxAttempts: 1.5 })).toThrow(/maxAttempts must be a positive integer/)
+  })
+
+  it('stops after maxAttempts consecutive failed reconnects and fires onGiveUp', async () => {
+    const api = new FakeApiClient()
+    api.onDescribe = () => Promise.reject(new Error('host down'))
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    let giveUps = 0
+    const controller = new ConnectionController(api, {
+      onGiveUp: () => { giveUps++ },
+    }, { ...FAST, maxAttempts: 3 })
+    controller.start()
+    try {
+      await vi.waitFor(() => { expect(giveUps).toBe(1) })
+      expect(api.callsOf('host.describe')).toHaveLength(4)
+      await new Promise(resolve => setTimeout(resolve, 40))
+      expect(api.callsOf('host.describe')).toHaveLength(4)
+      expect(giveUps).toBe(1)
+    } finally {
+      controller.stop()
+      warnSpy.mockRestore()
+    }
+  })
+
+  it('stops after maxAttempts even when onGiveUp is omitted', async () => {
+    const api = new FakeApiClient()
+    api.onDescribe = () => Promise.reject(new Error('host down'))
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    const controller = new ConnectionController(api, {}, { ...FAST, maxAttempts: 1 })
+    controller.start()
+    try {
+      await vi.waitFor(() => { expect(api.callsOf('host.describe')).toHaveLength(2) })
+      await new Promise(resolve => setTimeout(resolve, 40))
+      expect(api.callsOf('host.describe')).toHaveLength(2)
+    } finally {
+      controller.stop()
+      warnSpy.mockRestore()
+    }
+  })
+
+  it('gives up after maxAttempts failed reconnects of a previously connected generation', async () => {
+    const api = new FakeApiClient()
+    let connected = 0
+    let giveUps = 0
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    const controller = new ConnectionController(api, {
+      onConnected: () => { connected++ },
+      onGiveUp: () => { giveUps++ },
+    }, { ...FAST, maxAttempts: 3 })
+    controller.start()
+    try {
+      await vi.waitFor(() => { expect(connected).toBe(1) })
+      api.onDescribe = () => Promise.reject(new Error('host down'))
+      api.failStreams(new Error('torn'))
+      await vi.waitFor(() => { expect(giveUps).toBe(1) })
+      expect(connected).toBe(1)
+      const describesAfterLoss = api.callsOf('host.describe').length - 1
+      expect(describesAfterLoss).toBe(3)
+    } finally {
+      controller.stop()
+      warnSpy.mockRestore()
+    }
+  })
+
+  it('keeps retrying when the last allowed reconnect succeeds', async () => {
+    const api = new FakeApiClient()
+    let describeCalls = 0
+    api.onDescribe = () => {
+      describeCalls++
+      return describeCalls <= 3
+        ? Promise.reject(new Error('host down'))
+        : Promise.resolve(ok({ version: '0', cwd: '/f', attachedSessions: 0, canOpenPath: true }))
+    }
+    let connected = 0
+    let giveUps = 0
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    const controller = new ConnectionController(api, {
+      onConnected: () => { connected++ },
+      onGiveUp: () => { giveUps++ },
+    }, { ...FAST, maxAttempts: 3 })
+    controller.start()
+    try {
+      await vi.waitFor(() => { expect(connected).toBe(1) })
+      expect(describeCalls).toBe(4)
+      expect(giveUps).toBe(0)
+    } finally {
+      controller.stop()
+      warnSpy.mockRestore()
+    }
+  })
 })

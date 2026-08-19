@@ -14,13 +14,34 @@ export interface ConnectionConfig {
    *  fires onOpen (misbehaving proxy) must not wedge the connection forever — on timeout the
    *  generation proceeds as connected and the live-gap repair path covers stragglers. */
   streamOpenTimeoutMs?: number
+  /** Maximum consecutive reconnect attempts after a generation fails. After this many
+   *  failed retries the loop stops and {@link ConnectionSinks.onGiveUp} fires. Omission
+   *  retries until {@link ConnectionController.stop}. A provided value that is not a
+   *  positive integer throws at construction. */
+  maxAttempts?: number
 }
 
-const CONNECTION_DEFAULTS: Required<ConnectionConfig> = {
+interface ResolvedConnectionConfig {
+  backoffBaseMs: number
+  backoffFactor: number
+  backoffMaxMs: number
+  streamOpenTimeoutMs: number
+  maxAttempts: number | undefined
+}
+
+const CONNECTION_DEFAULTS: ResolvedConnectionConfig = {
   backoffBaseMs: 500,
   backoffFactor: 2,
   backoffMaxMs: 10_000,
   streamOpenTimeoutMs: 3_000,
+  maxAttempts: undefined,
+}
+
+function assertMaxAttempts(maxAttempts: number | undefined): void {
+  if (maxAttempts === undefined) return
+  if (!Number.isInteger(maxAttempts) || maxAttempts < 1) {
+    throw new Error('connection maxAttempts must be a positive integer')
+  }
 }
 
 function sleep(ms: number, signal: AbortSignal): Promise<void> {
@@ -49,6 +70,8 @@ export interface ConnectionSinks {
   /** Coarse state transitions (deduplicated: fires only on change). The initial pre-connect
    *  span reports nothing — the UI treats "no state yet" as connecting, not as an outage. */
   onStateChange?: (state: ConnectionState) => void
+  /** After {@link ConnectionConfig.maxAttempts} consecutive failed reconnects; the loop has already stopped. */
+  onGiveUp?: () => void
 }
 
 /**
@@ -64,13 +87,14 @@ export class ConnectionController {
   private current: AbortController | null = null
   private running = false
   private lastState: ConnectionState | null = null
-  private readonly config: Required<ConnectionConfig>
+  private readonly config: ResolvedConnectionConfig
 
   constructor(
     private readonly api: IApiClient,
     private readonly sinks: ConnectionSinks = {},
     config: ConnectionConfig = {},
   ) {
+    assertMaxAttempts(config.maxAttempts)
     this.config = { ...CONNECTION_DEFAULTS, ...config }
   }
 
@@ -162,6 +186,13 @@ export class ConnectionController {
       if (!this.isRunning()) return
       this.emitState('reconnecting')
       this.attempt += 1
+      const maxAttempts = this.config.maxAttempts
+      if (maxAttempts !== undefined && this.attempt > maxAttempts) {
+        console.warn(`[web-runtime] connection lost, giving up after ${String(maxAttempts)} reconnect attempts`)
+        this.running = false
+        this.callSink(() => { this.sinks.onGiveUp?.() })
+        return
+      }
       console.warn(`[web-runtime] connection lost, retry #${this.attempt}`)
       const idle = new AbortController()
       await sleep(this.backoffDelay(this.attempt), idle.signal)

@@ -4,7 +4,7 @@ import type { TokenUsageProjection } from '@deepseek-ai/dsh-token-meter/client'
 import type { PermissionSelect as PermissionSelectValue } from '@deepseek-ai/dsh-permission-presets/client'
 import type { GoalProjection } from '@deepseek-ai/dsh-goal/client'
 import type { PlanProjection } from '@deepseek-ai/dsh-plan-mode/client'
-import { ConnectionBanner, MessageText } from '@deepseek-ai/dsh-client-ui-primitives'
+import { MessageText } from '@deepseek-ai/dsh-client-ui-primitives'
 import { applyMuxEvent, deriveAgentWorking, OPTIMISTIC_USER_PREFIX, rowsFromHistory, type ChatRow } from './chat-projection.ts'
 import { MobileAssistantBody } from './MobileAssistantBody.tsx'
 import { MobileBackButton } from './MobileBackButton.tsx'
@@ -59,7 +59,7 @@ export function ChatPage({
   onBack,
   onSessionChange,
 }: ChatPageProps): JSX.Element {
-  const { subscribeMux, connectionState, sessions, hostDescription, refreshSessions } = useMobileConnection()
+  const { subscribeMux, sessions, refreshSessions, error: connectionError } = useMobileConnection()
   const [rows, setRows] = useState<ChatRow[]>([])
   const [draft, setDraft] = useState(initialDraft)
   const [claim, setClaim] = useState<MobileComposerClaim | undefined>(undefined)
@@ -101,12 +101,6 @@ export function ChatPage({
     [sessionId, sessions],
   )
 
-  const hostLabel = useMemo(() => {
-    if (hostDescription?.provider !== undefined) return hostDescription.provider
-    if (hostDescription?.model !== undefined) return hostDescription.model
-    return 'DSH'
-  }, [hostDescription])
-
   const projectionMap = useMemo(() => projectionValues(projections), [projections])
 
   const title = useMemo(() => {
@@ -117,9 +111,9 @@ export function ChatPage({
   }, [projectionMap.title, sessionId, sessionSummary])
 
   const headerMeta = useMemo(() => {
-    if (sessionSummary !== undefined) return sessionChatHeaderMeta(sessionSummary, hostLabel)
-    return `${hostLabel} · Work`
-  }, [hostLabel, sessionSummary])
+    if (sessionSummary !== undefined) return sessionChatHeaderMeta(sessionSummary)
+    return 'Work'
+  }, [sessionSummary])
 
   const showHero = !loading && !hasConversationContent(rows) && draft.trim() === '' && claim === undefined
   const switchableWorkspace = !hasConversationContent(rows)
@@ -314,7 +308,6 @@ export function ChatPage({
 
   return (
     <div className={css.chatSurface}>
-      <ConnectionBanner reconnecting={connectionState === 'reconnecting'} />
       <MobileShellLayout
         blankChat={showHero}
         headerSlot={showHero
@@ -401,7 +394,7 @@ export function ChatPage({
               </div>
             )}
           <div className={showHero ? css.composerDockBlank : css.composerDock}>
-            <StatusPanel error={error} />
+            <StatusPanel error={error ?? connectionError} />
             <MobileComposer
               sessionId={sessionId}
               draft={draft}

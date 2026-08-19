@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import {
-  ConnectionBanner,
   IconChevronLeftOutline14,
   IconFolderOpenOutline16,
 } from '@deepseek-ai/dsh-client-ui-primitives'
@@ -47,7 +46,7 @@ export function PairPage({
   autoStartCamera = true,
   initialPairingRaw,
 }: PairPageProps): JSX.Element {
-  const { reloadPairing, connectionState } = useMobileConnection()
+  const { reloadPairing } = useMobileConnection()
   const [pairPassword, setPairPassword] = useState('')
   const [passwordRequired, setPasswordRequired] = useState(false)
   const [pendingDecoded, setPendingDecoded] = useState<string | undefined>(undefined)
@@ -177,120 +176,117 @@ export function PairPage({
   const showErrorSheet = phase === 'error' && !cameraActive
 
   return (
-    <>
-      <ConnectionBanner reconnecting={connectionState === 'reconnecting'} />
-      <div className={css.page}>
-        <div className={css.scanPage}>
-          {cameraActive && !busy && (
-            <QrCameraScanner
-              active={cameraActive}
-              onDecode={onCameraDecode}
-              onError={onCameraError}
-              onReady={onCameraReady}
-            />
-          )}
-
-          <div className={css.scanMaskTop} aria-hidden="true" />
-          <div className={css.scanMaskBottom} aria-hidden="true" />
-
-          <header className={css.scanHeader}>
-            <button
-              type="button"
-              className={css.scanBackBtn}
-              aria-label={mobileConversationT('nav.back')}
-              onClick={onBack}
-            >
-              <IconChevronLeftOutline14 size={16} aria-hidden />
-            </button>
-            <h1 className={css.scanTitle}>连接我的电脑</h1>
-          </header>
-
-          {cameraActive && !busy && (
-            <div className={css.scanLaser} aria-hidden="true" />
-          )}
-
-          <p className={css.scanStatus} role="status">
-            {phase === 'pendingDesktop'
-              ? '请在电脑上点击「允许」，手机会自动继续…'
-              : status}
-          </p>
-
-          {!busy && (
-            <button
-              type="button"
-              className={css.scanAlbumBtn}
-              aria-label="从相册选择 QR 图片"
-              onClick={() => { fileInputRef.current?.click() }}
-            >
-              <IconFolderOpenOutline16 size={22} aria-hidden />
-            </button>
-          )}
-
-          <input
-            ref={fileInputRef}
-            className={css.pairFileInput}
-            type="file"
-            accept="image/*"
-            disabled={busy}
-            onChange={(event) => { void onPickImage(event.target.files?.[0]) }}
+    <div className={css.page}>
+      <div className={css.scanPage}>
+        {cameraActive && !busy && (
+          <QrCameraScanner
+            active={cameraActive}
+            onDecode={onCameraDecode}
+            onError={onCameraError}
+            onReady={onCameraReady}
           />
+        )}
 
-          {(showPasswordSheet || showErrorSheet) && (
-            <div className={css.scanSheet}>
-              {showErrorSheet && (
-                <>
-                  <p className={css.scanSheetError}>{status}</p>
-                  <button
-                    type="button"
-                    className={css.settingsPrimaryBtn}
-                    onClick={() => {
-                      setPhase('idle')
-                      setStatus('正在打开摄像头…')
-                      setCameraActive(true)
-                    }}
-                  >
-                    重新打开摄像头
-                  </button>
-                </>
-              )}
-              {showPasswordSheet && (
-                <>
-                  <p className={css.scanSheetCopy}>电脑端已启用连接密码，请输入后继续</p>
-                  <input
-                    className={css.pairInput}
-                    type="password"
-                    value={pairPassword}
-                    placeholder="连接密码"
-                    onChange={(event) => { setPairPassword(event.target.value) }}
-                  />
-                  <button
-                    type="button"
-                    className={css.settingsPrimaryBtn}
-                    onClick={onContinueWithPassword}
-                  >
-                    继续连接
-                  </button>
-                </>
-              )}
-              <button
-                type="button"
-                className={css.settingsDangerBtn}
-                onClick={() => {
-                  clearPairingStorage()
-                  reloadPairing()
-                  setPendingDecoded(undefined)
-                  setPhase('idle')
-                  setStatus('已清除本地连接信息')
-                  setCameraActive(true)
-                }}
-              >
-                清除本地信息
-              </button>
-            </div>
-          )}
-        </div>
+        <div className={css.scanMaskTop} aria-hidden="true" />
+        <div className={css.scanMaskBottom} aria-hidden="true" />
+
+        <header className={css.scanHeader}>
+          <button
+            type="button"
+            className={css.scanBackBtn}
+            aria-label={mobileConversationT('nav.back')}
+            onClick={onBack}
+          >
+            <IconChevronLeftOutline14 size={16} aria-hidden />
+          </button>
+          <h1 className={css.scanTitle}>连接我的电脑</h1>
+        </header>
+
+        {cameraActive && !busy && (
+          <div className={css.scanLaser} aria-hidden="true" />
+        )}
+
+        <p className={css.scanStatus} role="status">
+          {phase === 'pendingDesktop'
+            ? '请在电脑上点击「允许」，手机会自动继续…'
+            : status}
+        </p>
+
+        {!busy && (
+          <button
+            type="button"
+            className={css.scanAlbumBtn}
+            aria-label="从相册选择 QR 图片"
+            onClick={() => { fileInputRef.current?.click() }}
+          >
+            <IconFolderOpenOutline16 size={22} aria-hidden />
+          </button>
+        )}
+
+        <input
+          ref={fileInputRef}
+          className={css.pairFileInput}
+          type="file"
+          accept="image/*"
+          disabled={busy}
+          onChange={(event) => { void onPickImage(event.target.files?.[0]) }}
+        />
+
+        {(showPasswordSheet || showErrorSheet) && (
+          <div className={css.scanSheet}>
+            {showErrorSheet && (
+              <>
+                <p className={css.scanSheetError}>{status}</p>
+                <button
+                  type="button"
+                  className={css.settingsPrimaryBtn}
+                  onClick={() => {
+                    setPhase('idle')
+                    setStatus('正在打开摄像头…')
+                    setCameraActive(true)
+                  }}
+                >
+                  重新打开摄像头
+                </button>
+              </>
+            )}
+            {showPasswordSheet && (
+              <>
+                <p className={css.scanSheetCopy}>电脑端已启用连接密码，请输入后继续</p>
+                <input
+                  className={css.pairInput}
+                  type="password"
+                  value={pairPassword}
+                  placeholder="连接密码"
+                  onChange={(event) => { setPairPassword(event.target.value) }}
+                />
+                <button
+                  type="button"
+                  className={css.settingsPrimaryBtn}
+                  onClick={onContinueWithPassword}
+                >
+                  继续连接
+                </button>
+              </>
+            )}
+            <button
+              type="button"
+              className={css.settingsDangerBtn}
+              onClick={() => {
+                clearPairingStorage()
+                reloadPairing()
+                setPendingDecoded(undefined)
+                setPhase('idle')
+                setStatus('已清除本地连接信息')
+                setCameraActive(true)
+              }}
+            >
+              清除本地信息
+            </button>
+          </div>
+        )}
       </div>
-    </>
+    </div>
   )
 }
 

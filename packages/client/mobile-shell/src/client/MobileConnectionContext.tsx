@@ -53,6 +53,9 @@ interface MobileConnectionContextValue {
   reloadPairing: () => void
 }
 
+/** Consecutive failed generations after which mobile pairing is dropped. */
+const MOBILE_RECONNECT_MAX_ATTEMPTS = 3
+
 const MobileConnectionContext = createContext<MobileConnectionContextValue | undefined>(undefined)
 
 function isUnauthorizedError(message: string): boolean {
@@ -92,9 +95,13 @@ export function MobileConnectionProvider({ children }: { children: ReactNode }):
   }, [])
 
   const reloadPairing = useCallback((): void => {
-    setPaired(readSessionToken() !== undefined)
+    const token = readSessionToken()
+    setPaired(token !== undefined)
     setHostBase(readStoredHostBase())
-    if (readSessionToken() !== undefined) setRevoked(false)
+    if (token !== undefined) {
+      setRevoked(false)
+      setError(undefined)
+    }
   }, [])
 
   const refreshSessions = useCallback(async (): Promise<void> => {
@@ -157,7 +164,14 @@ export function MobileConnectionProvider({ children }: { children: ReactNode }):
     setConnectionState(null)
     setSessions([])
     setRevoked(false)
+    setError(undefined)
   }, [])
+
+  const dropPairingAfterReconnect = useCallback((): void => {
+    clearPairingStorage()
+    disconnect()
+    setError('多次重连失败，请重新扫码连接')
+  }, [disconnect])
 
   useEffect(() => {
     if (!paired) {
@@ -182,14 +196,15 @@ export function MobileConnectionProvider({ children }: { children: ReactNode }):
         void refreshSessions()
       },
       onStateChange: (state: ConnectionState) => { setConnectionState(state) },
-    })
+      onGiveUp: dropPairingAfterReconnect,
+    }, { maxAttempts: MOBILE_RECONNECT_MAX_ATTEMPTS })
     controllerRef.current = controller
     controller.start()
     return () => {
       controller.stop()
       if (controllerRef.current === controller) controllerRef.current = undefined
     }
-  }, [paired, refreshSessions])
+  }, [dropPairingAfterReconnect, paired, refreshSessions])
 
   const value = useMemo<MobileConnectionContextValue>(() => ({
     paired,

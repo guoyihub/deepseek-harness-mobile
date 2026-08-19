@@ -13,8 +13,8 @@ export type TaskHomeFilter = 'all' | 'running'
 export interface TaskHomeHeaderProps {
   /** Whether the device is paired with a Host. */
   paired: boolean
-  /** Whether the connection is reconnecting. */
-  reconnecting: boolean
+  /** Whether the live Host streams are connected. */
+  connected: boolean
   /** Active filter mode. */
   filter: TaskHomeFilter
   /** Whether the search overlay is open. */
@@ -32,13 +32,18 @@ const FILTER_LABELS: Record<TaskHomeFilter, string> = {
   running: '运行中',
 }
 
+function connectionAriaLabel(paired: boolean, connected: boolean): string {
+  if (!paired) return '连接管理'
+  return connected ? '连接管理，已连接' : '连接管理，未连接'
+}
+
 /**
  * Large-title task home header with filter, search, and profile pill.
  * @param props - filter/search state and navigation callbacks.
  */
 export function TaskHomeHeader({
   paired,
-  reconnecting,
+  connected,
   filter,
   searchOpen,
   onFilterChange,
@@ -61,9 +66,9 @@ export function TaskHomeHeader({
 
   const statusClass = !paired
     ? css.taskHomeStatusOffline
-    : reconnecting
-      ? css.taskHomeStatusWarning
-      : css.taskHomeStatusOnline
+    : connected
+      ? css.taskHomeStatusOnline
+      : css.taskHomeStatusError
 
   return (
     <header className={css.taskHomeHeader}>
@@ -115,7 +120,7 @@ export function TaskHomeHeader({
           <button
             type="button"
             className={css.taskHomeAvatarButton}
-            aria-label="连接管理"
+            aria-label={connectionAriaLabel(paired, connected)}
             onClick={onOpenConnection}
           >
             <span className={css.taskHomeAvatar}>

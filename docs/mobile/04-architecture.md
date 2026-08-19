@@ -33,7 +33,7 @@ flowchart TB
 
 | 模块 | 路径 | Mobile 用法 |
 |------|------|-------------|
-| 连接层 | `packages/client/connection` | `WebApiClient` 携带 `Authorization`；`ConnectionController` 重连逻辑不变 |
+| 连接层 | `packages/client/connection` | `WebApiClient` 携带 `Authorization`；移动端 `ConnectionController` 连续重连 3 次失败后放弃并清除配对 |
 | 运行时 | `packages/client/runtime` | `SessionManager`、workspace 投影不变 |
 | RPC 网关 | `packages/api/gateway` | Typert `@Remote` 方法手机端直接调用 |
 | Remote 定义 | `packages/api/remotes` | 会话列表、发消息等已有 Remote |
@@ -122,10 +122,7 @@ flowchart TB
   Runtime --> Connection
 ```
 
-M1 **不** 加载完整桌面 `ui-*` roster；仅引入：
-
-- `ConnectionBanner`（移动样式）
-- 会话消息列表的最小 ConversationNode 子集
+M1 **不** 加载完整桌面 `ui-*` roster；仅引入会话消息列表的最小 ConversationNode 子集。任务列表用头像角标表示连接状态（绿=已连接，红=已配对但断开），不挂 `ConnectionBanner`。
 
 ## CLI 扩展（规划）
 

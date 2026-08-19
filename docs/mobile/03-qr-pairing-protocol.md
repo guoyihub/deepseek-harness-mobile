@@ -222,7 +222,7 @@ M1 方案（择一，实现时定稿）：
 |------|------|
 | token 过期 | 手机提示重新扫码 |
 | Host 重启 | 视策略：sessionToken 失效 → 重新扫码 |
-| Wi-Fi 切换 | ConnectionController 重连；失败则引导扫码 |
+| Wi-Fi 切换 | ConnectionController 连续重连 3 次；失败则清除配对并引导扫码 |
 | 桌面拒绝配对 | 手机显示「桌面未授权」 |
 
 ## 下一步

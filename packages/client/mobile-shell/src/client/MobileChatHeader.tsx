@@ -16,23 +16,37 @@ export interface MobileChatHeaderProps {
 }
 
 /**
- * TRAE-style chat header: circular back control, bold title, workspace meta row.
+ * Chat header: back control, title, then tabs with the workspace chip on the right.
  * @param props - title copy and navigation.
  */
 export function MobileChatHeader({ title, meta, onBack, tabs }: MobileChatHeaderProps): JSX.Element {
-  return (
-    <header className={tabs === undefined ? css.shellHeaderChat : css.shellHeaderChatWithTabs}>
-      <div className={css.chatHeaderTopRow}>
+  const workspace = (
+    <div className={css.chatHeaderMeta} title={meta}>
+      <IconFolderOpen16 size={14} aria-hidden />
+      <span className={css.chatHeaderMetaText}>{meta}</span>
+    </div>
+  )
+
+  if (tabs === undefined) {
+    return (
+      <header className={css.shellHeaderChat}>
         <MobileBackButton onClick={onBack} />
-        <div className={css.chatHeaderTitleBlock}>
-          <h1 className={css.chatHeaderTitle}>{title}</h1>
-          <div className={css.chatHeaderMeta}>
-            <IconFolderOpen16 size={14} aria-hidden />
-            <span className={css.chatHeaderMetaText}>{meta}</span>
-          </div>
+        <h1 className={css.chatHeaderTitle}>{title}</h1>
+        {workspace}
+      </header>
+    )
+  }
+
+  return (
+    <header className={css.shellHeaderChatWithTabs}>
+      <MobileBackButton onClick={onBack} />
+      <div className={css.chatHeaderMain}>
+        <h1 className={css.chatHeaderTitle}>{title}</h1>
+        <div className={css.chatHeaderTabRow}>
+          {tabs}
+          {workspace}
         </div>
       </div>
-      {tabs}
     </header>
   )
 }

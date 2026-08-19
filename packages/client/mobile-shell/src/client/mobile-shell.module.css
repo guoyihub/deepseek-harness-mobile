@@ -81,9 +81,9 @@
 
 .shellHeaderChatWithTabs {
   display: flex;
-  flex-direction: column;
+  align-items: flex-start;
   flex: none;
-  gap: 4px;
+  gap: 12px;
   padding:
     calc(12px + env(safe-area-inset-top, 0px))
     calc(16px + env(safe-area-inset-right, 0px))
@@ -92,17 +92,26 @@
   background: var(--dsw-alias-bg-base);
 }
 
-.chatHeaderTopRow {
+.chatHeaderMain {
+  flex: 1;
+  min-width: 0;
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.chatHeaderTabRow {
+  display: flex;
+  align-items: flex-start;
   gap: 12px;
   min-width: 0;
 }
 
 .sessionTabs {
   display: flex;
+  flex: none;
   gap: 28px;
-  padding-left: 52px;
+  padding-left: 0;
 }
 
 .sessionTab {
@@ -157,15 +166,9 @@
   line-height: 18px;
 }
 
-.chatHeaderTitleBlock {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
 .chatHeaderTitle {
+  flex: 1 1 auto;
+  min-width: 0;
   margin: 0;
   overflow: hidden;
   font-size: 18px;
@@ -178,16 +181,25 @@
 
 .chatHeaderMeta {
   display: inline-flex;
+  flex: 1 1 auto;
   align-items: center;
-  gap: 4px;
+  justify-content: flex-start;
+  gap: 8px;
   min-width: 0;
+  height: 16px;
   color: var(--dsw-alias-label-tertiary);
 }
 
+.chatHeaderMeta > svg {
+  flex: none;
+}
+
 .chatHeaderMetaText {
+  min-width: 0;
   overflow: hidden;
-  font-size: 12px;
-  line-height: 18px;
+  font-size: 13px;
+  line-height: 16px;
+  font-weight: 500;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -385,8 +397,8 @@
   background: var(--dsw-alias-state-success-primary);
 }
 
-.settingsStatusWarning {
-  background: var(--dsw-alias-state-warning-primary);
+.settingsStatusError {
+  background: var(--dsw-alias-state-error-primary);
 }
 
 .settingsStatusOffline {
@@ -1717,8 +1729,8 @@
   background: var(--dsw-alias-state-success-primary);
 }
 
-.taskHomeStatusWarning {
-  background: var(--dsw-alias-state-warning-primary);
+.taskHomeStatusError {
+  background: var(--dsw-alias-state-error-primary);
 }
 
 .taskHomeStatusOffline {

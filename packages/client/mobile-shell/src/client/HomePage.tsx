@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 
 import type { SessionId } from '@deepseek-ai/dsh-client-connection/client'
 
-import { Button, ConnectionBanner } from '@deepseek-ai/dsh-client-ui-primitives'
+import { Button } from '@deepseek-ai/dsh-client-ui-primitives'
 
 import { useMobileConnection } from './MobileConnectionContext.tsx'
 
@@ -83,76 +83,70 @@ export function HomePage({
 
   if (searchOpen && paired) {
     return (
-      <>
-        <ConnectionBanner reconnecting={connectionState === 'reconnecting'} />
-        <TaskHomeSearchOverlay
-          query={searchQuery}
-          sessions={sessions}
-          onQueryChange={setSearchQuery}
-          onClose={closeSearch}
-          onOpenChat={onOpenChat}
-        />
-      </>
+      <TaskHomeSearchOverlay
+        query={searchQuery}
+        sessions={sessions}
+        onQueryChange={setSearchQuery}
+        onClose={closeSearch}
+        onOpenChat={onOpenChat}
+      />
     )
   }
 
   return (
-    <>
-      <ConnectionBanner reconnecting={connectionState === 'reconnecting'} />
-      <MobileShellLayout
-        taskHomeContent
-        headerSlot={(
-          <TaskHomeHeader
-            paired={paired}
-            reconnecting={connectionState === 'reconnecting'}
-            filter={filter}
-            searchOpen={searchOpen}
-            onFilterChange={setFilter}
-            onSearchOpen={() => { setSearchOpen(true) }}
-            onOpenConnection={onOpenConnection}
-          />
-        )}
-        fab={(
-          <MobileFab
-            label={paired ? '新建任务' : '扫码连接电脑'}
-            onClick={onFabClick}
-          />
-        )}
-      >
-        <StatusPanel error={revoked ? '设备已被桌面吊销，请重新扫码' : error} />
+    <MobileShellLayout
+      taskHomeContent
+      headerSlot={(
+        <TaskHomeHeader
+          paired={paired}
+          connected={connectionState === 'connected'}
+          filter={filter}
+          searchOpen={searchOpen}
+          onFilterChange={setFilter}
+          onSearchOpen={() => { setSearchOpen(true) }}
+          onOpenConnection={onOpenConnection}
+        />
+      )}
+      fab={(
+        <MobileFab
+          label={paired ? '新建任务' : '扫码连接电脑'}
+          onClick={onFabClick}
+        />
+      )}
+    >
+      <StatusPanel error={revoked ? '设备已被桌面吊销，请重新扫码' : error} />
 
-        {!paired && (
-          <div className={css.taskHomeEmpty}>
-            <p className={css.taskHomeEmptyCopy}>扫码连接同一局域网内的 DeepSeek Harness 电脑，即可查看并继续 Agent 任务。</p>
-            <Button variant="primary" onClick={onPair}>扫码连接电脑</Button>
-          </div>
-        )}
+      {!paired && (
+        <div className={css.taskHomeEmpty}>
+          <p className={css.taskHomeEmptyCopy}>扫码连接同一局域网内的 DeepSeek Harness 电脑，即可查看并继续 Agent 任务。</p>
+          <Button variant="primary" onClick={onPair}>扫码连接电脑</Button>
+        </div>
+      )}
 
-        {paired && sessionsLoading && visibleSessions.length === 0 && (
-          <div className={css.taskHomeEmpty}>正在加载任务…</div>
-        )}
+      {paired && sessionsLoading && visibleSessions.length === 0 && (
+        <div className={css.taskHomeEmpty}>正在加载任务…</div>
+      )}
 
-        {paired && !sessionsLoading && visibleSessions.length === 0 && (
-          <div className={css.taskHomeEmpty}>
-            {filter === 'running'
-              ? '没有匹配的任务'
-              : '暂无任务，点击右下角按钮新建一个'}
-          </div>
-        )}
+      {paired && !sessionsLoading && visibleSessions.length === 0 && (
+        <div className={css.taskHomeEmpty}>
+          {filter === 'running'
+            ? '没有匹配的任务'
+            : '暂无任务，点击右下角按钮新建一个'}
+        </div>
+      )}
 
-        {paired && visibleSessions.length > 0 && (
-          <ul className={css.taskHomeList}>
-            {visibleSessions.map(item => (
-              <TaskHomeRow
-                key={item.sessionId}
-                item={item}
-                hostLabel={hostLabel}
-                onOpen={() => { onOpenChat(item.sessionId) }}
-              />
-            ))}
-          </ul>
-        )}
-      </MobileShellLayout>
-    </>
+      {paired && visibleSessions.length > 0 && (
+        <ul className={css.taskHomeList}>
+          {visibleSessions.map(item => (
+            <TaskHomeRow
+              key={item.sessionId}
+              item={item}
+              hostLabel={hostLabel}
+              onOpen={() => { onOpenChat(item.sessionId) }}
+            />
+          ))}
+        </ul>
+      )}
+    </MobileShellLayout>
   )
 }

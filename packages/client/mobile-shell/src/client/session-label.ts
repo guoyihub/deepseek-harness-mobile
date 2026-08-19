@@ -29,14 +29,11 @@ export function sessionDisplayTitle(summary: SessionSummary): string {
 }
 
 /**
- * Resolve chat header metadata: host label and workspace leaf.
+ * Resolve chat header workspace leaf (right-side path chip).
  * @param summary - one session.list row.
- * @param hostLabel - optional Host provider label.
  */
-export function sessionChatHeaderMeta(summary: SessionSummary, hostLabel?: string): string {
-  const workspace = sessionWorkspaceLabel(summary)
-  const host = hostLabel ?? summary.agentPreset ?? 'DSH'
-  return `${host} · ${workspace}`
+export function sessionChatHeaderMeta(summary: SessionSummary): string {
+  return sessionWorkspaceLabel(summary)
 }
 
 /**
