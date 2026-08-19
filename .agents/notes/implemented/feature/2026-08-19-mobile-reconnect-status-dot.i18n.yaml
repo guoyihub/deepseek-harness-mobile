@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-08-19-mobile-reconnect-status-dot.md
-2026-08-19-mobile-reconnect-status-dot.md: 8de1844341ffc29dca55c220cb345ac86d19554b
-2026-08-19-mobile-reconnect-status-dot.zh.md: 6d2ce645c9db8e0f9a428644e4e7a1a5d06f444f
+2026-08-19-mobile-reconnect-status-dot.md: 004f6f204aba01739c469bf40bca4d2b7d047ae2
+2026-08-19-mobile-reconnect-status-dot.zh.md: 9ba33182fa2aba1a6dcca956415530af445ab1b0

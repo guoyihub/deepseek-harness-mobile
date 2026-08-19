@@ -81,6 +81,14 @@ export function HomePage({
     setSearchQuery('')
   }
 
+  const reconnecting = connectionState === 'reconnecting'
+  const reconnectFailed = !paired && !revoked && error !== undefined
+  const unpairedCopy = revoked
+    ? '设备已被桌面吊销，请重新扫码连接'
+    : reconnectFailed
+      ? '多次重连失败，请扫描电脑上的二维码重新连接'
+      : '扫码连接同一局域网内的 DeepSeek Harness 电脑，即可查看并继续 Agent 任务。'
+
   if (searchOpen && paired) {
     return (
       <TaskHomeSearchOverlay
@@ -114,20 +122,24 @@ export function HomePage({
         />
       )}
     >
-      <StatusPanel error={revoked ? '设备已被桌面吊销，请重新扫码' : error} />
+      <StatusPanel error={paired && !reconnecting ? error : undefined} />
 
       {!paired && (
         <div className={css.taskHomeEmpty}>
-          <p className={css.taskHomeEmptyCopy}>扫码连接同一局域网内的 DeepSeek Harness 电脑，即可查看并继续 Agent 任务。</p>
+          <p className={css.taskHomeEmptyCopy}>{unpairedCopy}</p>
           <Button variant="primary" onClick={onPair}>扫码连接电脑</Button>
         </div>
       )}
 
-      {paired && sessionsLoading && visibleSessions.length === 0 && (
+      {paired && reconnecting && visibleSessions.length === 0 && (
+        <div className={css.taskHomeEmpty} role="status">正在重连…</div>
+      )}
+
+      {paired && !reconnecting && sessionsLoading && visibleSessions.length === 0 && (
         <div className={css.taskHomeEmpty}>正在加载任务…</div>
       )}
 
-      {paired && !sessionsLoading && visibleSessions.length === 0 && (
+      {paired && !reconnecting && !sessionsLoading && visibleSessions.length === 0 && (
         <div className={css.taskHomeEmpty}>
           {filter === 'running'
             ? '没有匹配的任务'

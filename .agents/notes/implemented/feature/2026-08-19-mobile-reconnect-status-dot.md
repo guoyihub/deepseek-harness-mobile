@@ -10,7 +10,7 @@ A lost Host stream showed a full-width red reconnect banner on every mobile page
 
 ## Decision
 
-Mobile outages are a status-dot change, not a banner. `TaskHomeHeader` paints the avatar badge green while `connectionState === 'connected'` and red while paired but not connected. `ConnectionBanner` is not mounted on mobile shell pages. `ConnectionController` accepts optional `maxAttempts`; mobile starts the loop with `3`. After that many consecutive failed reconnects the controller stops, fires `onGiveUp`, and the shell clears pairing storage so the next connect is a scan.
+Mobile outages are a status-dot change, not a banner. `TaskHomeHeader` paints the avatar badge green while `connectionState === 'connected'` and red while paired but not connected. An empty task list shows `正在重连…` while reconnecting, and after give-up it shows a scan CTA. `ConnectionBanner` is not mounted on mobile shell pages. `ConnectionController` accepts optional `maxAttempts`; mobile starts the loop with `3`. After that many consecutive failed reconnects the controller stops, fires `onGiveUp`, and the shell clears pairing storage so the next connect is a scan.
 
 Desktop `ctx.connection.start` omits `maxAttempts` and still retries until `stop()`.
 
@@ -22,7 +22,7 @@ Desktop `ctx.connection.start` omits `maxAttempts` and still retries until `stop
 
 ## Consequences
 
-- Three failed reconnects drop the stored session token; the task list shows the unpaired scan CTA plus `多次重连失败，请重新扫码连接`.
+- Three failed reconnects drop the stored session token; the task list empty state reads `多次重连失败，请扫描电脑上的二维码重新连接` with a scan button.
 - A successful generation resets the attempt budget, so a later outage gets three new retries.
 - Connection-management copy still says 重连中; its status dot uses the same red as the task-home badge.
 
