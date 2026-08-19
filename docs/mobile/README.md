@@ -16,6 +16,9 @@ DeepSeek Harness Mobile（`@deepseek-ai/deepseek-harness-mobile`）是手机端 
 ## 本地开发
 
 ```powershell
+pnpm install
+pnpm run build:lib   # 首次 clone 或 pnpm run clean 之后必做
+
 # Terminal A — Host（默认 :3080）
 pnpm dsh web
 
@@ -23,7 +26,7 @@ pnpm dsh web
 pnpm dev:mobile
 ```
 
-一键后台启动见根目录 [README — 一键启动](../../README.md#run-from-source)（`deploy/dsh.sh` / `deploy/dsh.bat`）。
+`pnpm run build:lib` 按 Host → Client 顺序生成 Typert remote 契约与 client 构建产物（含 ui-theme 样式表）；跳过此步会导致 Mobile 无法加载主题 CSS 或 client 编译失败。一键后台启动见根目录 [README — 一键启动](../../README.md#run-from-source)（`deploy/dsh.sh` / `deploy/dsh.bat`）；deploy 脚本只启动进程，首次使用前须先完成安装与构建。
 
 | 端 | 本机 | 局域网 |
 |----|------|--------|

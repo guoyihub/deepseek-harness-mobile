@@ -147,6 +147,7 @@ Thanks to [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) an
 
 ```powershell
 pnpm install
+pnpm run build:lib   # required after first clone or pnpm run clean
 
 # Terminal A — Host (:3080)
 pnpm dsh web
@@ -155,9 +156,11 @@ pnpm dsh web
 pnpm dev:mobile
 ```
 
+`pnpm run build:lib` runs the Host → Client build in order, generating Typert remote contracts and client artifacts (including ui-theme stylesheets). Skipping it leaves Mobile unable to load theme CSS or client compilation failing.
+
 ### One-command start (background)
 
-The `deploy/` scripts start Host and Mobile PWA in the background, with logs and PID files (core logic in `deploy/dsh-runner.mjs`).
+The `deploy/` scripts start Host and Mobile PWA in the background, with logs and PID files (core logic in `deploy/dsh-runner.mjs`). They start processes only and do not build; complete `pnpm install` and `pnpm run build:lib` above before the first start.
 
 | Platform | Entry |
 | --- | --- |

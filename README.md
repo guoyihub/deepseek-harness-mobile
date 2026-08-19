@@ -147,6 +147,7 @@ docs/mobile/                         # 手机端开发说明
 
 ```powershell
 pnpm install
+pnpm run build:lib   # 首次 clone 或 pnpm run clean 之后必做
 
 # Terminal A — Host（:3080）
 pnpm dsh web
@@ -155,9 +156,11 @@ pnpm dsh web
 pnpm dev:mobile
 ```
 
+`pnpm run build:lib` 按 Host → Client 顺序生成 Typert remote 契约与 client 构建产物（含 ui-theme 样式表）；跳过此步会导致 Mobile 无法加载主题 CSS 或 client 编译失败。
+
 ### 一键启动（后台运行）
 
-`deploy/` 提供跨平台脚本，在后台启动 Host 与 Mobile PWA，并写入日志与 PID 文件（核心逻辑见 `deploy/dsh-runner.mjs`）。
+`deploy/` 提供跨平台脚本，在后台启动 Host 与 Mobile PWA，并写入日志与 PID 文件（核心逻辑见 `deploy/dsh-runner.mjs`）。脚本只启动进程，不会自动构建；首次使用前请先完成上方的 `pnpm install` 与 `pnpm run build:lib`。
 
 | 平台 | 入口 |
 | --- | --- |
