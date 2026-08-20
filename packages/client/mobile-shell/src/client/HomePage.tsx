@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 
 import type { SessionId } from '@deepseek-ai/dsh-client-connection/client'
 import type { PendingInteractionStatus } from '@deepseek-ai/dsh-client-runtime/client'
@@ -12,19 +12,31 @@ import { MobileFab } from './MobileFab.tsx'
 import { MobileShellLayout } from './MobileShellLayout.tsx'
 
 import {
+  archiveMobileSession,
+  archiveMobileSessions,
+  forkMobileSession,
+  pinMobileSessions,
+  renameMobileSession,
+} from './mobile-session-actions.ts'
+import {
   deriveMobileTaskGroups,
   groupDisplayLabel,
   visibleWireSessions,
 } from './mobile-task-groups.ts'
 import { mobileSessionIsActive } from './mobile-session-status.ts'
+import { sessionDisplayTitle } from './session-label.ts'
 
 import { StatusPanel } from './StatusPanel.tsx'
 
 import { TaskHomeHeader, type TaskHomeFilter } from './TaskHomeHeader.tsx'
 
+import { TaskHomeRenameModal } from './TaskHomeRenameModal.tsx'
+
 import { TaskHomeRow } from './TaskHomeRow.tsx'
 
 import { TaskHomeSearchOverlay } from './TaskHomeSearchOverlay.tsx'
+
+import { TaskHomeSelectDock } from './TaskHomeSelectDock.tsx'
 
 import css from './mobile-shell.module.css'
 
@@ -58,6 +70,7 @@ export function HomePage({
     error,
     revoked,
     createSession,
+    refreshSessions,
     pendingRevision,
     getPendingInteraction,
   } = useMobileConnection()
@@ -65,6 +78,14 @@ export function HomePage({
   const [filter, setFilter] = useState<TaskHomeFilter>('all')
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [selecting, setSelecting] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<ReadonlySet<SessionId>>(() => new Set())
+  const [actionError, setActionError] = useState<string | undefined>(undefined)
+  const [actionBusy, setActionBusy] = useState(false)
+  const [renameTarget, setRenameTarget] = useState<{
+    sessionId: SessionId
+    title: string
+  } | null>(null)
 
   const hostLabel = useMemo(() => {
     if (hostDescription?.model !== undefined) return hostDescription.model
@@ -113,6 +134,102 @@ export function HomePage({
     [visibleGroups],
   )
 
+  const exitSelect = useCallback((): void => {
+    setSelecting(false)
+    setSelectedIds(new Set())
+  }, [])
+
+  const enterSelect = useCallback((sessionId: SessionId): void => {
+    setSelecting(true)
+    setSelectedIds(new Set([sessionId]))
+    setActionError(undefined)
+  }, [])
+
+  const toggleSelect = useCallback((sessionId: SessionId): void => {
+    setSelectedIds((current) => {
+      const next = new Set(current)
+      if (next.has(sessionId)) next.delete(sessionId)
+      else next.add(sessionId)
+      return next
+    })
+  }, [])
+
+  const onArchiveOne = useCallback(async (sessionId: SessionId): Promise<void> => {
+    setActionBusy(true)
+    setActionError(undefined)
+    try {
+      await archiveMobileSession(sessionId)
+      await refreshSessions()
+      setSelectedIds((current) => {
+        if (!current.has(sessionId)) return current
+        const next = new Set(current)
+        next.delete(sessionId)
+        return next
+      })
+    } catch (reason) {
+      setActionError(reason instanceof Error ? reason.message : String(reason))
+    } finally {
+      setActionBusy(false)
+    }
+  }, [refreshSessions])
+
+  const onPinSelected = useCallback(async (): Promise<void> => {
+    if (selectedIds.size === 0 || actionBusy) return
+    setActionBusy(true)
+    setActionError(undefined)
+    try {
+      await pinMobileSessions([...selectedIds], workspaces)
+      await refreshSessions()
+      exitSelect()
+    } catch (reason) {
+      setActionError(reason instanceof Error ? reason.message : String(reason))
+    } finally {
+      setActionBusy(false)
+    }
+  }, [actionBusy, exitSelect, refreshSessions, selectedIds, workspaces])
+
+  const onPinOne = useCallback(async (sessionId: SessionId): Promise<void> => {
+    setActionBusy(true)
+    setActionError(undefined)
+    try {
+      await pinMobileSessions([sessionId], workspaces)
+      await refreshSessions()
+    } catch (reason) {
+      setActionError(reason instanceof Error ? reason.message : String(reason))
+    } finally {
+      setActionBusy(false)
+    }
+  }, [refreshSessions, workspaces])
+
+  const onArchiveSelected = useCallback(async (): Promise<void> => {
+    if (selectedIds.size === 0 || actionBusy) return
+    setActionBusy(true)
+    setActionError(undefined)
+    try {
+      await archiveMobileSessions([...selectedIds])
+      await refreshSessions()
+      exitSelect()
+    } catch (reason) {
+      setActionError(reason instanceof Error ? reason.message : String(reason))
+    } finally {
+      setActionBusy(false)
+    }
+  }, [actionBusy, exitSelect, refreshSessions, selectedIds])
+
+  const onForkOne = useCallback(async (sessionId: SessionId): Promise<void> => {
+    setActionBusy(true)
+    setActionError(undefined)
+    try {
+      const childId = await forkMobileSession(sessionId)
+      await refreshSessions()
+      onOpenChat(childId)
+    } catch (reason) {
+      setActionError(reason instanceof Error ? reason.message : String(reason))
+    } finally {
+      setActionBusy(false)
+    }
+  }, [onOpenChat, refreshSessions])
+
   const onFabClick = (): void => {
     if (!paired) {
       onPair()
@@ -159,19 +276,29 @@ export function HomePage({
           connected={connectionState === 'connected'}
           filter={filter}
           searchOpen={searchOpen}
+          selecting={selecting}
+          selectedCount={selectedIds.size}
+          onExitSelect={exitSelect}
           onFilterChange={setFilter}
           onSearchOpen={() => { setSearchOpen(true) }}
           onOpenConnection={onOpenConnection}
         />
       )}
-      fab={(
+      fab={selecting ? undefined : (
         <MobileFab
           label={paired ? '新建任务' : '扫码连接电脑'}
           onClick={onFabClick}
         />
       )}
+      dock={selecting ? (
+        <TaskHomeSelectDock
+          disabled={selectedIds.size === 0 || actionBusy}
+          onPin={() => { void onPinSelected() }}
+          onArchive={() => { void onArchiveSelected() }}
+        />
+      ) : undefined}
     >
-      <StatusPanel error={paired && !reconnecting ? error : undefined} />
+      <StatusPanel error={paired && !reconnecting ? (actionError ?? error) : undefined} />
 
       {!paired && (
         <div className={css.taskHomeEmpty}>
@@ -213,7 +340,20 @@ export function HomePage({
                         ? { pendingInteraction: session.pendingInteraction }
                         : {})}
                       hostLabel={hostLabel}
+                      selecting={selecting}
+                      selected={selectedIds.has(session.id)}
                       onOpen={() => { onOpenChat(session.id) }}
+                      onToggleSelect={() => { toggleSelect(session.id) }}
+                      onEnterSelect={() => { enterSelect(session.id) }}
+                      onRename={() => {
+                        setRenameTarget({
+                          sessionId: session.id,
+                          title: sessionDisplayTitle(item),
+                        })
+                      }}
+                      onFork={() => { void onForkOne(session.id) }}
+                      onPin={() => { void onPinOne(session.id) }}
+                      onArchive={() => { void onArchiveOne(session.id) }}
                     />
                   )
                 })}
@@ -221,6 +361,18 @@ export function HomePage({
             </section>
           ))}
         </div>
+      )}
+
+      {renameTarget !== null && (
+        <TaskHomeRenameModal
+          open
+          initialTitle={renameTarget.title}
+          onClose={() => { setRenameTarget(null) }}
+          onConfirm={async (title) => {
+            await renameMobileSession(renameTarget.sessionId, title)
+            await refreshSessions()
+          }}
+        />
       )}
     </MobileShellLayout>
   )

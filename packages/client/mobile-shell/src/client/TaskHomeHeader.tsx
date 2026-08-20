@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   IconChevronDownOutline14,
+  IconCloseOutline16,
   IconSearchOutline16,
   IconUserOutline16,
 } from '@deepseek-ai/dsh-client-ui-primitives'
@@ -19,6 +20,12 @@ export interface TaskHomeHeaderProps {
   filter: TaskHomeFilter
   /** Whether the search overlay is open. */
   searchOpen: boolean
+  /** Multi-select mode: show selected count and exit control. */
+  selecting?: boolean | undefined
+  /** Selected session count while selecting. */
+  selectedCount?: number | undefined
+  /** Exit multi-select mode. */
+  onExitSelect?: (() => void) | undefined
   /** Change the filter mode. */
   onFilterChange: (filter: TaskHomeFilter) => void
   /** Open the search overlay. */
@@ -46,6 +53,9 @@ export function TaskHomeHeader({
   connected,
   filter,
   searchOpen,
+  selecting = false,
+  selectedCount = 0,
+  onExitSelect,
   onFilterChange,
   onSearchOpen,
   onOpenConnection,
@@ -54,7 +64,7 @@ export function TaskHomeHeader({
   const filterRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    if (!filterOpen) return
+    if (!filterOpen || selecting) return
     const onPointerDown = (event: MouseEvent): void => {
       if (filterRef.current?.contains(event.target as Node) !== true) {
         setFilterOpen(false)
@@ -62,13 +72,33 @@ export function TaskHomeHeader({
     }
     document.addEventListener('pointerdown', onPointerDown)
     return () => { document.removeEventListener('pointerdown', onPointerDown) }
-  }, [filterOpen])
+  }, [filterOpen, selecting])
 
   const statusClass = !paired
     ? css.taskHomeStatusOffline
     : connected
       ? css.taskHomeStatusOnline
       : css.taskHomeStatusError
+
+  if (selecting) {
+    return (
+      <header className={css.taskHomeHeader}>
+        <div className={css.taskHomeHeaderRow}>
+          <h1 className={css.taskHomeSelectTitle}>
+            {selectedCount === 0 ? '选择会话' : `已选择 ${selectedCount} 个会话`}
+          </h1>
+          <button
+            type="button"
+            className={css.taskHomeSelectClose}
+            aria-label="退出多选"
+            onClick={onExitSelect}
+          >
+            <IconCloseOutline16 size={14} />
+          </button>
+        </div>
+      </header>
+    )
+  }
 
   return (
     <header className={css.taskHomeHeader}>

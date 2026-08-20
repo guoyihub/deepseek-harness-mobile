@@ -14,6 +14,8 @@ export interface MobileShellLayoutProps {
   children: ReactNode
   /** Optional floating action rendered above safe area. */
   fab?: ReactNode
+  /** Optional full-width bottom dock (e.g. multi-select actions). */
+  dock?: ReactNode
   /** When set, replaces the default sticky header. */
   headerSlot?: ReactNode
   /** Apply task-home content padding and FAB clearance. */
@@ -32,6 +34,7 @@ export function MobileShellLayout({
   onBack,
   children,
   fab,
+  dock,
   headerSlot,
   taskHomeContent = false,
   blankChat = false,
@@ -59,7 +62,8 @@ export function MobileShellLayout({
           )}
         </header>
       )}
-      <main className={contentClass}>{children}</main>
+      <main className={contentClass} data-dock={dock !== undefined || undefined}>{children}</main>
+      {dock !== undefined && <div className={css.dock}>{dock}</div>}
       {fab !== undefined && <div className={css.fab}>{fab}</div>}
     </div>
   )

@@ -218,7 +218,10 @@
   justify-content: flex-start;
   gap: 8px;
   min-width: 0;
+  /* Same text box + underline reserve as `.sessionTab` so labels share one baseline. */
   height: 16px;
+  padding-bottom: 10px;
+  box-sizing: content-box;
   color: var(--dsw-alias-label-tertiary);
 }
 
@@ -980,6 +983,23 @@
   z-index: 3;
 }
 
+.dock {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 4;
+  pointer-events: none;
+}
+
+.dock > * {
+  pointer-events: auto;
+}
+
+.taskHomeContent[data-dock] {
+  padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+}
+
 .chatPage {
   display: flex;
   flex: 1;
@@ -1476,8 +1496,9 @@
 
 .composerTrailing {
   flex: 0 0 auto;
-  gap: 12px;
+  gap: 8px;
   margin-left: auto;
+  align-items: center;
 }
 
 .composerAdd {
@@ -1621,14 +1642,13 @@
   display: grid;
   place-items: center;
   flex: none;
-  width: 34px;
-  height: 34px;
+  width: 28px;
+  height: 28px;
   padding: 0;
   border: none;
   border-radius: 999px;
   background: var(--dsw-alias-button-info-fill);
   color: #fff;
-  transform: translateY(-2px);
 }
 
 .composerSend:disabled {
@@ -1931,14 +1951,17 @@
 .taskHomeSearchRowItem {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
+  gap: 4px;
   width: 100%;
-  padding: 12px 0;
+  padding: 0;
   border: none;
   background: transparent;
   color: inherit;
-  font: inherit;
-  text-align: left;
+}
+
+.taskHomeSearchRowItem .taskHomeRowMain {
+  gap: 12px;
+  padding: 12px 0;
 }
 
 .taskHomeSearchIconBox {
@@ -2028,15 +2051,157 @@
   position: relative;
   display: flex;
   align-items: flex-start;
-  gap: 12px;
+  gap: 4px;
   width: 100%;
-  padding: 16px 0;
+  padding: 0;
   border: none;
   border-bottom: 1px solid var(--dsw-alias-border-l1);
   background: transparent;
   color: inherit;
+}
+
+.taskHomeRowMain {
+  display: flex;
+  flex: 1;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+  padding: 16px 0;
+  border: none;
+  background: transparent;
+  color: inherit;
   font: inherit;
   text-align: left;
+  cursor: pointer;
+}
+
+.taskHomeRow[data-selecting] .taskHomeRowMain {
+  padding-right: 8px;
+}
+
+.taskHomeRowMenuButton {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  margin-top: 20px;
+  padding: 0;
+  border: none;
+  border-radius: 20px;
+  background: transparent;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.taskHomeRowMenuButton:active {
+  background: var(--dsw-alias-bg-layer-2);
+}
+
+.taskHomeCheck {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  margin-top: 12px;
+  border: 1.5px solid var(--dsw-alias-border-l2);
+  border-radius: 50%;
+  color: var(--dsw-alias-label-primary-foreground);
+  background: transparent;
+}
+
+.taskHomeCheck[data-checked] {
+  border-color: var(--dsw-alias-button-primary-fill);
+  background: var(--dsw-alias-button-primary-fill);
+}
+
+.taskHomeSelectTitle {
+  margin: 0;
+  min-width: 0;
+  color: var(--dsw-alias-label-primary);
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 28px;
+}
+
+.taskHomeSelectClose {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: none;
+  border-radius: 18px;
+  background: var(--dsw-alias-bg-layer-2);
+  color: var(--dsw-alias-label-primary);
+}
+
+.taskHomeSelectBar {
+  display: flex;
+  justify-content: space-evenly;
+  align-items: stretch;
+  gap: 8px;
+  padding:
+    10px
+    calc(16px + env(safe-area-inset-right, 0px))
+    calc(10px + env(safe-area-inset-bottom, 0px))
+    calc(16px + env(safe-area-inset-left, 0px));
+  border-top: 1px solid var(--dsw-alias-border-l1);
+  background: color-mix(in srgb, var(--dsw-alias-bg-base) 92%, transparent);
+  backdrop-filter: blur(12px);
+}
+
+.taskHomeSelectAction,
+.taskHomeSelectArchive {
+  display: inline-flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 0;
+  max-width: 120px;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--dsw-alias-label-primary);
+  font: inherit;
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.taskHomeSelectAction:disabled,
+.taskHomeSelectArchive:disabled {
+  opacity: 0.4;
+}
+
+.taskHomeSelectArchive {
+  color: var(--dsw-alias-status-error, #d94841);
+}
+
+.taskHomeRenameInput {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 10px;
+  background: var(--dsw-alias-bg-layer-1);
+  color: var(--dsw-alias-label-primary);
+  font: inherit;
+  font-size: 16px;
+  line-height: 22px;
+}
+
+.taskHomeRenameError {
+  margin-top: 8px;
+  color: var(--dsw-alias-status-error);
+  font-size: 13px;
+  line-height: 18px;
 }
 
 .taskHomeIconBox {
