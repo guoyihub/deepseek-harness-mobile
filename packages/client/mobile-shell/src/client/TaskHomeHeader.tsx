@@ -29,7 +29,7 @@ export interface TaskHomeHeaderProps {
 
 const FILTER_LABELS: Record<TaskHomeFilter, string> = {
   all: '全部任务',
-  running: '运行中',
+  running: '进行中',
 }
 
 function connectionAriaLabel(paired: boolean, connected: boolean): string {

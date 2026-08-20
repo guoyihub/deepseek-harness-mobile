@@ -18,10 +18,32 @@ import {
   type RpcRequest,
   type SessionId,
   type SessionSummary,
+  type WorkspaceId,
   type WorkspaceView,
 } from '@deepseek-ai/dsh-client-connection/client'
+import type { PendingInteractionStatus } from '@deepseek-ai/dsh-client-runtime/client'
 import { mobileApi } from './mobile-api-client.ts'
+import {
+  applyMobilePendingMuxFrame,
+  clearMobilePendingInteractions,
+  mobilePendingInteraction,
+} from './mobile-session-pending-tracker.ts'
+import {
+  findReusableBlankSession,
+  resolveDefaultWorkspaceId,
+} from './mobile-workspace-connect.ts'
 import { readSessionToken, readStoredHostBase } from './mobile-session.ts'
+import {
+  isMobileSessionRoutedFrame,
+  routeMobileMuxEnvelope,
+} from './mobile-session-mux-buffer.ts'
+
+function frameSessionId(frame: MuxFrame): SessionId | undefined {
+  if ('sessionId' in frame && typeof frame.sessionId === 'string') {
+    return frame.sessionId as SessionId
+  }
+  return undefined
+}
 
 interface MobileConnectionContextValue {
   /** Whether pairing storage contains a live session token. */
@@ -46,8 +68,12 @@ interface MobileConnectionContextValue {
   revoked: boolean
   /** Refresh session.list from Host. */
   refreshSessions: () => Promise<void>
+  /** Live pending-interaction revision (sidebar status dots). */
+  pendingRevision: number
+  /** Read one session's pending-interaction status for list rows. */
+  getPendingInteraction: (sessionId: SessionId) => PendingInteractionStatus | undefined
   /** Create a new session and refresh the list. */
-  createSession: () => Promise<SessionId | undefined>
+  createSession: (workspaceId?: WorkspaceId) => Promise<SessionId | undefined>
   /** Subscribe to mux frames for chat streaming. */
   subscribeMux: (listener: (frame: MuxFrame) => void) => () => void
   /** Subscribe to mux envelopes (rpcId + frame) for Session.handleMuxEnvelope. */
@@ -83,6 +109,7 @@ export function MobileConnectionProvider({ children }: { children: ReactNode }):
   const [sessionsLoading, setSessionsLoading] = useState(false)
   const [error, setError] = useState<string | undefined>(undefined)
   const [revoked, setRevoked] = useState(false)
+  const [pendingRevision, setPendingRevision] = useState(0)
   const muxListeners = useRef(new Set<(frame: MuxFrame) => void>())
   const muxEnvelopeListeners = useRef(new Set<(envelope: RpcRequest<MuxFrame>) => void>())
   const controllerRef = useRef<ConnectionController | undefined>(undefined)
@@ -112,6 +139,10 @@ export function MobileConnectionProvider({ children }: { children: ReactNode }):
       setError(undefined)
     }
   }, [])
+
+  const getPendingInteraction = useCallback((
+    sessionId: SessionId,
+  ): PendingInteractionStatus | undefined => mobilePendingInteraction(sessionId), [])
 
   const refreshSessions = useCallback(async (): Promise<void> => {
     if (readSessionToken() === undefined) {
@@ -153,8 +184,20 @@ export function MobileConnectionProvider({ children }: { children: ReactNode }):
     }
   }, [handleAuthFailure])
 
-  const createSession = useCallback(async (): Promise<SessionId | undefined> => {
-    const response = await mobileApi.sessions.create({})
+  const createSession = useCallback(async (workspaceId?: WorkspaceId): Promise<SessionId | undefined> => {
+    const targetWorkspaceId = workspaceId ?? (
+      workspaces.length > 0 ? resolveDefaultWorkspaceId(workspaces, sessions) : undefined
+    )
+    if (targetWorkspaceId !== undefined) {
+      const workspace = workspaces.find(item => item.workspaceId === targetWorkspaceId)
+      if (workspace !== undefined) {
+        const reusable = findReusableBlankSession(workspace, sessions, archivedSessionIds)
+        if (reusable !== undefined) return reusable
+      }
+    }
+    const response = await mobileApi.sessions.create(
+      targetWorkspaceId === undefined ? {} : { workspaceId: targetWorkspaceId },
+    )
     if (!response.result.ok) {
       handleAuthFailure(response.result.error.message)
       if (!isUnauthorizedError(response.result.error.message)) {
@@ -164,7 +207,7 @@ export function MobileConnectionProvider({ children }: { children: ReactNode }):
     }
     await refreshSessions()
     return response.result.value.sessionId
-  }, [handleAuthFailure, refreshSessions])
+  }, [archivedSessionIds, handleAuthFailure, refreshSessions, sessions, workspaces])
 
   const subscribeMux = useCallback((listener: (frame: MuxFrame) => void): (() => void) => {
     muxListeners.current.add(listener)
@@ -206,6 +249,14 @@ export function MobileConnectionProvider({ children }: { children: ReactNode }):
     }
     const controller = new ConnectionController(mobileApi, {
       onMuxEnvelope: (envelope: RpcRequest<MuxFrame>) => {
+        const frame = envelope.payload
+        const sid = frameSessionId(frame)
+        if (sid !== undefined && applyMobilePendingMuxFrame(sid, frame, envelope.rpcId)) {
+          setPendingRevision(revision => revision + 1)
+        }
+        if (sid !== undefined && isMobileSessionRoutedFrame(frame)) {
+          routeMobileMuxEnvelope(sid, envelope)
+        }
         for (const listener of muxListeners.current) listener(envelope.payload)
         for (const listener of muxEnvelopeListeners.current) listener(envelope)
       },
@@ -222,6 +273,8 @@ export function MobileConnectionProvider({ children }: { children: ReactNode }):
         }
       },
       onConnected: (description: HostDescription) => {
+        clearMobilePendingInteractions()
+        setPendingRevision(revision => revision + 1)
         setHostDescription(description)
         void refreshSessions()
       },
@@ -248,6 +301,8 @@ export function MobileConnectionProvider({ children }: { children: ReactNode }):
     error,
     revoked,
     refreshSessions,
+    pendingRevision,
+    getPendingInteraction,
     createSession,
     subscribeMux,
     subscribeMuxEnvelope,
@@ -265,6 +320,8 @@ export function MobileConnectionProvider({ children }: { children: ReactNode }):
     error,
     revoked,
     refreshSessions,
+    pendingRevision,
+    getPendingInteraction,
     createSession,
     subscribeMux,
     subscribeMuxEnvelope,

@@ -1,6 +1,36 @@
 /** Display labels for session list rows. */
 
-import type { SessionSummary } from '@deepseek-ai/dsh-client-connection/client'
+import type { SessionId, SessionSummary, WorkspaceView } from '@deepseek-ai/dsh-client-connection/client'
+
+/** Label when a session belongs to no registered workspace. */
+const UNGROUPED_WORKSPACE_LABEL = '未分组'
+
+/**
+ * Resolve the Host workspace display title (registry `title`, then path leaf).
+ * @param view - one workspace.list row.
+ */
+export function workspaceDisplayLabel(view: WorkspaceView): string {
+  const title = view.title.trim()
+  if (title !== '') return title
+  const parts = view.path.split(/[/\\]/).filter(part => part !== '')
+  const leaf = parts[parts.length - 1]
+  if (leaf !== undefined && leaf !== '') return leaf
+  return view.path
+}
+
+/**
+ * Resolve the workspace title for one session from the Host registry.
+ * @param sessionId - active session id.
+ * @param workspaces - cached workspace.list rows.
+ */
+export function sessionWorkspaceTitle(
+  sessionId: SessionId,
+  workspaces: readonly WorkspaceView[],
+): string {
+  const workspace = workspaces.find(item => item.sessionIds.includes(sessionId))
+  if (workspace !== undefined) return workspaceDisplayLabel(workspace)
+  return UNGROUPED_WORKSPACE_LABEL
+}
 
 /**
  * Resolve the workspace leaf directory name from one session row.
@@ -29,11 +59,15 @@ export function sessionDisplayTitle(summary: SessionSummary): string {
 }
 
 /**
- * Resolve chat header workspace leaf (right-side path chip).
- * @param summary - one session.list row.
+ * Resolve chat header workspace title (Host registry name, not cwd leaf).
+ * @param sessionId - active session id.
+ * @param workspaces - cached workspace.list rows.
  */
-export function sessionChatHeaderMeta(summary: SessionSummary): string {
-  return sessionWorkspaceLabel(summary)
+export function sessionChatHeaderMeta(
+  sessionId: SessionId,
+  workspaces: readonly WorkspaceView[],
+): string {
+  return sessionWorkspaceTitle(sessionId, workspaces)
 }
 
 /**

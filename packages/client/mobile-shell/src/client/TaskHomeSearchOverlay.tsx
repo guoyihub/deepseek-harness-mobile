@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef } from 'react'
 import type { SessionId, SessionSummary } from '@deepseek-ai/dsh-client-connection/client'
+import type { PendingInteractionStatus } from '@deepseek-ai/dsh-client-runtime/client'
 import {
   IconCloseOutline16,
   IconSearchOutline16,
@@ -14,6 +15,8 @@ export interface TaskHomeSearchOverlayProps {
   query: string
   /** All sessions to filter locally by title. */
   sessions: readonly SessionSummary[]
+  /** Live pending-interaction status by session id. */
+  pendingBySession?: ReadonlyMap<SessionId, PendingInteractionStatus>
   /** Update the search query. */
   onQueryChange: (query: string) => void
   /** Close the overlay and clear the query. */
@@ -29,6 +32,7 @@ export interface TaskHomeSearchOverlayProps {
 export function TaskHomeSearchOverlay({
   query,
   sessions,
+  pendingBySession,
   onQueryChange,
   onClose,
   onOpenChat,
@@ -89,14 +93,18 @@ export function TaskHomeSearchOverlay({
           <div className={css.taskHomeEmpty}>没有匹配的任务</div>
         ) : (
           <ul className={css.taskHomeSearchList}>
-            {matches.map(item => (
-              <TaskHomeRow
-                key={item.sessionId}
-                item={item}
-                variant="search"
-                onOpen={() => { onOpenChat(item.sessionId) }}
-              />
-            ))}
+            {matches.map((item) => {
+              const pending = pendingBySession?.get(item.sessionId)
+              return (
+                <TaskHomeRow
+                  key={item.sessionId}
+                  item={item}
+                  {...(pending !== undefined ? { pendingInteraction: pending } : {})}
+                  variant="search"
+                  onOpen={() => { onOpenChat(item.sessionId) }}
+                />
+              )
+            })}
           </ul>
         )}
       </div>

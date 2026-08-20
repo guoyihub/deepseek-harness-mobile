@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 
 import type { SessionId } from '@deepseek-ai/dsh-client-connection/client'
+import type { PendingInteractionStatus } from '@deepseek-ai/dsh-client-runtime/client'
 
 import { Button } from '@deepseek-ai/dsh-client-ui-primitives'
 
@@ -15,6 +16,7 @@ import {
   groupDisplayLabel,
   visibleWireSessions,
 } from './mobile-task-groups.ts'
+import { mobileSessionIsActive } from './mobile-session-status.ts'
 
 import { StatusPanel } from './StatusPanel.tsx'
 
@@ -56,6 +58,8 @@ export function HomePage({
     error,
     revoked,
     createSession,
+    pendingRevision,
+    getPendingInteraction,
   } = useMobileConnection()
 
   const [filter, setFilter] = useState<TaskHomeFilter>('all')
@@ -73,20 +77,36 @@ export function HomePage({
     [sessions],
   )
 
+  const pendingBySession = useMemo(() => {
+    void pendingRevision
+    const map = new Map<SessionId, PendingInteractionStatus>()
+    for (const item of sessions) {
+      const pending = getPendingInteraction(item.sessionId)
+      if (pending !== undefined) map.set(item.sessionId, pending)
+    }
+    return map
+  }, [getPendingInteraction, pendingRevision, sessions])
+
   const searchableSessions = useMemo(
-    () => visibleWireSessions(sessions, workspaces, archivedSessionIds),
-    [archivedSessionIds, sessions, workspaces],
+    () => visibleWireSessions(sessions, workspaces, archivedSessionIds, pendingBySession),
+    [archivedSessionIds, pendingBySession, sessions, workspaces],
   )
 
   const visibleGroups = useMemo(() => {
-    const groups = deriveMobileTaskGroups(sessions, workspaces, archivedSessionIds)
+    const groups = deriveMobileTaskGroups(sessions, workspaces, archivedSessionIds, pendingBySession)
     return groups
       .map(group => ({
         ...group,
-        sessions: group.sessions.filter(session => filter !== 'running' || session.running),
+        sessions: group.sessions.filter(session => filter !== 'running'
+          || mobileSessionIsActive({
+            running: session.running,
+            ...(session.pendingInteraction !== undefined
+              ? { pendingInteraction: session.pendingInteraction }
+              : {}),
+          })),
       }))
       .filter(group => group.sessions.length > 0)
-  }, [archivedSessionIds, filter, sessions, workspaces])
+  }, [archivedSessionIds, filter, pendingBySession, sessions, workspaces])
 
   const visibleSessionCount = useMemo(
     () => visibleGroups.reduce((count, group) => count + group.sessions.length, 0),
@@ -122,6 +142,7 @@ export function HomePage({
       <TaskHomeSearchOverlay
         query={searchQuery}
         sessions={searchableSessions}
+        pendingBySession={pendingBySession}
         onQueryChange={setSearchQuery}
         onClose={closeSearch}
         onOpenChat={onOpenChat}
@@ -188,6 +209,9 @@ export function HomePage({
                     <TaskHomeRow
                       key={session.id}
                       item={item}
+                      {...(session.pendingInteraction !== undefined
+                        ? { pendingInteraction: session.pendingInteraction }
+                        : {})}
                       hostLabel={hostLabel}
                       onOpen={() => { onOpenChat(session.id) }}
                     />
