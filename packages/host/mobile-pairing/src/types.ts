@@ -12,6 +12,9 @@ export const PAIR_TOKEN_NO_EXPIRY_MS = Number.MAX_SAFE_INTEGER
 /** Default no-password pairToken lifetime (24 hours). */
 export const DEFAULT_PAIR_TOKEN_TTL_MS = 24 * 60 * 60 * 1000
 
+/** Default Mobile PWA listen port baked into QR deep links. */
+export const MOBILE_PWA_PORT = 8030
+
 /** URL scheme for QR payloads and mobile base URLs. */
 export type PublicScheme = 'http' | 'https'
 

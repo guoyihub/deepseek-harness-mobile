@@ -40,7 +40,8 @@ describe('MobilePairingStore', () => {
       hostDisplayName: 'test-host',
     })
     const offer = store.createPairing('192.168.1.10', 3080)
-    expect(offer.qrUrl).toMatch(/^http:\/\//)
+    expect(offer.port).toBe(8030)
+    expect(offer.qrUrl).toMatch(/^http:\/\/192\.168\.1\.10:8030\/mobile\/pair\?t=/)
     expect(offer.qrUrl).toContain(offer.pairToken)
     expect(offer.shortCode).toMatch(/^\d{6}$/)
     expect(offer.confirmMode).toBe('off')

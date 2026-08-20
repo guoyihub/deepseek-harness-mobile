@@ -17,16 +17,19 @@ DeepSeek Harness Mobile（`@deepseek-ai/deepseek-harness-mobile`）是手机端 
 
 ```powershell
 pnpm install
-pnpm run build:lib   # 首次 clone 或 pnpm run clean 之后必做
 
-# Terminal A — Host（默认 :3080）
-pnpm dsh web
+# 构建（已含 build:lib）
+pnpm build:mobile   # 仅 Mobile PWA
+pnpm build:web      # 仅桌面 Web
+pnpm build          # 全部
 
-# Terminal B — Mobile PWA（Vite :8030，/api 代理到 Host）
-pnpm dev:mobile
+# 开发启动
+pnpm dsh web        # Host（:3080）
+pnpm dsh mobile     # Mobile PWA（:8030）
+pnpm dsh            # 同时启动两者
 ```
 
-`pnpm run build:lib` 按 Host → Client 顺序生成 Typert remote 契约与 client 构建产物（含 ui-theme 样式表）；跳过此步会导致 Mobile 无法加载主题 CSS 或 client 编译失败。一键后台启动见根目录 [README — 一键启动](../../README.md#run-from-source)（`deploy/dsh.sh` / `deploy/dsh.bat`）；deploy 脚本只启动进程，首次使用前须先完成安装与构建。
+服务器上 Host 建议：`pnpm dsh web --no-open`。
 
 | 端 | 本机 | 局域网 |
 |----|------|--------|
@@ -36,12 +39,10 @@ pnpm dev:mobile
 
 ### 配对步骤
 
-1. 桌面 Web 侧边栏打开 **手机连接**，展示 QR 与 6 位短码。
-2. 手机浏览器打开 Mobile，或扫描 QR / 输入短码。
+1. 桌面 Web 侧边栏打开 **手机连接**，展示 QR 与 6 位短码；或在 **设置 → DSH 移动端** 调整连接验证。
+2. 手机浏览器打开 Mobile（`:8030`），或扫描 QR / 输入短码。
 3. 配对成功后进入任务列表（默认扫码即连；Host 可设 `confirmMode: strict`）。
 
-### 穿透 / Vite 代理
+Mobile 的 `/api` 与 WebSocket 由 Vite 代理到本机 Host `:3080`，二维码自动指向 Mobile 地址，无需手动填写穿透域名。
 
-手机只访问 Mobile（`:8030` 或穿透域名），`/api` 与 WebSocket 由 Vite 代理到本机 Host `:3080`。在桌面「手机连接」中填写 **手机端访问地址** 后保存并刷新二维码；勿让 QR 指向 `127.0.0.1:3080`。
-
-生产构建：`pnpm run build:mobile`（输出 `apps/mobile/dist`）。
+生产构建：`pnpm build:mobile`（输出 `apps/mobile/dist`）。

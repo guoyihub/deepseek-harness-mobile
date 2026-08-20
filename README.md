@@ -31,14 +31,14 @@ DSH Mobile 把 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harnes
 
 | 端 | 地址 | 说明 |
 | --- | --- | --- |
-| 桌面 Host | `http://127.0.0.1:3080` | 运行 `pnpm dsh web`；侧栏 **手机连接** 展示二维码 |
-| Mobile PWA | `http://127.0.0.1:8030` | 运行 `pnpm dev:mobile`；手机浏览器打开或扫码进入 |
+| 桌面 Host | `http://127.0.0.1:3080` | `pnpm dsh web`；侧栏 **手机连接** 展示二维码 |
+| Mobile PWA | `http://127.0.0.1:8030` | `pnpm dsh mobile`；手机浏览器打开或扫码进入 |
 | 局域网 | `http://<电脑 IP>:8030` | 手机只访问 Mobile；`/api` 与 WebSocket 由 Vite 代理到 Host |
 
 ### 配对步骤
 
 1. 电脑启动 Host，手机启动 Mobile PWA（见下方「开发」）。
-2. 桌面 Web 侧栏点击 **手机连接**，或进入 **设置 → DSH 移动端** 配置 **手机端访问地址** 与连接密码后保存并刷新二维码。
+2. 桌面 Web 侧栏点击 **手机连接** 扫码，或进入 **设置 → DSH 移动端** 配置连接密码（可选）。
 3. 手机打开 Mobile，扫描电脑二维码；或在配对页从相册选择二维码图片。
 4. 配对成功后进入 **全部任务** 列表，点选任务继续对话。
 
@@ -117,7 +117,7 @@ docs/mobile/                         # 手机端开发说明
 | --- | --- |
 | `apps/mobile/` | PWA 壳、`manifest`、Vite 开发服务器；`:8030` 把 `/api` 与 WebSocket 代理到 Host `:3080` |
 | `packages/host/mobile-pairing/` | `/api/mobile/*` 路由：发码、配对、确认/拒绝、设备列表与吊销 |
-| `packages/client/ui-mobile-pairing/` | 桌面侧 QR Modal 与设置页（密码策略、手机端访问地址） |
+| `packages/client/ui-mobile-pairing/` | 桌面侧 QR Modal 与设置页（连接验证、设备管理） |
 | `packages/client/mobile-shell/` | 手机 UI：配对页、任务列表、Chat / 轨迹、Composer |
 | `packages/client/connection/` | 配对后的 Bearer / WebSocket 连接与会话 RPC |
 | `packages/bundle/web-app/` | 将 Mobile 相关插件编入 `dsh web` profile |
@@ -145,70 +145,25 @@ docs/mobile/                         # 手机端开发说明
 
 ## 开发
 
+安装依赖后，**构建**与**启动**各只需记一条命令：
+
 ```powershell
 pnpm install
-pnpm run build:lib   # 首次 clone 或 pnpm run clean 之后必做
 
-# Terminal A — Host（:3080）
-pnpm dsh web
+# 构建（已含 build:lib，无需再单独执行）
+pnpm build:mobile   # 仅 Mobile PWA 生产包
+pnpm build:web      # 仅桌面 Web 前端
+pnpm build          # Web + Mobile 全部构建
 
-# Terminal B — Mobile PWA（:8030，/api 代理到 Host）
-pnpm dev:mobile
+# 开发启动
+pnpm dsh web        # 仅 Host（:3080）
+pnpm dsh mobile     # 仅 Mobile PWA（:8030）
+pnpm dsh            # 同时启动 Host + Mobile（同一终端，Ctrl+C 停止两者）
 ```
 
-`pnpm run build:lib` 按 Host → Client 顺序生成 Typert remote 契约与 client 构建产物（含 ui-theme 样式表）；跳过此步会导致 Mobile 无法加载主题 CSS 或 client 编译失败。
+服务器或无图形界面时，Host 建议加 `--no-open`：`pnpm dsh web --no-open`。
 
-### 一键启动（后台运行）
-
-`deploy/` 提供跨平台脚本，在后台启动 Host 与 Mobile PWA，并写入日志与 PID 文件（核心逻辑见 `deploy/dsh-runner.mjs`）。脚本只启动进程，不会自动构建；首次使用前请先完成上方的 `pnpm install` 与 `pnpm run build:lib`。
-
-| 平台 | 入口 |
-| --- | --- |
-| Windows | `deploy\dsh.bat` |
-| Linux | `./deploy/dsh.sh` |
-| macOS | `./deploy/dsh.sh` 或双击 `deploy/dsh.command` |
-
-```powershell
-# 启动两者（省略 target 默认为 web + mobile）
-deploy\dsh.bat start
-./deploy/dsh.sh start
-
-# 只启动其中一个
-deploy\dsh.bat start web
-./deploy/dsh.sh start mobile
-
-# 停止、查看状态、跟踪日志
-deploy\dsh.bat stop
-deploy\dsh.bat status
-deploy\dsh.bat logs
-```
-
-日志目录：`deploy/logs/`；运行态 PID：`deploy/.run/`。
-
-生产构建：`pnpm run build:mobile`（输出 `apps/mobile/dist`）。包级测试与更多细节见 [手机端开发文档](docs/mobile/README.md) 与各包 README。
-
-## 社区与支持
-
-- 欢迎通过 [GitHub Discussions](https://github.com/deepseek-ai/deepseek-harness/discussions) 提交反馈或 bug 报告。
-- 为你的插件仓库添加 [`dsh-plugin`](https://github.com/topics/dsh-plugin) 话题，便于被发现。
-- 欢迎加入 DeepSeek Harness 企微群：扫码添加企微小助手并填写入群问卷，完成后小助手会邀请你入群。
-
-<table>
-  <thead>
-    <tr>
-      <th align="center">企微小助手</th>
-      <th align="center">入群问卷</th>
-      <th align="center">微信公众号</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td align="center"><img src="assets/community-wecom-assistant.png" alt="DeepSeek Harness 企微小助手二维码" width="180" height="180"></td>
-      <td align="center"><a href="https://trtgsjkv6r.feishu.cn/share/base/form/shrcnIt5twSVdLGD52KJBckGCgg"><img src="assets/community-wecom-survey.png" alt="DeepSeek Harness 入群问卷二维码" width="180" height="180"></a></td>
-      <td align="center"><img src="assets/community-wechat-official-account.png" alt="DeepSeek Harness 团队微信公众号二维码" width="180" height="180"></td>
-    </tr>
-  </tbody>
-</table>
+生产构建输出：`pnpm build:web` → Web dist；`pnpm build:mobile` → `apps/mobile/dist`。包级测试与更多细节见 [手机端开发文档](docs/mobile/README.md) 与各包 README。
 
 ## 友情链接
 

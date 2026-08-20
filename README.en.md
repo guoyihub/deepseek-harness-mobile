@@ -31,14 +31,14 @@ Your phone and computer should be on the same LAN, or the phone should reach Mob
 
 | Surface | URL | Notes |
 | --- | --- | --- |
-| Desktop Host | `http://127.0.0.1:3080` | Run `pnpm dsh web`; open **手机连接** in the sidebar for the QR code |
-| Mobile PWA | `http://127.0.0.1:8030` | Run `pnpm dev:mobile`; open in the phone browser or scan the QR code |
+| Desktop Host | `http://127.0.0.1:3080` | `pnpm dsh web`; open **手机连接** in the sidebar for the QR code |
+| Mobile PWA | `http://127.0.0.1:8030` | `pnpm dsh mobile`; open in the phone browser or scan the QR code |
 | LAN | `http://<computer-ip>:8030` | Phones talk only to Mobile; Vite proxies `/api` and WebSocket to the Host |
 
 ### Pairing steps
 
 1. Start the Host on your computer and the Mobile PWA locally (see **Development** below).
-2. On desktop Web, click **手机连接** in the sidebar, or open **Settings → DSH 移动端**, set **手机端访问地址** and an optional connection password, then save and refresh the QR code.
+2. On desktop Web, click **手机连接** in the sidebar to scan, or open **Settings → DSH 移动端** to configure an optional connection password.
 3. On the phone, open Mobile and scan the desktop QR code, or pick a QR image from the album on the pairing page.
 4. After pairing succeeds, open **全部任务**, pick a task, and continue the conversation.
 
@@ -117,7 +117,7 @@ docs/mobile/                         # Mobile development notes
 | --- | --- |
 | `apps/mobile/` | PWA shell, `manifest`, Vite dev server; `:8030` proxies `/api` and WebSocket to Host `:3080` |
 | `packages/host/mobile-pairing/` | `/api/mobile/*` routes: mint QR, pair, confirm/deny, list and revoke devices |
-| `packages/client/ui-mobile-pairing/` | Desktop QR modal and settings (password policy, Mobile public base URL) |
+| `packages/client/ui-mobile-pairing/` | Desktop QR modal and settings (connection verification, device management) |
 | `packages/client/mobile-shell/` | Mobile UI: pairing page, task list, chat / trajectory, composer |
 | `packages/client/connection/` | Post-pairing Bearer / WebSocket connection and session RPC |
 | `packages/bundle/web-app/` | Composes Mobile plugins into the `dsh web` profile |
@@ -145,70 +145,25 @@ Thanks to [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) an
 
 ## Development
 
+After `pnpm install`, use one command per build or dev task:
+
 ```powershell
 pnpm install
-pnpm run build:lib   # required after first clone or pnpm run clean
 
-# Terminal A — Host (:3080)
-pnpm dsh web
+# Build (includes build:lib — no separate step)
+pnpm build:mobile   # Mobile PWA production bundle only
+pnpm build:web      # Desktop Web frontend only
+pnpm build          # Web + Mobile
 
-# Terminal B — Mobile PWA (:8030, /api proxied to Host)
-pnpm dev:mobile
+# Dev servers
+pnpm dsh web        # Host only (:3080)
+pnpm dsh mobile     # Mobile PWA only (:8030)
+pnpm dsh            # Both Host + Mobile (one terminal; Ctrl+C stops both)
 ```
 
-`pnpm run build:lib` runs the Host → Client build in order, generating Typert remote contracts and client artifacts (including ui-theme stylesheets). Skipping it leaves Mobile unable to load theme CSS or client compilation failing.
+On servers or headless hosts, pass `--no-open` to the web Host: `pnpm dsh web --no-open`.
 
-### One-command start (background)
-
-The `deploy/` scripts start Host and Mobile PWA in the background, with logs and PID files (core logic in `deploy/dsh-runner.mjs`). They start processes only and do not build; complete `pnpm install` and `pnpm run build:lib` above before the first start.
-
-| Platform | Entry |
-| --- | --- |
-| Windows | `deploy\dsh.bat` |
-| Linux | `./deploy/dsh.sh` |
-| macOS | `./deploy/dsh.sh` or double-click `deploy/dsh.command` |
-
-```powershell
-# Start both (omit target for web + mobile)
-deploy\dsh.bat start
-./deploy/dsh.sh start
-
-# Start one service
-deploy\dsh.bat start web
-./deploy/dsh.sh start mobile
-
-# Stop, status, tail logs
-deploy\dsh.bat stop
-deploy\dsh.bat status
-deploy\dsh.bat logs
-```
-
-Logs: `deploy/logs/`; runtime PIDs: `deploy/.run/`.
-
-Production build: `pnpm run build:mobile` (output in `apps/mobile/dist`). Package tests and more detail live in the [mobile development guide](docs/mobile/README.md) and package READMEs.
-
-## Community and support
-
-- Share feedback or bug reports in [GitHub Discussions](https://github.com/deepseek-ai/deepseek-harness/discussions).
-- Add the [`dsh-plugin`](https://github.com/topics/dsh-plugin) topic to plugin repositories so they are easier to discover.
-- Join the DeepSeek Harness WeCom community: scan the assistant QR code below, complete the onboarding form, and the assistant will invite you into the group.
-
-<table>
-  <thead>
-    <tr>
-      <th align="center">WeCom assistant</th>
-      <th align="center">Onboarding form</th>
-      <th align="center">WeChat official account</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td align="center"><img src="assets/community-wecom-assistant.png" alt="DeepSeek Harness WeCom assistant QR code" width="180" height="180"></td>
-      <td align="center"><a href="https://trtgsjkv6r.feishu.cn/share/base/form/shrcnIt5twSVdLGD52KJBckGCgg"><img src="assets/community-wecom-survey.png" alt="DeepSeek Harness onboarding form QR code" width="180" height="180"></a></td>
-      <td align="center"><img src="assets/community-wechat-official-account.png" alt="DeepSeek Harness WeChat official account QR code" width="180" height="180"></td>
-    </tr>
-  </tbody>
-</table>
+Production output: `pnpm build:web` → Web dist; `pnpm build:mobile` → `apps/mobile/dist`. Package tests and more detail live in the [mobile development guide](docs/mobile/README.md) and package READMEs.
 
 ## Related projects
 

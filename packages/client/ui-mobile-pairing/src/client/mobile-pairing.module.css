@@ -1,3 +1,7 @@
+/* Mobile pairing UI — settings section follows the shared settings-panel
+ * language (Models / Plugins / Agent presets): 18/600 heading, 13/22 intro,
+ * border-l2 cards, uppercase group labels, and 720px content width. */
+
 .mobilePairing {
   display: flex;
   flex-direction: column;
@@ -21,70 +25,225 @@
   border: 1px solid var(--dsw-alias-border-subtle);
 }
 
+.qrEmbedded {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
 .qrImage {
-  width: 220px;
-  height: 220px;
+  width: 200px;
+  height: 200px;
   border-radius: 12px;
   background: #fff;
 }
 
-.metaRow {
+.section {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  width: 100%;
-  margin-top: 8px;
-  font-size: 13px;
-  color: var(--dsw-alias-label-secondary);
+  gap: 12px;
+  max-width: 720px;
+  color: var(--dsw-alias-label-primary);
 }
 
-.metaStrong {
-  color: var(--dsw-alias-label-primary);
+.heading {
+  margin: 0;
+  font-size: 18px;
+  line-height: 26px;
   font-weight: 600;
 }
 
-.settingsPage {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  max-width: 720px;
+.intro {
+  margin: 0;
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--dsw-alias-label-tertiary);
 }
 
-.settingsLead {
+.heroGrid {
+  display: grid;
+  grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+  gap: 12px;
+  align-items: stretch;
+  margin-top: 4px;
+}
+
+@media (max-width: 640px) {
+  .heroGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 12px;
+  background: var(--dsw-alias-bg-layer-3);
+}
+
+.cardTitle {
   margin: 0;
+  font-size: 14px;
+  line-height: 22px;
+  font-weight: 600;
+  color: var(--dsw-alias-label-primary);
+}
+
+.metaList {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 12px;
+  margin: 0;
+  width: 100%;
+}
+
+.metaItem {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.metaItem dt {
+  margin: 0;
+  font-size: 11px;
+  line-height: 16px;
+  font-weight: 500;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.metaItem dd {
+  margin: 0;
+  font-size: 13px;
+  line-height: 20px;
+  font-weight: 500;
+  color: var(--dsw-alias-label-primary);
+}
+
+.modeOptions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.modeOption {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 10px;
+  background: transparent;
+  cursor: pointer;
+  transition: border-color .16s, background .16s;
+}
+
+.modeOption:hover {
+  border-color: var(--dsw-alias-label-dimmed);
+}
+
+.modeOption:has(input:checked) {
+  border-color: var(--dsw-alias-label-primary);
+  background: var(--dsw-alias-bg-layer-2);
+}
+
+.modeOption input {
+  margin-top: 3px;
+  flex: none;
+}
+
+.modeCopy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.modeTitle {
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 500;
+  color: var(--dsw-alias-label-primary);
+}
+
+.modeHint {
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.fieldLabel {
   font-size: 12px;
   line-height: 18px;
   color: var(--dsw-alias-label-secondary);
 }
 
-.settingsSection {
+.cardFooter {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: auto;
+  padding-top: 4px;
 }
 
-.sectionTitle {
+.status {
   margin: 0;
-  font-size: 14px;
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--dsw-alias-label-secondary);
+  text-align: right;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.groupHead {
+  margin: 0;
+  font-size: 12px;
+  line-height: 18px;
   font-weight: 600;
-  color: var(--dsw-alias-label-primary);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--dsw-alias-label-tertiary);
 }
 
 .list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-.row {
+.rowCard {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 10px 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--dsw-alias-border-l2);
   border-radius: 12px;
-  background: var(--dsw-alias-bg-layer-1);
-  border: 1px solid var(--dsw-alias-border-subtle);
+  background: var(--dsw-alias-bg-layer-3);
 }
 
 .rowMeta {
@@ -96,13 +255,15 @@
 
 .rowTitle {
   font-size: 14px;
+  line-height: 22px;
   font-weight: 500;
   color: var(--dsw-alias-label-primary);
 }
 
 .rowSub {
   font-size: 12px;
-  color: var(--dsw-alias-label-secondary);
+  line-height: 18px;
+  color: var(--dsw-alias-label-tertiary);
 }
 
 .rowActions {
@@ -114,47 +275,13 @@
 .empty {
   margin: 0;
   font-size: 13px;
-  color: var(--dsw-alias-label-secondary);
+  line-height: 20px;
+  color: var(--dsw-alias-label-tertiary);
 }
 
 .error {
   margin: 0;
   font-size: 13px;
+  line-height: 20px;
   color: var(--dsw-alias-label-danger);
-}
-
-.settingsRow {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.modeLabel {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  font-size: 13px;
-  color: var(--dsw-alias-label-primary);
-}
-
-.passwordField {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-top: 8px;
-  font-size: 13px;
-  color: var(--dsw-alias-label-secondary);
-}
-
-.settingsActions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-top: 12px;
-  flex-wrap: wrap;
-}
-
-.settingsHint {
-  font-size: 12px;
-  color: var(--dsw-alias-label-secondary);
 }

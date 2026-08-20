@@ -16,7 +16,7 @@ import type {
   PublicScheme,
   SessionRecord,
 } from './types.ts'
-import { DEFAULT_MOBILE_SCOPES, PAIR_TOKEN_NO_EXPIRY_MS } from './types.ts'
+import { DEFAULT_MOBILE_SCOPES, MOBILE_PWA_PORT, PAIR_TOKEN_NO_EXPIRY_MS } from './types.ts'
 
 /** Mutable pairing state owned by {@link MobilePairingStore}. */
 export interface MobilePairingStoreOptions {
@@ -401,8 +401,10 @@ export class MobilePairingStore {
     return record.expiresAt <= Date.now()
   }
 
-  private resolveOfferAuthority(fallbackHost: string, fallbackPort: number): { host: string; port: number } {
-    if (this.mobilePublicBaseUrl === '') return { host: fallbackHost, port: fallbackPort }
+  private resolveOfferAuthority(fallbackHost: string, _fallbackPort: number): { host: string; port: number } {
+    if (this.mobilePublicBaseUrl === '') {
+      return { host: fallbackHost, port: MOBILE_PWA_PORT }
+    }
     try {
       const url = new URL(this.mobilePublicBaseUrl)
       const port = url.port !== ''
@@ -410,11 +412,11 @@ export class MobilePairingStore {
         : (url.protocol === 'https:' ? 443 : 80)
       return { host: url.hostname, port }
     } catch {
-      return { host: fallbackHost, port: fallbackPort }
+      return { host: fallbackHost, port: MOBILE_PWA_PORT }
     }
   }
 
-  private formatQrUrl(host: string, port: number, pairToken: string, record: PairTokenRecord): string {
+  private formatQrUrl(host: string, _port: number, pairToken: string, record: PairTokenRecord): string {
     const passwordFlag = this.pairPasswordMode === 'required' ? '&p=1' : ''
     const expiresUnix = record.expiresAt === PAIR_TOKEN_NO_EXPIRY_MS
       ? 0
@@ -423,6 +425,6 @@ export class MobilePairingStore {
     if (this.mobilePublicBaseUrl !== '') {
       return `${this.mobilePublicBaseUrl}/mobile/pair?${query}`
     }
-    return `${this.options.publicScheme}://${host}:${String(port)}/mobile/pair?${query}`
+    return `${this.options.publicScheme}://${host}:${String(MOBILE_PWA_PORT)}/mobile/pair?${query}`
   }
 }

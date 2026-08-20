@@ -17,9 +17,7 @@ import {
   type PendingDeviceView,
 } from './desktop-pair-api.ts'
 
-const MOBILE_PUBLIC_BASE_STORAGE_KEY = 'dsh.desktop.mobilePublicBaseUrl'
-
-/** Mutable pairing surface shared by the QR modal and General settings row. */
+/** Mutable pairing surface shared by the QR modal and settings section. */
 export interface MobilePairingController {
   /** Latest pairing offer, when loaded. */
   offer: PairingOffer | undefined
@@ -41,15 +39,11 @@ export interface MobilePairingController {
   passwordDraft: string
   /** Update the password draft. */
   setPasswordDraft: (value: string) => void
-  /** Draft Mobile public base URL for QR payloads. */
-  mobilePublicBaseDraft: string
-  /** Update the Mobile public base draft. */
-  setMobilePublicBaseDraft: (value: string) => void
   /** Whether a settings save is in flight. */
   settingsBusy: boolean
   /** Last settings save result or error. */
   settingsMessage: string | undefined
-  /** Persist password mode / password / public base and refresh the QR. */
+  /** Persist password mode / password and refresh the QR. */
   onSavePasswordSettings: () => Promise<void>
   /** Approve a strict-mode pending device. */
   onConfirm: (deviceId: string) => Promise<void>
@@ -73,7 +67,6 @@ export function useMobilePairing(active: boolean): MobilePairingController {
   const [ttl, setTtl] = useState('')
   const [passwordMode, setPasswordMode] = useState<PairPasswordMode>('none')
   const [passwordDraft, setPasswordDraft] = useState('')
-  const [mobilePublicBaseDraft, setMobilePublicBaseDraft] = useState('')
   const [settingsBusy, setSettingsBusy] = useState(false)
   const [settingsMessage, setSettingsMessage] = useState<string | undefined>(undefined)
 
@@ -99,16 +92,8 @@ export function useMobilePairing(active: boolean): MobilePairingController {
     if (!active) return
     void fetchPairPasswordSettings().then((settings) => {
       setPasswordMode(settings.mode)
-      const stored = globalThis.localStorage?.getItem(MOBILE_PUBLIC_BASE_STORAGE_KEY) ?? ''
-      const nextBase = settings.mobilePublicBaseUrl !== ''
-        ? settings.mobilePublicBaseUrl
-        : stored
-      setMobilePublicBaseDraft(nextBase)
-      if (settings.mobilePublicBaseUrl === '' && stored !== '') {
-        void updatePairPasswordSettings(undefined, undefined, stored).then(() => { void refresh() })
-      }
     }).catch(() => { /* settings load is best-effort */ })
-  }, [active, refresh])
+  }, [active])
 
   useEffect(() => {
     if (!active) return
@@ -151,16 +136,9 @@ export function useMobilePairing(active: boolean): MobilePairingController {
       const next = await updatePairPasswordSettings(
         passwordMode,
         passwordMode === 'required' ? passwordDraft : undefined,
-        mobilePublicBaseDraft.trim(),
       )
       setPasswordMode(next.mode)
-      setMobilePublicBaseDraft(next.mobilePublicBaseUrl)
-      globalThis.localStorage?.setItem(MOBILE_PUBLIC_BASE_STORAGE_KEY, next.mobilePublicBaseUrl)
-      const passwordHint = passwordMode === 'required' ? '已启用连接密码' : '已切换为无密码连接'
-      const publicHint = next.mobilePublicBaseUrl === ''
-        ? 'QR 使用本机 Host 地址'
-        : 'QR 已指向手机端穿透/代理地址'
-      setSettingsMessage(`${passwordHint}；${publicHint}`)
+      setSettingsMessage(passwordMode === 'required' ? '已启用连接密码' : '已切换为无密码连接')
       setPasswordDraft('')
       await refresh()
     } catch (saveError) {
@@ -168,7 +146,7 @@ export function useMobilePairing(active: boolean): MobilePairingController {
     } finally {
       setSettingsBusy(false)
     }
-  }, [mobilePublicBaseDraft, passwordDraft, passwordMode, refresh])
+  }, [passwordDraft, passwordMode, refresh])
 
   return {
     offer,
@@ -181,8 +159,6 @@ export function useMobilePairing(active: boolean): MobilePairingController {
     setPasswordMode,
     passwordDraft,
     setPasswordDraft,
-    mobilePublicBaseDraft,
-    setMobilePublicBaseDraft,
     settingsBusy,
     settingsMessage,
     onSavePasswordSettings,
