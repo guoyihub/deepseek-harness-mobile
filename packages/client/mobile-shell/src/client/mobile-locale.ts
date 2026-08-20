@@ -23,12 +23,15 @@ const zh = {
   'plan.chip.aria': 'plan mode 已开启，按下关闭',
   'plan.chip.title': 'plan mode 已开启 — 点击关闭（/plan off）',
   'nav.back': '返回',
-  'input.accessMode': '权限模式：{name}',
-  'access.confirm.title': '启用完全访问？',
-  'access.confirm.description': '智能体将可以执行高风险操作。请确认你理解相关风险。',
-  'access.confirm.acknowledge': '我了解相关风险',
+  'input.accessMode': '访问模式，当前：{name}',
+  'permission.readOnly': '只读',
+  'permission.workspaceWrite': '工作区写入',
+  'permission.fullAccess': '完全访问',
+  'access.confirm.title': '确认启用 Full access？',
+  'access.confirm.description': '启用 Full access 后，agent 将减少确认步骤，并且可以直接执行更多操作，包括敏感操作、文件修改或外部命令。仅建议在你信任当前任务时使用。',
+  'access.confirm.acknowledge': '我已了解风险，并愿意继续',
   'access.confirm.cancel': '取消',
-  'access.confirm.enable': '启用',
+  'access.confirm.enable': '启用 Full access',
   'stats.counts': '{turns} 轮 · {steps} 步',
   'stats.llm': 'LLM {duration}',
   'stats.toolCall': '工具调用 {duration}',
@@ -70,6 +73,24 @@ const zh = {
 } as const
 
 type Params = Record<string, string | number>
+
+const PERMISSION_LABEL_KEYS = {
+  'read-only': 'permission.readOnly',
+  'workspace-write': 'permission.workspaceWrite',
+  'danger-full-access': 'permission.fullAccess',
+} as const
+
+/**
+ * Render a permission preset label for the mobile composer menu.
+ * @param value - preset machine value from the permissions projection.
+ * @param name - host-supplied preset name for custom entries.
+ */
+export function mobilePermissionLabel(value: string, name: string): string {
+  const key = PERMISSION_LABEL_KEYS[value as keyof typeof PERMISSION_LABEL_KEYS]
+  if (key !== undefined) return mobileConversationT(key)
+  if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(name)) return name
+  return name.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
+}
 
 /**
  * Resolve one conversation namespace string for the mobile shell.
