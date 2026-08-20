@@ -1,9 +1,10 @@
 import type { KeyboardEvent } from 'react'
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import type { SessionId } from '@deepseek-ai/dsh-client-connection/client'
 import type { PermissionSelect as PermissionSelectValue } from '@deepseek-ai/dsh-permission-presets/client'
 import { IconCloseFill14 } from '@deepseek-ai/dsh-client-ui-primitives'
 import { MobileCommandMenu } from './MobileCommandMenu.tsx'
+import type { MobileCommandSurface } from './mobile-command-catalog.ts'
 import { beginMobileClaim, type MobileComposerClaim } from './mobile-composer-claim.ts'
 import { mobileConversationT } from './mobile-locale.ts'
 import { MobileModelSelect } from './MobileModelSelect.tsx'
@@ -81,6 +82,9 @@ export function MobileComposer({
   onCommandSubmit,
   onCommandError,
 }: MobileComposerProps): JSX.Element {
+  const [modelOpen, setModelOpen] = useState(false)
+  const [permissionOpen, setPermissionOpen] = useState(false)
+
   const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>): void => {
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault()
@@ -99,6 +103,16 @@ export function MobileComposer({
   const sendDisabled = primaryStops
     ? stopping
     : sending || (!claimed && draft.trim() === '')
+
+  const onOpenSurface = (surface: MobileCommandSurface): void => {
+    if (surface === 'model') {
+      setPermissionOpen(false)
+      setModelOpen(true)
+      return
+    }
+    setModelOpen(false)
+    setPermissionOpen(true)
+  }
 
   return (
     <div ref={cardRef} className={css.composerCard}>
@@ -151,6 +165,7 @@ export function MobileComposer({
               onDraftChange('')
               onClaimChange(beginMobileClaim(name))
             }}
+            onOpenSurface={onOpenSurface}
             onCommandSubmit={onCommandSubmit}
             onCommandError={onCommandError}
           />
@@ -163,11 +178,23 @@ export function MobileComposer({
                 onCommandError={onCommandError}
               />
             )}
-            <MobilePermissionSelect sessionId={sessionId} value={permissions} locked={locked} />
+            <MobilePermissionSelect
+              sessionId={sessionId}
+              value={permissions}
+              locked={locked}
+              open={permissionOpen}
+              onOpenChange={setPermissionOpen}
+            />
           </div>
         </div>
         <div className={css.composerTrailing}>
-          <MobileModelSelect sessionId={sessionId} locked={locked} variant="toolbar" />
+          <MobileModelSelect
+            sessionId={sessionId}
+            locked={locked}
+            variant="toolbar"
+            open={modelOpen}
+            onOpenChange={setModelOpen}
+          />
           <button
             type="button"
             className={css.composerSend}

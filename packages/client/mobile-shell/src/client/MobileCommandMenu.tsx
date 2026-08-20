@@ -6,7 +6,9 @@ import { mobileApi } from './mobile-api-client.ts'
 import {
   findMobileCommand,
   isLeadingInputCommand,
+  isSurfaceCommand,
   MOBILE_COMMANDS,
+  type MobileCommandSurface,
 } from './mobile-command-catalog.ts'
 import { mobileConversationT } from './mobile-locale.ts'
 import css from './mobile-shell.module.css'
@@ -19,6 +21,8 @@ export interface MobileCommandMenuProps {
   menuAnchorRef?: RefObject<HTMLElement>
   /** Called when a leadingInput command should claim the composer. */
   onLeadingInput: (name: string) => void
+  /** Open a dedicated composer surface (model / permission), like desktop popupSelect. */
+  onOpenSurface: (surface: MobileCommandSurface) => void
   /** Called just before a bare slash command is submitted. */
   onCommandSubmit?: (() => void) | undefined
   /** Surface an admission/transport failure on the chat error strip. */
@@ -27,7 +31,7 @@ export interface MobileCommandMenuProps {
 
 /**
  * Composer command launcher. Bare host commands execute immediately; commands
- * with `input` claim the composer (desktop leadingInput).
+ * with `input` claim the composer; `surface` commands open the matching picker.
  * @param props - session id, lock state, and claim/submit callbacks.
  */
 export function MobileCommandMenu({
@@ -35,6 +39,7 @@ export function MobileCommandMenu({
   locked,
   menuAnchorRef,
   onLeadingInput,
+  onOpenSurface,
   onCommandSubmit,
   onCommandError,
 }: MobileCommandMenuProps): JSX.Element {
@@ -94,12 +99,16 @@ export function MobileCommandMenu({
     if (id.startsWith('label:')) return
     const command = findMobileCommand(id)
     setOpen(false)
+    if (command !== undefined && isSurfaceCommand(command)) {
+      onOpenSurface(command.surface)
+      return
+    }
     if (command !== undefined && isLeadingInputCommand(command)) {
       onLeadingInput(command.name)
       return
     }
     void runBareCommand(id)
-  }, [onLeadingInput, runBareCommand])
+  }, [onLeadingInput, onOpenSurface, runBareCommand])
 
   return (
     <>

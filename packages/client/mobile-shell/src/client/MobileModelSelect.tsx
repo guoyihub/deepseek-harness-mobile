@@ -15,6 +15,10 @@ export interface MobileModelSelectProps {
   locked: boolean
   /** Inline chip in the composer toolbar, or desktop-style trigger. */
   variant?: 'chip' | 'pill' | 'toolbar' | undefined
+  /** When true, keep the menu open (composer + menu / toolbar share one surface). */
+  open?: boolean | undefined
+  /** Report menu open changes so the + menu can open this picker. */
+  onOpenChange?: ((open: boolean) => void) | undefined
 }
 
 interface ModelDirectoryState {
@@ -49,13 +53,21 @@ export function MobileModelSelect({
   sessionId,
   locked,
   variant = 'chip',
+  open: openProp,
+  onOpenChange,
 }: MobileModelSelectProps): JSX.Element {
   const [state, setState] = useState<ModelDirectoryState>({
     current: null,
     groups: [],
     status: 'idle',
   })
-  const [open, setOpen] = useState(false)
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false)
+  const open = openProp ?? uncontrolledOpen
+  const setOpen = useCallback((next: boolean | ((current: boolean) => boolean)): void => {
+    const resolved = typeof next === 'function' ? next(openProp ?? uncontrolledOpen) : next
+    if (openProp === undefined) setUncontrolledOpen(resolved)
+    onOpenChange?.(resolved)
+  }, [onOpenChange, openProp, uncontrolledOpen])
   const anchorRef = useRef<HTMLButtonElement>(null)
   const generationRef = useRef(0)
 
@@ -105,7 +117,11 @@ export function MobileModelSelect({
 
   useEffect(() => {
     if (locked) setOpen(false)
-  }, [locked])
+  }, [locked, setOpen])
+
+  useEffect(() => {
+    if (open) void load()
+  }, [load, open])
 
   const getAnchorRect = useCallback(
     () => anchorRef.current?.getBoundingClientRect() ?? null,
@@ -153,8 +169,7 @@ export function MobileModelSelect({
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => {
-          setOpen(value => !value)
-          if (!open) void load()
+          setOpen(!open)
         }}
       >
         <span className={variant === 'toolbar' ? css.composerTriggerLabel : css.composerChipLabel}>

@@ -50,6 +50,10 @@ export interface MobilePermissionSelectProps {
   sessionId: SessionId
   value: PermissionSelectValue | undefined
   locked: boolean
+  /** When true, keep the menu open (composer + menu / toolbar share one surface). */
+  open?: boolean | undefined
+  /** Report menu open changes so the + menu can open this picker. */
+  onOpenChange?: ((open: boolean) => void) | undefined
 }
 
 /**
@@ -61,9 +65,17 @@ export function MobilePermissionSelect({
   sessionId,
   value,
   locked,
+  open: openProp,
+  onOpenChange,
 }: MobilePermissionSelectProps): JSX.Element | null {
   const [pick, setPick] = useState<string | null>(null)
-  const [open, setOpen] = useState(false)
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false)
+  const open = openProp ?? uncontrolledOpen
+  const setOpen = useCallback((next: boolean | ((current: boolean) => boolean)): void => {
+    const resolved = typeof next === 'function' ? next(openProp ?? uncontrolledOpen) : next
+    if (openProp === undefined) setUncontrolledOpen(resolved)
+    onOpenChange?.(resolved)
+  }, [onOpenChange, openProp, uncontrolledOpen])
   const [confirmation, setConfirmation] = useState<string | null>(null)
   const [acknowledged, setAcknowledged] = useState(false)
   const anchorRef = useRef<HTMLButtonElement>(null)
@@ -73,7 +85,7 @@ export function MobilePermissionSelect({
     setOpen(false)
     setAcknowledged(false)
     setConfirmation(null)
-  }, [locked, value])
+  }, [locked, setOpen, value])
 
   const runCommand = useCallback(async (line: string): Promise<boolean> => {
     const response = await mobileApi.commands.execute({ sessionId, line })
@@ -143,7 +155,7 @@ export function MobilePermissionSelect({
         disabled={locked || busy}
         aria-haspopup="menu"
         aria-expanded={open}
-        onClick={() => { setOpen(currentOpen => !currentOpen) }}
+        onClick={() => { setOpen(!open) }}
       >
         <span className={css.composerTriggerIcon} aria-hidden>
           {permissionGlyph(currentValue)}
