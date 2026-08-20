@@ -34,6 +34,7 @@ apps/web/dist/
 apps/mobile/dist/
 build-client.log
 .artifacts/
+.dsh-build/
 .playwright-mcp/
 .orig
 .worktrees/

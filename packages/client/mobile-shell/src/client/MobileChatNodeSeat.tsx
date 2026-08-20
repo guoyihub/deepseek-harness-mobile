@@ -3,9 +3,10 @@
  * desktop node views the PC conversation tab uses (retry, context, Think,
  * tools, turn-error, …).
  */
-import { memo, type ReactNode } from 'react'
-import type { SessionId } from '@deepseek-ai/dsh-client-connection/client'
+import { memo, useMemo, type ReactNode } from 'react'
+import type { HostDescription, SessionId } from '@deepseek-ai/dsh-client-connection/client'
 import type { ConversationSnapshot } from '@deepseek-ai/dsh-client-runtime/client'
+import { bindSnapshotSelector } from '@deepseek-ai/dsh-client-ui-renderer/src/client/bind.ts'
 import type {
   ChatNode, ChatNodeOwnerProps, ChatNodeViewProps, UseChatNodeTurnData,
 } from '@deepseek-ai/dsh-client-ui-conversation/client'
@@ -40,6 +41,7 @@ import { GenericToolCard } from '@deepseek-ai/dsh-client-ui-tool/src/client/tool
 import type { SnapshotSelectorHook, SessionAreaProps } from '@deepseek-ai/dsh-client-ui-slots'
 import { JsonBlock } from '@deepseek-ai/dsh-client-ui-primitives'
 import { mobileChatT } from './mobile-conversation-t.ts'
+import { useMobileConnection } from './MobileConnectionContext.tsx'
 
 type RoutedChatNodeOwner = ChatNodeOwnerProps & { readonly node: ChatNode }
 
@@ -57,8 +59,7 @@ const noopOpenFile: ChatNodeOwnerProps['openFile'] = () => {}
 const noopInspect: ChatNodeOwnerProps['inspectCall'] = () => {}
 const noopFork: ChatNodeOwnerProps['forkAt'] = () => {}
 const noopFileMentions: ChatNodeOwnerProps['fileMentions'] = () => undefined
-const loadImageUnavailable: ChatNodeOwnerProps['loadImage'] = () =>
-  Promise.reject(new Error(mobileChatT('image.serviceUnavailable')))
+const renderMessageImagesUnavailable: ChatNodeOwnerProps['renderMessageImages'] = () => null
 const noopRenderSlot = (): null => null
 const noopRenderSlotChain = (): null => null
 
@@ -76,6 +77,14 @@ export const MobileChatNodeSeat = memo(function MobileChatNodeSeat({
   sessionId,
   useSession,
 }: MobileChatNodeSeatProps): ReactNode {
+  const { hostDescription } = useMobileConnection()
+  const useHostDescription = useMemo(
+    () => bindSnapshotSelector<HostDescription | undefined>({
+      getSnapshot: () => hostDescription,
+      subscribe: () => () => {},
+    }),
+    [hostDescription],
+  )
   const node = useSession(snapshot => snapshot.chat.nodes.get(nodeKey)) as ChatNode | undefined
 
   const useTurnData: UseChatNodeTurnData = dataKey => useSession((snapshot) => {
@@ -93,7 +102,7 @@ export const MobileChatNodeSeat = memo(function MobileChatNodeSeat({
     openFile: noopOpenFile,
     inspectCall: noopInspect,
     forkAt: noopFork,
-    loadImage: loadImageUnavailable,
+    renderMessageImages: renderMessageImagesUnavailable,
     fileMentions: noopFileMentions,
   }
   const routedOwner = { ...owner, node } as RoutedChatNodeOwner
@@ -179,6 +188,7 @@ export const MobileChatNodeSeat = memo(function MobileChatNodeSeat({
         <ToolCallTree
           {...nodeProps<'tool-call'>()}
           {...baseRuntime}
+          useHostDescription={useHostDescription}
           renderSlot={renderToolSlot}
         />
       )

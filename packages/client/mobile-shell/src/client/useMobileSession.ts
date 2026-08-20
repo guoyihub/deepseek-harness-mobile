@@ -13,7 +13,7 @@ import {
 import { Session } from '@deepseek-ai/dsh-client-runtime/src/client/sessions/session.ts'
 import type { SessionRemotes } from '@deepseek-ai/dsh-client-runtime/src/client/sessions/remotes.ts'
 import type { HostObservable, SnapshotSelectorHook } from '@deepseek-ai/dsh-client-ui-slots'
-import { bindSnapshotSelector } from '@deepseek-ai/dsh-client-web-react'
+import { bindSnapshotSelector } from '@deepseek-ai/dsh-client-ui-renderer/src/client/bind.ts'
 import { getMobileConversationRuntime } from './mobile-conversation-runtime.ts'
 import { mobileApi } from './mobile-api-client.ts'
 import { useMobileConnection } from './MobileConnectionContext.tsx'
