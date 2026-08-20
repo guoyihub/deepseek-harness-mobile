@@ -27,19 +27,41 @@ DSH Mobile 把 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harnes
 
 ## 快速开始
 
-手机与电脑需在同一局域网，或通过手机可访问的穿透地址访问 Mobile PWA。无需注册账号。
+手机与电脑需在同一局域网，或通过手机可访问的穿透地址访问 **Mobile PWA（:8030）**。无需注册账号。
 
 | 端 | 地址 | 说明 |
 | --- | --- | --- |
 | 桌面 Host | `http://127.0.0.1:3080` | `pnpm dsh web`；侧栏 **手机连接** 展示二维码 |
-| Mobile PWA | `http://127.0.0.1:8030` | `pnpm dsh mobile`；手机浏览器打开或扫码进入 |
-| 局域网 | `http://<电脑 IP>:8030` | 手机只访问 Mobile；`/api` 与 WebSocket 由 Vite 代理到 Host |
+| Mobile PWA（本机） | `http://127.0.0.1:8030` | `pnpm dsh mobile`；**仅适合在电脑浏览器预览** |
+| Mobile PWA（局域网） | `http://<电脑 IP>:8030` | 手机请用此地址；`/api` 与 WebSocket 由 Vite 代理到 Host `:3080` |
+| Mobile PWA（穿透） | `https://<你的隧道域名>` | 只穿透 **8030**，不要穿透 Host `:3080` |
+
+### 本机访问 vs 局域网 / 穿透（易踩坑）
+<a id="access-local-vs-tunnel"></a>
+
+开发时有两条路径，用途不同：
+
+| 场景 | 打开哪个地址 | 说明 |
+| --- | --- | --- |
+| 电脑上调试 Mobile UI | `http://127.0.0.1:8030` | 本机回环；配对、扫码链路仍依赖下方「手机可达」地址 |
+| 手机配对 / 日常使用 | `http://<电脑 IP>:8030` 或穿透域名 | 手机必须能打开这个地址；页面再通过同源 `/api` 代理到 Host |
+
+**架构要点：** 手机只跟 Mobile（:8030）说话；Mobile 开发服务器把 `/api` 与 WebSocket **代理到本机 Host（:3080）**。二维码与配对页也应指向 Mobile，而不是 Host。
+
+常见踩坑：
+
+1. **手机打开 `127.0.0.1:8030`**：手机上的 `127.0.0.1` 是手机自己，连不到电脑，页面打不开或配对失败。请改用电脑局域网 IP，或穿透地址。
+2. **只穿透 / 只访问 Host `:3080`**：配对页在 Mobile 上（`/mobile/pair`），且 `/api` 代理在 Vite 侧；手机直连 Host 会缺代理与配对路径。**穿透时只暴露 `:8030`。**
+3. **二维码里是电脑内网 IP，手机却不在同一局域网**：扫码后无法打开配对页。同网用局域网 IP；异地用穿透，并确保二维码 / 短码对应的是穿透后的 Mobile 地址。
+4. **电脑上 `127.0.0.1:8030` 能开、手机用穿透却配对失败**：确认隧道指向的是 Mobile（8030）而非 Host（3080）；本仓库 Vite 已对代理请求去掉 Origin/Referer，避免穿透来源被 Host 的 Origin 校验拦住。
+
+更细的穿透与短码说明见 [手机端开发文档](docs/mobile/README.md)。
 
 ### 配对步骤
 
-1. 电脑启动 Host，手机启动 Mobile PWA（见下方「开发」）。
-2. 桌面 Web 侧栏点击 **手机连接** 扫码，或进入 **设置 → DSH 移动端** 配置连接密码（可选）。
-3. 手机打开 Mobile，扫描电脑二维码；或在配对页从相册选择二维码图片。
+1. 电脑启动 Host，再启动 Mobile PWA（见下方「开发」）。
+2. 桌面 Web 侧栏点击 **手机连接**，或进入 **设置 → DSH 移动端** 配置连接密码（可选）。
+3. **手机**用局域网 IP 或穿透地址打开 Mobile，扫描电脑二维码；或在配对页从相册选择二维码图片。不要用手机访问电脑的 `127.0.0.1`。
 4. 配对成功后进入 **全部任务** 列表，点选任务继续对话。
 
 <p align="center">
@@ -52,7 +74,7 @@ DSH Mobile 把 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harnes
   <img src="assets/mobile-home-unpaired.png" alt="未配对时的手机首页" width="360">
 </p>
 
-穿透、短码配对、生产构建与代码地图见 [手机端开发文档](docs/mobile/README.md)。
+短码配对、生产构建与代码地图见 [手机端开发文档](docs/mobile/README.md)。
 
 ## 文档
 

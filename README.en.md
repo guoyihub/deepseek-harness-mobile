@@ -27,19 +27,41 @@ DSH Mobile brings [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-har
 
 ## Quick start
 
-Your phone and computer should be on the same LAN, or the phone should reach Mobile through a tunnel URL. No signup is required.
+Your phone and computer should be on the same LAN, or the phone should reach the **Mobile PWA (:8030)** through a tunnel URL. No signup is required.
 
 | Surface | URL | Notes |
 | --- | --- | --- |
 | Desktop Host | `http://127.0.0.1:3080` | `pnpm dsh web`; open **手机连接** in the sidebar for the QR code |
-| Mobile PWA | `http://127.0.0.1:8030` | `pnpm dsh mobile`; open in the phone browser or scan the QR code |
-| LAN | `http://<computer-ip>:8030` | Phones talk only to Mobile; Vite proxies `/api` and WebSocket to the Host |
+| Mobile PWA (loopback) | `http://127.0.0.1:8030` | `pnpm dsh mobile`; **desktop browser preview only** |
+| Mobile PWA (LAN) | `http://<computer-ip>:8030` | Use this on the phone; Vite proxies `/api` and WebSocket to Host `:3080` |
+| Mobile PWA (tunnel) | `https://<your-tunnel-host>` | Tunnel **:8030 only** — do not expose Host `:3080` |
+
+### Loopback vs LAN / tunnel (common pitfalls)
+<a id="access-local-vs-tunnel"></a>
+
+These paths serve different jobs:
+
+| Scenario | Open | Notes |
+| --- | --- | --- |
+| Debug Mobile UI on the computer | `http://127.0.0.1:8030` | Loopback on the PC; pairing still needs a phone-reachable URL below |
+| Pair / use from a phone | `http://<computer-ip>:8030` or a tunnel URL | The phone must load this origin; same-origin `/api` is then proxied to the Host |
+
+**Architecture:** phones talk only to Mobile (:8030). The Mobile Vite server proxies `/api` and WebSocket to the local Host (:3080). QR codes and the pairing page must target Mobile, not Host.
+
+Pitfalls:
+
+1. **Opening `127.0.0.1:8030` on the phone** — that is the phone’s own loopback, not your PC. Use the computer’s LAN IP or a tunnel.
+2. **Tunneling or opening only Host `:3080`** — pairing lives on Mobile (`/mobile/pair`), and the `/api` proxy is on Vite. **Expose `:8030` only.**
+3. **QR encodes a LAN IP while the phone is off that network** — the pairing page never loads. Stay on LAN, or use a tunnel whose URL matches the QR / short-code offer.
+4. **Desktop `127.0.0.1:8030` works but tunnel pairing fails** — confirm the tunnel targets Mobile (8030), not Host (3080). This repo’s Vite proxy strips Origin/Referer so tunnel page origins do not fail the Host Origin check.
+
+More tunnel and short-code detail: [mobile development guide](docs/mobile/README.md).
 
 ### Pairing steps
 
-1. Start the Host on your computer and the Mobile PWA locally (see **Development** below).
-2. On desktop Web, click **手机连接** in the sidebar to scan, or open **Settings → DSH 移动端** to configure an optional connection password.
-3. On the phone, open Mobile and scan the desktop QR code, or pick a QR image from the album on the pairing page.
+1. Start the Host on your computer, then the Mobile PWA (see **Development** below).
+2. On desktop Web, click **手机连接** in the sidebar, or open **Settings → DSH 移动端** for an optional connection password.
+3. On the **phone**, open Mobile via LAN IP or tunnel, then scan the desktop QR code (or pick a QR image on the pairing page). Do not use the PC’s `127.0.0.1` from the phone.
 4. After pairing succeeds, open **全部任务**, pick a task, and continue the conversation.
 
 <p align="center">
@@ -52,7 +74,7 @@ Your phone and computer should be on the same LAN, or the phone should reach Mob
   <img src="assets/mobile-home-unpaired.png" alt="Unpaired mobile home screen" width="360">
 </p>
 
-Tunneling, short-code pairing, production builds, and the code map live in the [mobile development guide](docs/mobile/README.md).
+Short-code pairing, production builds, and the code map live in the [mobile development guide](docs/mobile/README.md).
 
 ## Documentation
 
