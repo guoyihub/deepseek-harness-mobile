@@ -166,6 +166,38 @@
   line-height: 18px;
 }
 
+/* Trajectory toolbar: keep the search field fully visible on narrow screens. */
+.trajectoryPane [role='toolbar'] > div {
+  gap: 4px;
+  padding:
+    0
+    calc(12px + env(safe-area-inset-right, 0px))
+    0
+    calc(8px + env(safe-area-inset-left, 0px));
+  min-width: 0;
+}
+
+.trajectoryPane [role='toolbar'] > div > div:first-child {
+  flex: 0 1 auto;
+  min-width: 0;
+  gap: 0;
+}
+
+.trajectoryPane [role='toolbar'] .toggle,
+.trajectoryPane [role='toolbar'] .action {
+  padding: 0 4px;
+  gap: 2px;
+  min-width: 0;
+}
+
+.trajectoryPane [role='toolbar'] > div > div:last-child {
+  flex: 1 1 72px;
+  width: auto;
+  max-width: 128px;
+  min-width: 72px;
+  margin-left: 4px;
+}
+
 .chatHeaderTitle {
   flex: 1 1 auto;
   min-width: 0;
@@ -958,6 +990,49 @@
   --dsh-composer-height: 168px;
 }
 
+/* Assistant/user message footer: compact metrics on narrow screens. */
+.chatPage [data-message-actions] {
+  gap: 2px;
+  max-width: 100%;
+  min-width: 0;
+  height: auto;
+  min-height: 24px;
+}
+
+.chatPage [data-message-actions] [data-message-clock] {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding-left: 6px;
+  font-size: 11px;
+  line-height: 18px;
+}
+
+.chatPage [data-message-actions] [data-run-dot] {
+  margin: 0 3px;
+}
+
+.chatPage [data-message-actions] button {
+  width: 24px;
+  height: 24px;
+  padding: 4px;
+  flex: none;
+}
+
+@media (max-width: 360px) {
+  .chatPage [data-message-actions] [data-metric='ttft'],
+  .chatPage [data-message-actions] [data-metric='tps'] {
+    display: none;
+  }
+}
+
+.chatPage [data-turn-tail] {
+  max-width: 100%;
+  min-width: 0;
+}
+
 .chatPageBlank {
   display: flex;
   flex: 1;
@@ -1560,6 +1635,34 @@
   opacity: 0.4;
 }
 
+.composerTakeover {
+  flex: none;
+  min-width: 0;
+}
+
+/* Question / approval composer takeover: fit narrow mobile width. */
+.composerTakeover [data-question-key] {
+  padding: 0;
+}
+
+.composerTakeover [data-question-key] > section {
+  width: 100%;
+  max-width: 100%;
+  max-height: min(55vh, 480px);
+  border-radius: 16px;
+}
+
+.composerTakeover [data-approval-key] {
+  padding: 0;
+  width: 100%;
+}
+
+.composerTakeover [data-approval-key] > div {
+  width: 100%;
+  max-width: 100%;
+  border-radius: 16px;
+}
+
 .statsLine {
   display: block;
   flex: none;
@@ -1922,6 +2025,7 @@
 }
 
 .taskHomeRow {
+  position: relative;
   display: flex;
   align-items: flex-start;
   gap: 12px;
@@ -1945,6 +2049,27 @@
   border-radius: 12px;
   background: var(--dsw-alias-bg-layer-2);
   color: var(--dsw-alias-label-secondary);
+}
+
+.taskHomeStatusSlot {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+}
+
+.taskHomeStatusA11y {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .taskHomeRowBody {

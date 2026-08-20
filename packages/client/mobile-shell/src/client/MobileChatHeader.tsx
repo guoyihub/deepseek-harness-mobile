@@ -7,7 +7,7 @@ import css from './mobile-shell.module.css'
 export interface MobileChatHeaderProps {
   /** Session title shown on the primary line. */
   title: string
-  /** Host and workspace metadata on the secondary line. */
+  /** Host workspace title on the tab-row chip. */
   meta: string
   /** Navigate back to the task list. */
   onBack: () => void

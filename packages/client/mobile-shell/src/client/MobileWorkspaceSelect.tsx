@@ -7,9 +7,15 @@ import {
   IconChevronDownOutline14, IconFolderClose16, IconFolderOpen16, IconPlusOutline16, Menu,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { MenuEntry } from '@deepseek-ai/dsh-client-ui-primitives'
+import { useMobileConnection } from './MobileConnectionContext.tsx'
 import { mobileApi } from './mobile-api-client.ts'
 import { mobileConversationT } from './mobile-locale.ts'
-import { sessionWorkspaceLabel } from './session-label.ts'
+import { workspaceDisplayLabel } from './session-label.ts'
+import {
+  findReusableBlankSession,
+  resolveDefaultWorkspaceId,
+  workspaceForSession,
+} from './mobile-workspace-connect.ts'
 import css from './mobile-shell.module.css'
 
 /** Synthetic menu id for the pinned Add Workspace footer row. */
@@ -33,8 +39,7 @@ export interface MobileWorkspaceSelectProps {
 }
 
 function workspaceLabel(view: WorkspaceView): string {
-  const leaf = view.title.trim()
-  return leaf !== '' ? leaf : view.path.split(/[/\\]/).filter(Boolean).pop() ?? view.path
+  return workspaceDisplayLabel(view)
 }
 
 /**
@@ -52,42 +57,95 @@ export function MobileWorkspaceSelect({
   onError,
   variant = 'chip',
 }: MobileWorkspaceSelectProps): JSX.Element {
-  const [workspaces, setWorkspaces] = useState<readonly WorkspaceView[]>([])
-  const [listReady, setListReady] = useState(false)
+  const {
+    sessions,
+    workspaces,
+    archivedSessionIds,
+    refreshSessions,
+  } = useMobileConnection()
+  const [listReady, setListReady] = useState(workspaces.length > 0)
   const [open, setOpen] = useState(false)
   const [browseOpen, setBrowseOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [pickingFolder, setPickingFolder] = useState(false)
   const anchorRef = useRef<HTMLButtonElement>(null)
+  const autoConnectedRef = useRef<SessionId | undefined>(undefined)
   const flowBusy = browseOpen || pickingFolder || loading
 
-  const refreshWorkspaces = useCallback(async (): Promise<void> => {
-    const response = await mobileApi.workspace.list({})
-    if (!response.result.ok) return
-    setWorkspaces(response.result.value.items)
-    setListReady(true)
-  }, [])
+  useEffect(() => {
+    if (workspaces.length > 0) setListReady(true)
+  }, [workspaces.length])
+
+  const assigned = useMemo(
+    () => workspaceForSession(sessionId, workspaces),
+    [sessionId, workspaces],
+  )
+
+  const label = assigned === undefined
+    ? mobileConversationT('workspace.choose')
+    : workspaceLabel(assigned)
+
+  const connectToWorkspace = useCallback(async (workspaceId: WorkspaceId): Promise<void> => {
+    const workspace = workspaces.find(item => item.workspaceId === workspaceId)
+    if (workspace === undefined) {
+      throw new Error(`unknown workspace ${workspaceId}`)
+    }
+    const reusable = findReusableBlankSession(workspace, sessions, archivedSessionIds)
+    if (reusable !== undefined) {
+      onSessionChange(reusable, draft)
+      return
+    }
+    const response = await mobileApi.sessions.create({ workspaceId })
+    if (response.result.ok) {
+      await refreshSessions()
+      onSessionChange(response.result.value.sessionId, draft)
+      return
+    }
+    throw new Error(response.result.error.message)
+  }, [archivedSessionIds, draft, onSessionChange, refreshSessions, sessions, workspaces])
+
+  const onSelectWorkspace = useCallback(async (workspaceId: string): Promise<void> => {
+    if (!switchable || locked || workspaceId === assigned?.workspaceId) {
+      setOpen(false)
+      return
+    }
+    setLoading(true)
+    setOpen(false)
+    try {
+      await connectToWorkspace(workspaceId as WorkspaceId)
+    } catch (error) {
+      onError?.(error instanceof Error ? error.message : String(error))
+    } finally {
+      setLoading(false)
+    }
+  }, [assigned?.workspaceId, connectToWorkspace, locked, onError, switchable])
 
   useEffect(() => {
-    let cancelled = false
-    void (async () => {
-      const response = await mobileApi.workspace.list({})
-      if (cancelled) return
-      if (response.result.ok) setWorkspaces(response.result.value.items)
-      setListReady(true)
-    })()
-    return () => { cancelled = true }
-  }, [])
-
-  const selected = useMemo(() => {
-    const bySession = workspaces.find(item => item.sessionIds.includes(sessionId))
-    if (bySession !== undefined) return bySession
-    return workspaces[0]
-  }, [sessionId, workspaces])
-
-  const label = selected === undefined
-    ? sessionWorkspaceLabel({ sessionId, updatedAt: 0, running: false, blank: true })
-    : workspaceLabel(selected)
+    if (!switchable || locked || loading || !listReady || workspaces.length === 0) return
+    if (assigned !== undefined) return
+    if (autoConnectedRef.current === sessionId) return
+    const targetId = resolveDefaultWorkspaceId(workspaces, sessions)
+    if (targetId === undefined) return
+    autoConnectedRef.current = sessionId
+    setLoading(true)
+    void connectToWorkspace(targetId)
+      .catch((error: unknown) => {
+        autoConnectedRef.current = undefined
+        onError?.(error instanceof Error ? error.message : String(error))
+      })
+      .finally(() => { setLoading(false) })
+  }, [
+    assigned,
+    connectToWorkspace,
+    listReady,
+    loading,
+    locked,
+    onError,
+    sessionId,
+    sessions,
+    switchable,
+    workspaces,
+  ])
 
   const addEntries: MenuEntry[] = useMemo(() => [{
     id: ADD_WORKSPACE,
@@ -141,27 +199,6 @@ export function MobileWorkspaceSelect({
     return response.result.value.path
   }, [])
 
-  const onSelectWorkspace = useCallback(async (workspaceId: string): Promise<void> => {
-    if (!switchable || locked || workspaceId === selected?.workspaceId) {
-      setOpen(false)
-      return
-    }
-    setLoading(true)
-    setOpen(false)
-    try {
-      const response = await mobileApi.sessions.create({ workspaceId: workspaceId as WorkspaceId })
-      if (response.result.ok) {
-        onSessionChange(response.result.value.sessionId, draft)
-        return
-      }
-      onError?.(response.result.error.message)
-    } catch (error) {
-      onError?.(error instanceof Error ? error.message : String(error))
-    } finally {
-      setLoading(false)
-    }
-  }, [draft, locked, onError, onSessionChange, selected?.workspaceId, switchable])
-
   const onOpenDirectory = useCallback((path: string): void => {
     setPickingFolder(true)
     void (async () => {
@@ -173,15 +210,9 @@ export function MobileWorkspaceSelect({
           return
         }
         const workspaceId = created.result.value.workspace.workspaceId
-        const session = await mobileApi.sessions.create({ workspaceId })
-        if (!session.result.ok) {
-          onError?.(session.result.error.message)
-          setBrowseOpen(false)
-          return
-        }
         setBrowseOpen(false)
-        await refreshWorkspaces()
-        onSessionChange(session.result.value.sessionId, draft)
+        await refreshSessions()
+        await connectToWorkspace(workspaceId)
       } catch (error) {
         onError?.(error instanceof Error ? error.message : String(error))
         setBrowseOpen(false)
@@ -189,7 +220,7 @@ export function MobileWorkspaceSelect({
         setPickingFolder(false)
       }
     })()
-  }, [draft, onError, onSessionChange, refreshWorkspaces])
+  }, [connectToWorkspace, onError, refreshSessions])
 
   const handleSelect = useCallback((id: string): void => {
     if (id === ADD_WORKSPACE) {
@@ -216,6 +247,8 @@ export function MobileWorkspaceSelect({
     [],
   )
 
+  const showClosedFolder = assigned === undefined
+
   return (
     <>
       <button
@@ -229,12 +262,14 @@ export function MobileWorkspaceSelect({
         onClick={() => {
           setOpen((value) => {
             const next = !value
-            if (next) void refreshWorkspaces()
+            if (next && workspaces.length === 0) void refreshSessions().then(() => { setListReady(true) })
             return next
           })
         }}
       >
-        <IconFolderOpen16 size={14} aria-hidden />
+        {showClosedFolder
+          ? <IconFolderClose16 size={14} aria-hidden />
+          : <IconFolderOpen16 size={14} aria-hidden />}
         <span className={variant === 'toolbar' ? css.composerTriggerLabel : css.composerChipLabel}>{label}</span>
         <IconChevronDownOutline14 size={12} aria-hidden />
       </button>
@@ -243,7 +278,7 @@ export function MobileWorkspaceSelect({
         anchor={null}
         items={items}
         {...pinAdd ? { footer: addEntries } : {}}
-        selectedId={selected?.workspaceId}
+        selectedId={assigned?.workspaceId}
         side={variant === 'header' ? 'bottom' : 'top'}
         portal
         getAnchorRect={getAnchorRect}

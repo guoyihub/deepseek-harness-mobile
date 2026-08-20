@@ -24,8 +24,16 @@ const absentProjection: UseProjection = ((
   selector?: (value: undefined) => unknown,
 ) => (selector === undefined ? undefined : selector(undefined))) as UseProjection
 
+const MOBILE_TRAJECTORY_OVERRIDES: Record<string, string> = {
+  'toolbar.duration': '时长',
+  'toolbar.turns': '轮次',
+  'toolbar.calls': '调用',
+}
+
 function trajectoryT(key: string, params?: Record<string, unknown>): string {
-  const template = (trajectoryZh as Record<string, string>)[key] ?? key
+  const template = MOBILE_TRAJECTORY_OVERRIDES[key]
+    ?? (trajectoryZh as Record<string, string>)[key]
+    ?? key
   if (params === undefined) return template
   return Object.entries(params).reduce(
     (text, [name, value]) => text.replace(`{${name}}`, String(value)),
