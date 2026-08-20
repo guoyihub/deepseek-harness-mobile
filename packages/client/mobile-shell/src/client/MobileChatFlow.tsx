@@ -4,7 +4,11 @@
  */
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react'
 import type { SessionId } from '@deepseek-ai/dsh-client-connection/client'
-import type { ConversationSnapshot, ConversationTimelineSnapshot } from '@deepseek-ai/dsh-client-runtime/client'
+import type {
+  ConversationSnapshot,
+  ConversationTimelineSnapshot,
+  UseProjection,
+} from '@deepseek-ai/dsh-client-runtime/client'
 import { MessageText } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { SnapshotSelectorHook } from '@deepseek-ai/dsh-client-ui-slots'
 import chatCss from '@deepseek-ai/dsh-client-ui-conversation/src/client/chat/ChatView.module.css'
@@ -20,6 +24,8 @@ export interface MobileChatFlowProps {
   sessionId: SessionId
   /** Shared Session face from {@link useMobileSession}. */
   useSession: SnapshotSelectorHook<ConversationSnapshot>
+  /** Framework projection reader (absent on mobile). */
+  useProjection: UseProjection
   /** Whether Session.open has finished. */
   ready: boolean
   /** Session open / history error. */
@@ -75,6 +81,7 @@ function TurnStatus({ startTime }: { startTime: number | null }): ReactNode {
 export function MobileChatFlow({
   sessionId,
   useSession,
+  useProjection,
   ready,
   error,
   optimisticText,
@@ -155,6 +162,7 @@ export function MobileChatFlow({
           nodeKey={nodeKey}
           sessionId={sessionId}
           useSession={useSession}
+          useProjection={useProjection}
         />
       ))}
       {optimisticText !== undefined && (

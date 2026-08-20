@@ -81,6 +81,18 @@ export default defineConfig({
         replacement: src('../../packages/client/ui-trajectory/src/$1'),
       },
       {
+        find: /^@deepseek-ai\/dsh-client-ui-conversation\/src\/(.*)$/,
+        replacement: src('../../packages/client/ui-conversation/src/$1'),
+      },
+      {
+        find: /^@deepseek-ai\/dsh-client-ui-user-questions\/src\/(.*)$/,
+        replacement: src('../../packages/client/ui-user-questions/src/$1'),
+      },
+      {
+        find: /^@deepseek-ai\/dsh-client-ui-tool\/src\/(.*)$/,
+        replacement: src('../../packages/client/ui-tool/src/$1'),
+      },
+      {
         find: /^@deepseek-ai\/dsh-client-ui-conversation\/client$/,
         replacement: src('../../packages/client/ui-conversation/src/client/index.ts'),
       },

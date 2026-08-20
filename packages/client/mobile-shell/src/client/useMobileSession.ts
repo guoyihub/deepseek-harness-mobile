@@ -2,8 +2,8 @@
  * Per-session {@link Session} for mobile chat and trajectory: opens history,
  * accepts mux frames for this session id, and exposes a uSES selector hook.
  */
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import type { SessionId, MuxFrame, RpcRequest } from '@deepseek-ai/dsh-client-connection/client'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import type { ConnectionState, SessionId, MuxFrame, RpcRequest } from '@deepseek-ai/dsh-client-connection/client'
 import {
   EMPTY_CHAT_SNAPSHOT,
   EMPTY_CONVERSATION_VIEWS,
@@ -16,6 +16,11 @@ import type { HostObservable, SnapshotSelectorHook } from '@deepseek-ai/dsh-clie
 import { bindSnapshotSelector } from '@deepseek-ai/dsh-client-ui-renderer/src/client/bind.ts'
 import { getMobileConversationRuntime } from './mobile-conversation-runtime.ts'
 import { mobileApi } from './mobile-api-client.ts'
+import {
+  isMobileSessionRoutedFrame,
+  registerMobileSession,
+  unregisterMobileSession,
+} from './mobile-session-mux-buffer.ts'
 import { useMobileConnection } from './MobileConnectionContext.tsx'
 
 /** SessionRemotes stub: Trajectory viewing does not execute commands through Session. */
@@ -32,6 +37,8 @@ const absentProjection: UseProjection = ((
   _key: string,
   selector?: (value: undefined) => unknown,
 ) => (selector === undefined ? undefined : selector(undefined))) as UseProjection
+
+const sessionCache = new Map<SessionId, Session>()
 
 function frameSessionId(frame: MuxFrame): SessionId | undefined {
   if ('sessionId' in frame && typeof frame.sessionId === 'string') {
@@ -93,24 +100,32 @@ export interface MobileSessionHandle {
  * @param sessionId - active Host session.
  */
 export function useMobileSession(sessionId: SessionId): MobileSessionHandle {
-  const { subscribeMuxEnvelope, sessions } = useMobileConnection()
+  const { subscribeMuxEnvelope, sessions, connectionState } = useMobileConnection()
   const [session, setSession] = useState<Session | undefined>(undefined)
   const [ready, setReady] = useState(false)
   const [error, setError] = useState<string | undefined>(undefined)
+  const sessionRef = useRef<Session | undefined>(undefined)
+  const prevConnectionState = useRef<ConnectionState | null>(null)
+
+  sessionRef.current = session
 
   useEffect(() => {
     let cancelled = false
     setReady(false)
     setError(undefined)
-    setSession(undefined)
     void (async () => {
       try {
         const conversation = await getMobileConversationRuntime()
         if (cancelled) return
-        const next = new Session(sessionId, mobileApi, mobileSessionRemotes(), { conversation })
+        let next = sessionCache.get(sessionId)
+        if (next === undefined) {
+          next = new Session(sessionId, mobileApi, mobileSessionRemotes(), { conversation })
+          sessionCache.set(sessionId, next)
+        }
         setSession(next)
         await next.open()
         if (cancelled) return
+        registerMobileSession(sessionId, next)
         setReady(true)
       } catch (openError) {
         if (!cancelled) {
@@ -121,6 +136,7 @@ export function useMobileSession(sessionId: SessionId): MobileSessionHandle {
     })()
     return () => {
       cancelled = true
+      unregisterMobileSession(sessionId)
     }
   }, [sessionId])
 
@@ -130,9 +146,19 @@ export function useMobileSession(sessionId: SessionId): MobileSessionHandle {
       const frame = envelope.payload
       if (frameSessionId(frame) !== sessionId) return
       if (frame.type === 'session/projection') return
+      if (isMobileSessionRoutedFrame(frame)) return
       session.handleMuxEnvelope(envelope.rpcId, frame)
     })
   }, [session, sessionId, subscribeMuxEnvelope])
+
+  useEffect(() => {
+    const prev = prevConnectionState.current
+    prevConnectionState.current = connectionState
+    if (connectionState !== 'connected' || prev !== 'reconnecting') return
+    const active = sessionRef.current
+    if (active === undefined || active.getSnapshot().openState !== 'open') return
+    void active.resync()
+  }, [connectionState])
 
   useEffect(() => {
     if (session === undefined) return

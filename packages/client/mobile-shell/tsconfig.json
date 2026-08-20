@@ -39,6 +39,9 @@
       "path": "../ui-tool"
     },
     {
+      "path": "../ui-user-questions"
+    },
+    {
       "path": "../../plan/plan-mode"
     },
     {

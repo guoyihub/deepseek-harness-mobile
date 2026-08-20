@@ -11,6 +11,7 @@ import { MobileBackButton } from './MobileBackButton.tsx'
 import { MobileChatFlow } from './MobileChatFlow.tsx'
 import { MobileChatHeader } from './MobileChatHeader.tsx'
 import { MobileComposer } from './MobileComposer.tsx'
+import { MobileComposerTakeover } from './MobileComposerTakeover.tsx'
 import { claimExecuteLine, type MobileComposerClaim } from './mobile-composer-claim.ts'
 import { MobileSessionTabs, type MobileSessionViewId } from './MobileSessionTabs.tsx'
 import { MobileStatsLine } from './MobileStatsLine.tsx'
@@ -61,9 +62,9 @@ export function ChatPage({
   onBack,
   onSessionChange,
 }: ChatPageProps): JSX.Element {
-  const { subscribeMux, sessions, refreshSessions, error: connectionError } = useMobileConnection()
+  const { subscribeMux, sessions, workspaces, refreshSessions, error: connectionError } = useMobileConnection()
   const mobileSession = useMobileSession(sessionId)
-  const { ready, error: sessionError, useSession, loadOlder } = mobileSession
+  const { ready, error: sessionError, useSession, useProjection, loadOlder } = mobileSession
   const [draft, setDraft] = useState(initialDraft)
   const [claim, setClaim] = useState<MobileComposerClaim | undefined>(undefined)
   const [optimisticText, setOptimisticText] = useState<string | undefined>(undefined)
@@ -107,11 +108,12 @@ export function ChatPage({
     return sessionId.slice(0, 8)
   }, [projectionMap.title, sessionId, sessionSummary])
 
-  const headerMeta = useMemo(() => {
-    if (sessionSummary !== undefined) return sessionChatHeaderMeta(sessionSummary)
-    return 'Work'
-  }, [sessionSummary])
+  const headerMeta = useMemo(
+    () => sessionChatHeaderMeta(sessionId, workspaces),
+    [sessionId, workspaces],
+  )
 
+  const pending = useSession(snapshot => snapshot.pending)
   const blank = useSession(snapshot => snapshot.blank)
   const chatOrder = useSession(snapshot => snapshot.chat.order)
   const chatNodes = useSession(snapshot => snapshot.chat.nodes)
@@ -317,6 +319,7 @@ export function ChatPage({
               <MobileChatFlow
                 sessionId={sessionId}
                 useSession={useSession}
+                useProjection={useProjection}
                 ready={ready}
                 error={sessionError}
                 optimisticText={optimisticText}
@@ -327,25 +330,36 @@ export function ChatPage({
             )}
           <div className={showHero ? css.composerDockBlank : css.composerDock}>
             <StatusPanel error={error ?? connectionError} />
-            <MobileComposer
-              sessionId={sessionId}
-              draft={draft}
-              sending={sending}
-              locked={agentWorking || sending}
-              agentWorking={agentWorking}
-              stopping={cancelling}
-              permissions={permissions}
-              claim={claim}
-              planActive={planActive}
-              goalActive={goalActive}
-              onDraftChange={setDraft}
-              onClaimChange={setClaim}
-              onSend={() => { void onSend() }}
-              onStop={() => { void onCancel() }}
-              onCommandSubmit={() => { stickToBottomRef.current = true }}
-              onCommandError={setError}
-            />
-            <MobileStatsLine tokenUsage={tokenUsage} />
+            {pending.length > 0
+              ? (
+                <MobileComposerTakeover
+                  sessionId={sessionId}
+                  pending={pending}
+                  useSession={useSession}
+                  useProjection={useProjection}
+                />
+              )
+              : (
+                <MobileComposer
+                  sessionId={sessionId}
+                  draft={draft}
+                  sending={sending}
+                  locked={agentWorking || sending}
+                  agentWorking={agentWorking}
+                  stopping={cancelling}
+                  permissions={permissions}
+                  claim={claim}
+                  planActive={planActive}
+                  goalActive={goalActive}
+                  onDraftChange={setDraft}
+                  onClaimChange={setClaim}
+                  onSend={() => { void onSend() }}
+                  onStop={() => { void onCancel() }}
+                  onCommandSubmit={() => { stickToBottomRef.current = true }}
+                  onCommandError={setError}
+                />
+              )}
+            {pending.length === 0 && <MobileStatsLine tokenUsage={tokenUsage} />}
           </div>
         </div>
       </MobileShellLayout>

@@ -5,8 +5,10 @@
  */
 import { memo, useMemo, type ReactNode } from 'react'
 import type { HostDescription, SessionId } from '@deepseek-ai/dsh-client-connection/client'
-import type { ConversationSnapshot } from '@deepseek-ai/dsh-client-runtime/client'
+import type { ConversationSnapshot, UseProjection } from '@deepseek-ai/dsh-client-runtime/client'
 import { bindSnapshotSelector } from '@deepseek-ai/dsh-client-ui-renderer/src/client/bind.ts'
+import type { SnapshotSelectorHook } from '@deepseek-ai/dsh-client-ui-slots'
+import { JsonBlock } from '@deepseek-ai/dsh-client-ui-primitives'
 import type {
   ChatNode, ChatNodeOwnerProps, ChatNodeViewProps, UseChatNodeTurnData,
 } from '@deepseek-ai/dsh-client-ui-conversation/client'
@@ -38,8 +40,11 @@ import chatCss from '@deepseek-ai/dsh-client-ui-conversation/src/client/chat/Cha
 import { ToolCallTree } from '@deepseek-ai/dsh-client-ui-tool/src/client/tool/ToolCallTree.tsx'
 import type { ToolCallOwnerProps } from '@deepseek-ai/dsh-client-ui-tool/src/client/contract/slots.ts'
 import { GenericToolCard } from '@deepseek-ai/dsh-client-ui-tool/src/client/tool/toolviews/GenericToolCard.tsx'
-import type { SnapshotSelectorHook, SessionAreaProps } from '@deepseek-ai/dsh-client-ui-slots'
-import { JsonBlock } from '@deepseek-ai/dsh-client-ui-primitives'
+import { AskQuestionRow } from '@deepseek-ai/dsh-client-ui-tool/src/client/tool/toolviews/ask-question-row.tsx'
+import {
+  PassthroughSessionProvider,
+  useMobileInputKit,
+} from './mobile-framework-kit.ts'
 import { mobileChatT } from './mobile-conversation-t.ts'
 import { useMobileConnection } from './MobileConnectionContext.tsx'
 
@@ -53,6 +58,8 @@ export interface MobileChatNodeSeatProps {
   sessionId: SessionId
   /** uSES selector over the conversation snapshot. */
   useSession: SnapshotSelectorHook<ConversationSnapshot>
+  /** Framework projection reader (absent on mobile). */
+  useProjection: UseProjection
 }
 
 const noopOpenFile: ChatNodeOwnerProps['openFile'] = () => {}
@@ -63,11 +70,6 @@ const renderMessageImagesUnavailable: ChatNodeOwnerProps['renderMessageImages'] 
 const noopRenderSlot = (): null => null
 const noopRenderSlotChain = (): null => null
 
-/** Satisfy PropsRuntime SessionProvider without nesting a real session area. */
-function PassthroughSessionProvider(_props: SessionAreaProps): ReactNode {
-  return null
-}
-
 /**
  * Subscribe and dispatch one Chat Node without observing sibling Nodes.
  * @param props - node key and session face.
@@ -76,7 +78,9 @@ export const MobileChatNodeSeat = memo(function MobileChatNodeSeat({
   nodeKey,
   sessionId,
   useSession,
+  useProjection,
 }: MobileChatNodeSeatProps): ReactNode {
+  const { useInput, inputActions } = useMobileInputKit()
   const { hostDescription } = useMobileConnection()
   const useHostDescription = useMemo(
     () => bindSnapshotSelector<HostDescription | undefined>({
@@ -110,6 +114,9 @@ export const MobileChatNodeSeat = memo(function MobileChatNodeSeat({
   const baseRuntime = {
     sessionId,
     useSession,
+    useProjection,
+    useInput: useInput as never,
+    inputActions: inputActions as never,
     useSessions: (() => undefined) as never,
     useWorkspaces: (() => undefined) as never,
     SessionProvider: PassthroughSessionProvider,
@@ -122,12 +129,21 @@ export const MobileChatNodeSeat = memo(function MobileChatNodeSeat({
   } as unknown as ChatNodeViewProps<Kind>)
 
   const renderToolSlot = (
-    _key: string,
+    _slotName: string,
     toolOwner: object,
-    opts?: { fallback?: ReactNode },
-  ): ReactNode => opts?.fallback ?? (
-    <GenericToolCard {...toolOwner as ToolCallOwnerProps} t={t} />
-  )
+    opts?: { entryKey?: string; fallback?: ReactNode },
+  ): ReactNode => {
+    if (opts?.entryKey === 'ask_user_question') {
+      return (
+        <AskQuestionRow
+          {...toolOwner as ToolCallOwnerProps}
+          {...baseRuntime}
+          t={mobileChatT}
+        />
+      )
+    }
+    return opts?.fallback ?? <GenericToolCard {...toolOwner as ToolCallOwnerProps} t={t} />
+  }
 
   let body: ReactNode
   switch (routedOwner.node.kind) {
