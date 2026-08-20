@@ -79,36 +79,36 @@ export function MessageIconActions({
   // readings only on screen: without the flanking spaces a reader hears one
   // run-on string ("Ran for 13sTTFT 0.2s12 tok/s") instead of three facts.
   const clockEl = time === undefined ? null : (
-    <span className={clock === 'start' ? css.timeStart : css.timeEnd}>
-      {formatMessageClock(time, t, day)}
+    <span
+      className={clock === 'start' ? css.timeStart : css.timeEnd}
+      data-message-clock
+    >
+      <span className={css.clockTime}>{formatMessageClock(time, t, day)}</span>
       {runMs !== undefined && (
-        <>
-          {' '}
-          <span className={css.runTimeDot} aria-hidden>·</span>
-          {' '}
+        <span className={css.metricGroup} data-metric="duration">
+          <span className={css.runTimeDot} data-run-dot aria-hidden>·</span>
           {t('message.ranFor', { duration: formatRunDuration(runMs, t) })}
-        </>
+        </span>
       )}
       {ttftMs !== undefined && (
-        <>
-          {' '}
-          <span className={css.runTimeDot} aria-hidden>·</span>
-          {' '}
+        <span className={css.metricGroup} data-metric="ttft">
+          <span className={css.runTimeDot} data-run-dot aria-hidden>·</span>
           {t('message.ttft', { seconds: formatLatencySeconds(ttftMs) })}
-        </>
+        </span>
       )}
       {tokensPerSecond !== undefined && (
-        <>
-          {' '}
-          <span className={css.runTimeDot} aria-hidden>·</span>
-          {' '}
+        <span className={css.metricGroup} data-metric="tps">
+          <span className={css.runTimeDot} data-run-dot aria-hidden>·</span>
           {t('message.tokensPerSecond', { tps: formatTokensPerSecond(tokensPerSecond) })}
-        </>
+        </span>
       )}
     </span>
   )
   return (
-    <div className={className === undefined ? css.actions : `${css.actions} ${className}`}>
+    <div
+      className={className === undefined ? css.actions : `${css.actions} ${className}`}
+      data-message-actions
+    >
       {clock === 'start' ? clockEl : null}
       <Tooltip label={copied ? t('copied') : t('copy')} side="bottom">
         <button type="button" className={css.action} aria-label={copied ? t('copied') : t('copy')} onClick={onCopy}>

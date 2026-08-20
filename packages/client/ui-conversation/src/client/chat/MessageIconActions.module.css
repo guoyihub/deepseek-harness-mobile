@@ -26,6 +26,14 @@
   white-space: nowrap;
 }
 
+.clockTime {
+  display: inline;
+}
+
+.metricGroup {
+  display: inline;
+}
+
 /* Separator between the clock and the run-time label (time · Ran for 15s). */
 .runTimeDot {
   margin: 0 10px;
