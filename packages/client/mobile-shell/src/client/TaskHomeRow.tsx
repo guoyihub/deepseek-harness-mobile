@@ -10,7 +10,6 @@ import {
   IconChevronUpOutline14,
   IconEditOutline16,
   IconEllipsisOutline16,
-  IconListPenOutline16,
   Menu,
   StateDot,
 } from '@deepseek-ai/dsh-client-ui-primitives'
@@ -23,7 +22,6 @@ import {
   sessionDisplayMeta,
   sessionDisplayTitle,
   sessionSearchMeta,
-  formatSessionSearchTime,
 } from './session-label.ts'
 import css from './mobile-shell.module.css'
 
@@ -37,6 +35,10 @@ export interface TaskHomeRowProps {
   hostLabel?: string | undefined
   /** Home list or search-result layout. */
   variant?: 'home' | 'search' | undefined
+  /** Search-result workspace label (Host registry title). */
+  workspaceLabel?: string | undefined
+  /** Optional Host content-match excerpt. */
+  snippet?: string | undefined
   /** Whether the home list is in multi-select mode. */
   selecting?: boolean | undefined
   /** Whether this row is selected while selecting. */
@@ -66,6 +68,8 @@ export function TaskHomeRow({
   pendingInteraction,
   hostLabel,
   variant = 'home',
+  workspaceLabel,
+  snippet,
   selecting = false,
   selected = false,
   onOpen,
@@ -151,10 +155,11 @@ export function TaskHomeRow({
             {search ? (
               <span className={css.taskHomeSearchMeta}>
                 <span className={css.taskHomeSearchMetaLead}>
-                  <IconListPenOutline16 size={12} />
-                  <span>{sessionSearchMeta(item)}</span>
+                  <span>{workspaceLabel ?? sessionSearchMeta(item)}</span>
                 </span>
-                <span className={css.taskHomeTime}>{formatSessionSearchTime(item.updatedAt)}</span>
+                {snippet !== undefined && snippet !== '' && (
+                  <span className={css.taskHomeSearchSnippet}>{snippet}</span>
+                )}
               </span>
             ) : (
               <span className={css.taskHomeMeta}>

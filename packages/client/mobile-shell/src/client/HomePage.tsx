@@ -1,16 +1,14 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
-import type { SessionId } from '@deepseek-ai/dsh-client-connection/client'
+import type { SessionId, SessionSearchItem } from '@deepseek-ai/dsh-client-connection/client'
 import type { PendingInteractionStatus } from '@deepseek-ai/dsh-client-runtime/client'
 
 import { Button } from '@deepseek-ai/dsh-client-ui-primitives'
 
 import { useMobileConnection } from './MobileConnectionContext.tsx'
-
+import { mobileApi } from './mobile-api-client.ts'
 import { MobileFab } from './MobileFab.tsx'
-
 import { MobileShellLayout } from './MobileShellLayout.tsx'
-
 import {
   archiveMobileSession,
   archiveMobileSessions,
@@ -19,25 +17,22 @@ import {
   renameMobileSession,
 } from './mobile-session-actions.ts'
 import {
+  deriveMobileSearchResults,
+  MOBILE_SEARCH_DEBOUNCE_MS,
+  MOBILE_SEARCH_RESULT_LIMIT,
+  type MobileRemoteSearchState,
+} from './mobile-session-search.ts'
+import {
   deriveMobileTaskGroups,
   groupDisplayLabel,
-  visibleWireSessions,
 } from './mobile-task-groups.ts'
 import { mobileSessionIsActive } from './mobile-session-status.ts'
 import { sessionDisplayTitle } from './session-label.ts'
-
 import { StatusPanel } from './StatusPanel.tsx'
-
 import { TaskHomeHeader, type TaskHomeFilter } from './TaskHomeHeader.tsx'
-
 import { TaskHomeRenameModal } from './TaskHomeRenameModal.tsx'
-
 import { TaskHomeRow } from './TaskHomeRow.tsx'
-
-import { TaskHomeSearchOverlay } from './TaskHomeSearchOverlay.tsx'
-
 import { TaskHomeSelectDock } from './TaskHomeSelectDock.tsx'
-
 import css from './mobile-shell.module.css'
 
 /** Props for {@link HomePage}. */
@@ -76,8 +71,14 @@ export function HomePage({
   } = useMobileConnection()
 
   const [filter, setFilter] = useState<TaskHomeFilter>('all')
-  const [searchOpen, setSearchOpen] = useState(false)
+  const [searchExpanded, setSearchExpanded] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [remoteSearch, setRemoteSearch] = useState<MobileRemoteSearchState>({
+    query: '',
+    status: 'idle',
+    items: [],
+    hasMore: false,
+  })
   const [selecting, setSelecting] = useState(false)
   const [selectedIds, setSelectedIds] = useState<ReadonlySet<SessionId>>(() => new Set())
   const [actionError, setActionError] = useState<string | undefined>(undefined)
@@ -86,6 +87,8 @@ export function HomePage({
     sessionId: SessionId
     title: string
   } | null>(null)
+
+  const normalizedQuery = searchQuery.trim()
 
   const hostLabel = useMemo(() => {
     if (hostDescription?.model !== undefined) return hostDescription.model
@@ -108,10 +111,74 @@ export function HomePage({
     return map
   }, [getPendingInteraction, pendingRevision, sessions])
 
-  const searchableSessions = useMemo(
-    () => visibleWireSessions(sessions, workspaces, archivedSessionIds, pendingBySession),
-    [archivedSessionIds, pendingBySession, sessions, workspaces],
+  useEffect(() => {
+    if (normalizedQuery === '') {
+      setRemoteSearch({ query: '', status: 'idle', items: [], hasMore: false })
+      return
+    }
+    const controller = new AbortController()
+    setRemoteSearch({
+      query: normalizedQuery,
+      status: 'loading',
+      items: [],
+      hasMore: false,
+    })
+    const timer = window.setTimeout(() => {
+      void mobileApi.sessions.search({ query: normalizedQuery }, controller.signal)
+        .then((response) => {
+          if (controller.signal.aborted) return
+          if (!response.result.ok) {
+            setRemoteSearch({
+              query: normalizedQuery,
+              status: 'error',
+              items: [],
+              hasMore: false,
+            })
+            return
+          }
+          const items: readonly SessionSearchItem[] = response.result.value.items
+          setRemoteSearch({
+            query: normalizedQuery,
+            status: 'ready',
+            items,
+            hasMore: response.result.value.hasMore,
+          })
+        })
+        .catch(() => {
+          if (controller.signal.aborted) return
+          setRemoteSearch({
+            query: normalizedQuery,
+            status: 'error',
+            items: [],
+            hasMore: false,
+          })
+        })
+    }, MOBILE_SEARCH_DEBOUNCE_MS)
+    return () => {
+      window.clearTimeout(timer)
+      controller.abort()
+    }
+  }, [normalizedQuery])
+
+  const searchResults = useMemo(
+    () => deriveMobileSearchResults(
+      sessions,
+      workspaces,
+      archivedSessionIds,
+      normalizedQuery,
+      remoteSearch,
+      pendingBySession,
+    ),
+    [archivedSessionIds, normalizedQuery, pendingBySession, remoteSearch, sessions, workspaces],
   )
+
+  const searching = normalizedQuery !== ''
+  const searchPending = searching && (
+    remoteSearch.query !== normalizedQuery || remoteSearch.status === 'loading'
+  )
+  const searchFailed = searching
+    && remoteSearch.query === normalizedQuery
+    && remoteSearch.status === 'error'
 
   const visibleGroups = useMemo(() => {
     const groups = deriveMobileTaskGroups(sessions, workspaces, archivedSessionIds, pendingBySession)
@@ -241,10 +308,10 @@ export function HomePage({
     })()
   }
 
-  const closeSearch = (): void => {
-    setSearchOpen(false)
+  const collapseSearch = useCallback((): void => {
+    setSearchExpanded(false)
     setSearchQuery('')
-  }
+  }, [])
 
   const reconnecting = connectionState === 'reconnecting'
   const reconnectFailed = !paired && !revoked && error !== undefined
@@ -254,19 +321,6 @@ export function HomePage({
       ? '多次重连失败，请扫描电脑上的二维码重新连接'
       : '扫码连接同一局域网内的 DeepSeek Harness 电脑，即可查看并继续 Agent 任务。'
 
-  if (searchOpen && paired) {
-    return (
-      <TaskHomeSearchOverlay
-        query={searchQuery}
-        sessions={searchableSessions}
-        pendingBySession={pendingBySession}
-        onQueryChange={setSearchQuery}
-        onClose={closeSearch}
-        onOpenChat={onOpenChat}
-      />
-    )
-  }
-
   return (
     <MobileShellLayout
       taskHomeContent
@@ -275,16 +329,19 @@ export function HomePage({
           paired={paired}
           connected={connectionState === 'connected'}
           filter={filter}
-          searchOpen={searchOpen}
+          searchExpanded={searchExpanded}
+          searchQuery={searchQuery}
           selecting={selecting}
           selectedCount={selectedIds.size}
           onExitSelect={exitSelect}
           onFilterChange={setFilter}
-          onSearchOpen={() => { setSearchOpen(true) }}
+          onSearchExpand={() => { setSearchExpanded(true) }}
+          onSearchQueryChange={setSearchQuery}
+          onSearchCollapse={collapseSearch}
           onOpenConnection={onOpenConnection}
         />
       )}
-      fab={selecting ? undefined : (
+      fab={selecting || searching ? undefined : (
         <MobileFab
           label={paired ? '新建任务' : '扫码连接电脑'}
           onClick={onFabClick}
@@ -307,15 +364,55 @@ export function HomePage({
         </div>
       )}
 
-      {paired && reconnecting && visibleSessionCount === 0 && (
+      {paired && searching && (
+        <div className={css.taskHomeSearchBody} role="list" aria-label="搜索结果">
+          <ul className={css.taskHomeSearchList}>
+            {searchResults.items.map((result) => {
+              const item = sessionById.get(result.id)
+              if (item === undefined) return null
+              return (
+                <TaskHomeRow
+                  key={result.id}
+                  item={item}
+                  {...(result.pendingInteraction !== undefined
+                    ? { pendingInteraction: result.pendingInteraction }
+                    : {})}
+                  variant="search"
+                  workspaceLabel={result.workspace}
+                  {...(result.snippet !== undefined ? { snippet: result.snippet } : {})}
+                  onOpen={() => { onOpenChat(result.id) }}
+                />
+              )
+            })}
+          </ul>
+          {searchPending && (
+            <div className={css.taskHomeSearchStatus} role="status">正在搜索会话历史…</div>
+          )}
+          {searchFailed && (
+            <div className={css.taskHomeSearchWarning} role="status">
+              内容搜索暂不可用，仅显示名称匹配。
+            </div>
+          )}
+          {!searchPending && searchResults.items.length === 0 && (
+            <div className={css.taskHomeEmpty}>无匹配会话</div>
+          )}
+          {searchResults.hasMore && (
+            <div className={css.taskHomeSearchStatus}>
+              {`仅显示前 ${MOBILE_SEARCH_RESULT_LIMIT} 条结果，请缩小搜索范围。`}
+            </div>
+          )}
+        </div>
+      )}
+
+      {paired && !searching && reconnecting && visibleSessionCount === 0 && (
         <div className={css.taskHomeEmpty} role="status">正在重连…</div>
       )}
 
-      {paired && !reconnecting && sessionsLoading && visibleSessionCount === 0 && (
+      {paired && !searching && !reconnecting && sessionsLoading && visibleSessionCount === 0 && (
         <div className={css.taskHomeEmpty}>正在加载任务…</div>
       )}
 
-      {paired && !reconnecting && !sessionsLoading && visibleSessionCount === 0 && (
+      {paired && !searching && !reconnecting && !sessionsLoading && visibleSessionCount === 0 && (
         <div className={css.taskHomeEmpty}>
           {filter === 'running'
             ? '没有匹配的任务'
@@ -323,7 +420,7 @@ export function HomePage({
         </div>
       )}
 
-      {paired && visibleSessionCount > 0 && (
+      {paired && !searching && visibleSessionCount > 0 && (
         <div className={css.taskHomeGroups}>
           {visibleGroups.map(group => (
             <section key={group.key} className={css.taskHomeGroup} aria-label={groupDisplayLabel(group)}>

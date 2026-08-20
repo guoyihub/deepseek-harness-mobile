@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   IconChevronDownOutline14,
+  IconCloseFill14,
   IconCloseOutline16,
   IconSearchOutline16,
   IconUserOutline16,
 } from '@deepseek-ai/dsh-client-ui-primitives'
+import { sanitizeSearchQuery } from './mobile-session-search.ts'
 import css from './mobile-shell.module.css'
 
 /** Task list filter mode for the home surface. */
@@ -18,8 +20,10 @@ export interface TaskHomeHeaderProps {
   connected: boolean
   /** Active filter mode. */
   filter: TaskHomeFilter
-  /** Whether the search overlay is open. */
-  searchOpen: boolean
+  /** Whether the inline search field is expanded. */
+  searchExpanded: boolean
+  /** Current search query. */
+  searchQuery: string
   /** Multi-select mode: show selected count and exit control. */
   selecting?: boolean | undefined
   /** Selected session count while selecting. */
@@ -28,8 +32,12 @@ export interface TaskHomeHeaderProps {
   onExitSelect?: (() => void) | undefined
   /** Change the filter mode. */
   onFilterChange: (filter: TaskHomeFilter) => void
-  /** Open the search overlay. */
-  onSearchOpen: () => void
+  /** Expand the inline search capsule. */
+  onSearchExpand: () => void
+  /** Update the search query (already sanitized by the header). */
+  onSearchQueryChange: (query: string) => void
+  /** Collapse search and clear the query. */
+  onSearchCollapse: () => void
   /** Open connection management. */
   onOpenConnection: () => void
 }
@@ -45,26 +53,32 @@ function connectionAriaLabel(paired: boolean, connected: boolean): string {
 }
 
 /**
- * Large-title task home header with filter, search, and profile pill.
+ * Task home header with filter, inline-expanding search (desktop WorkspaceBrowser),
+ * and profile pill.
  * @param props - filter/search state and navigation callbacks.
  */
 export function TaskHomeHeader({
   paired,
   connected,
   filter,
-  searchOpen,
+  searchExpanded,
+  searchQuery,
   selecting = false,
   selectedCount = 0,
   onExitSelect,
   onFilterChange,
-  onSearchOpen,
+  onSearchExpand,
+  onSearchQueryChange,
+  onSearchCollapse,
   onOpenConnection,
 }: TaskHomeHeaderProps): JSX.Element {
   const [filterOpen, setFilterOpen] = useState(false)
   const filterRef = useRef<HTMLDivElement>(null)
+  const searchRoot = useRef<HTMLDivElement>(null)
+  const searchInput = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    if (!filterOpen || selecting) return
+    if (!filterOpen || selecting || searchExpanded) return
     const onPointerDown = (event: MouseEvent): void => {
       if (filterRef.current?.contains(event.target as Node) !== true) {
         setFilterOpen(false)
@@ -72,13 +86,37 @@ export function TaskHomeHeader({
     }
     document.addEventListener('pointerdown', onPointerDown)
     return () => { document.removeEventListener('pointerdown', onPointerDown) }
-  }, [filterOpen, selecting])
+  }, [filterOpen, searchExpanded, selecting])
+
+  useEffect(() => {
+    if (!searchExpanded) return
+    searchInput.current?.focus({ preventScroll: true })
+  }, [searchExpanded])
+
+  // Outside-click collapses only when the query is empty (desktop rule).
+  useEffect(() => {
+    if (!searchExpanded || selecting) return
+    const onClick = (event: MouseEvent): void => {
+      if (!(event.target instanceof Node) || searchRoot.current?.contains(event.target) === true) return
+      searchInput.current?.blur()
+      if (searchQuery.trim() !== '') return
+      onSearchCollapse()
+    }
+    document.addEventListener('click', onClick)
+    return () => { document.removeEventListener('click', onClick) }
+  }, [onSearchCollapse, searchExpanded, searchQuery, selecting])
 
   const statusClass = !paired
     ? css.taskHomeStatusOffline
     : connected
       ? css.taskHomeStatusOnline
       : css.taskHomeStatusError
+
+  const expandSearch = (): void => {
+    if (!paired) return
+    setFilterOpen(false)
+    onSearchExpand()
+  }
 
   if (selecting) {
     return (
@@ -103,19 +141,23 @@ export function TaskHomeHeader({
   return (
     <header className={css.taskHomeHeader}>
       <div className={css.taskHomeHeaderRow}>
-        <div className={css.taskHomeTitleWrap} ref={filterRef}>
+        <div
+          className={`${css.taskHomeTitleWrap}${searchExpanded ? ` ${css.taskHomeTitleWrapHidden}` : ''}`}
+          ref={filterRef}
+        >
           <button
             type="button"
             className={css.taskHomeTitleButton}
             aria-haspopup="listbox"
             aria-expanded={filterOpen}
-            disabled={!paired}
+            disabled={!paired || searchExpanded}
+            tabIndex={searchExpanded ? -1 : 0}
             onClick={() => { setFilterOpen(open => !open) }}
           >
             <span>{FILTER_LABELS[filter]}</span>
             <IconChevronDownOutline14 size={14} />
           </button>
-          {filterOpen && paired && (
+          {filterOpen && paired && !searchExpanded && (
             <div className={css.taskHomeFilterMenu} role="listbox">
               {(Object.keys(FILTER_LABELS) as TaskHomeFilter[]).map(option => (
                 <button
@@ -136,21 +178,71 @@ export function TaskHomeHeader({
             </div>
           )}
         </div>
-        <div className={css.taskHomeActionPill}>
-          <button
-            type="button"
-            className={css.taskHomePillButton}
-            aria-label="搜索任务"
-            disabled={!paired}
-            aria-pressed={searchOpen}
-            onClick={onSearchOpen}
+
+        <div
+          ref={searchRoot}
+          className={`${css.taskHomeTrailing}${searchExpanded ? ` ${css.taskHomeTrailingExpanded}` : ''}`}
+        >
+          <div
+            className={`${css.taskHomeSearch}${searchExpanded ? ` ${css.taskHomeSearchExpanded}` : ''}`}
+            onClick={() => {
+              expandSearch()
+              searchInput.current?.focus({ preventScroll: true })
+            }}
           >
-            <IconSearchOutline16 size={16} />
-          </button>
+            <button
+              type="button"
+              className={css.taskHomeSearchButton}
+              aria-label="搜索会话"
+              aria-expanded={searchExpanded}
+              disabled={!paired}
+              onClick={(event) => {
+                event.stopPropagation()
+                expandSearch()
+              }}
+            >
+              <IconSearchOutline16 size={searchExpanded ? 14 : 16} />
+            </button>
+            <input
+              ref={searchInput}
+              className={css.taskHomeSearchInput}
+              type="text"
+              placeholder="搜索会话…"
+              value={searchQuery}
+              tabIndex={searchExpanded ? 0 : -1}
+              aria-label="搜索会话"
+              autoCapitalize="none"
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck={false}
+              onChange={(event) => {
+                onSearchQueryChange(sanitizeSearchQuery(event.target.value))
+              }}
+              onKeyDown={(event) => {
+                if (event.key !== 'Escape') return
+                onSearchCollapse()
+              }}
+            />
+            {searchExpanded && (
+              <button
+                type="button"
+                className={css.taskHomeSearchClear}
+                aria-label="清除搜索"
+                onClick={(event) => {
+                  event.stopPropagation()
+                  onSearchCollapse()
+                }}
+              >
+                <IconCloseFill14 size={14} />
+              </button>
+            )}
+          </div>
+
           <button
             type="button"
-            className={css.taskHomeAvatarButton}
+            className={`${css.taskHomeAvatarButton}${searchExpanded ? ` ${css.taskHomeAvatarHidden}` : ''}`}
             aria-label={connectionAriaLabel(paired, connected)}
+            tabIndex={searchExpanded ? -1 : 0}
             onClick={onOpenConnection}
           >
             <span className={css.taskHomeAvatar}>

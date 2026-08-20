@@ -103,27 +103,6 @@ export function formatSessionListTime(updatedAt: number): string {
 }
 
 /**
- * Format a search-result timestamp: `昨天 HH:mm` for the previous calendar day.
- * @param updatedAt - unix ms from session.list.
- * @param now - clock used for the calendar-day comparison.
- */
-export function formatSessionSearchTime(updatedAt: number, now: number = Date.now()): string {
-  const date = new Date(updatedAt)
-  const time = date.toLocaleTimeString(undefined, {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  })
-  const today = new Date(now)
-  const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime()
-  const startOfThat = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime()
-  const dayDiff = Math.round((startOfToday - startOfThat) / 86_400_000)
-  if (dayDiff === 1) return `昨天 ${time}`
-  if (dayDiff === 0) return time
-  return date.toLocaleDateString(undefined, { month: 'numeric', day: 'numeric' }) + ` ${time}`
-}
-
-/**
  * Format a session list timestamp for mobile surfaces.
  * @param updatedAt - unix ms from session.list.
  */

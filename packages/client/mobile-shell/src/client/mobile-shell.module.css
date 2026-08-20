@@ -1739,7 +1739,26 @@
 
 .taskHomeTitleWrap {
   position: relative;
+  flex: none;
   min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  opacity: 1;
+  visibility: visible;
+  transition:
+    max-width 180ms var(--ds-ease-in-out, ease-in-out),
+    opacity 120ms var(--ds-ease-in-out, ease-in-out),
+    transform 180ms var(--ds-ease-in-out, ease-in-out),
+    visibility 0s linear;
+}
+
+.taskHomeTitleWrapHidden {
+  max-width: 0;
+  opacity: 0;
+  transform: translateX(-4px);
+  visibility: hidden;
+  pointer-events: none;
+  transition-delay: 0s, 0s, 0s, 180ms;
 }
 
 .taskHomeTitleButton {
@@ -1754,6 +1773,7 @@
   font-size: 24px;
   font-weight: 600;
   line-height: 32px;
+  white-space: nowrap;
 }
 
 .taskHomeTitleButton:disabled {
@@ -1792,38 +1812,153 @@
   background: var(--dsw-alias-bg-layer-2);
 }
 
-.taskHomeActionPill {
+.taskHomeTrailing {
   display: inline-flex;
+  flex: none;
   align-items: center;
   gap: 8px;
   height: 36px;
+  margin-left: auto;
   padding: 2px 2px 2px 10px;
-  border: none;
   border-radius: 999px;
   background: var(--dsw-alias-bg-base);
   box-shadow:
     0 1px 3px color-mix(in srgb, var(--dsw-alias-label-primary) 10%, transparent),
     0 0 0 0.5px color-mix(in srgb, var(--dsw-alias-label-primary) 8%, transparent);
+  transition:
+    flex 180ms var(--ds-ease-in-out, ease-in-out),
+    max-width 180ms var(--ds-ease-in-out, ease-in-out),
+    padding 180ms var(--ds-ease-in-out, ease-in-out),
+    border-radius 180ms var(--ds-ease-in-out, ease-in-out),
+    box-shadow 180ms var(--ds-ease-in-out, ease-in-out),
+    background-color 180ms var(--ds-ease-in-out, ease-in-out);
 }
 
-.taskHomePillButton,
+.taskHomeTrailingExpanded {
+  flex: 1 1 auto;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  height: 40px;
+  padding: 0 4px 0 0;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 12px;
+  background: transparent;
+  box-shadow: none;
+}
+
+.taskHomeSearch {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 0;
+  min-width: 0;
+  height: 32px;
+  color: var(--dsw-alias-label-primary);
+  overflow: hidden;
+}
+
+.taskHomeSearchExpanded {
+  flex: 1 1 auto;
+  width: 100%;
+  height: 100%;
+  color: var(--dsw-alias-label-caption);
+}
+
+.taskHomeSearchButton {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.taskHomeSearchButton:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.taskHomeSearchExpanded .taskHomeSearchButton {
+  width: 36px;
+  height: 100%;
+}
+
+.taskHomeSearchInput {
+  flex: 1 1 auto;
+  width: 0;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  opacity: 0;
+  pointer-events: none;
+  color: var(--dsw-alias-label-primary);
+  font: inherit;
+  font-size: 16px;
+  line-height: 22px;
+  transition: opacity 120ms var(--ds-ease-in-out, ease-in-out);
+}
+
+.taskHomeSearchExpanded .taskHomeSearchInput {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.taskHomeSearchInput::placeholder {
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.taskHomeSearchClear {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  cursor: pointer;
+}
+
 .taskHomeAvatarButton {
   display: inline-flex;
+  flex: none;
   align-items: center;
   justify-content: center;
   padding: 0;
   border: none;
   background: transparent;
   color: var(--dsw-alias-label-primary);
+  max-width: 40px;
+  opacity: 1;
+  overflow: hidden;
+  visibility: visible;
+  transition:
+    max-width 180ms var(--ds-ease-in-out, ease-in-out),
+    opacity 120ms var(--ds-ease-in-out, ease-in-out),
+    transform 180ms var(--ds-ease-in-out, ease-in-out),
+    visibility 0s linear;
 }
 
-.taskHomePillButton {
-  width: 20px;
-  height: 32px;
-}
-
-.taskHomePillButton:disabled {
-  opacity: 0.45;
+.taskHomeAvatarHidden {
+  max-width: 0;
+  opacity: 0;
+  transform: translateX(4px);
+  visibility: hidden;
+  pointer-events: none;
+  transition-delay: 0s, 0s, 0s, 180ms;
 }
 
 .taskHomeAvatar {
@@ -1860,76 +1995,6 @@
   background: var(--dsw-alias-label-tertiary);
 }
 
-.taskHomeSearchHeader {
-  display: flex;
-  flex: none;
-  align-items: center;
-  gap: 8px;
-  padding:
-    calc(8px + env(safe-area-inset-top, 0px))
-    calc(16px + env(safe-area-inset-right, 0px))
-    8px
-    calc(16px + env(safe-area-inset-left, 0px));
-  background: var(--dsw-alias-bg-base);
-}
-
-.taskHomeSearchField {
-  display: flex;
-  flex: 1 1 auto;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-  height: 36px;
-  padding: 0 12px;
-  border-radius: 999px;
-  background: var(--dsw-alias-bg-layer-2);
-  color: var(--dsw-alias-label-tertiary);
-}
-
-.taskHomeSearchGlyph {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-}
-
-.taskHomeSearchInput {
-  flex: 1 1 auto;
-  min-width: 0;
-  height: 36px;
-  padding: 0;
-  border: none;
-  background: transparent;
-  color: var(--dsw-alias-label-primary);
-  font: inherit;
-  font-size: 16px;
-  line-height: 22px;
-  outline: none;
-}
-
-.taskHomeSearchInput::placeholder {
-  color: var(--dsw-alias-label-tertiary);
-}
-
-.taskHomeSearchInput::-webkit-search-decoration,
-.taskHomeSearchInput::-webkit-search-cancel-button {
-  -webkit-appearance: none;
-}
-
-.taskHomeSearchClose {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  padding: 0;
-  border: none;
-  border-radius: 999px;
-  background: var(--dsw-alias-bg-layer-2);
-  color: var(--dsw-alias-label-primary);
-}
-
 .taskHomeSearchBody {
   flex: 1;
   min-height: 0;
@@ -1946,6 +2011,18 @@
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+.taskHomeSearchStatus,
+.taskHomeSearchWarning {
+  padding: 12px 4px;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.taskHomeSearchWarning {
+  color: var(--dsw-alias-state-warning-primary, var(--dsw-alias-label-secondary));
 }
 
 .taskHomeSearchRowItem {
@@ -1978,9 +2055,8 @@
 
 .taskHomeSearchMeta {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  flex-direction: column;
+  gap: 2px;
   margin-top: 4px;
   min-width: 0;
 }
@@ -1998,6 +2074,15 @@
 
 .taskHomeSearchMetaLead span {
   overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.taskHomeSearchSnippet {
+  overflow: hidden;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 13px;
+  line-height: 18px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
