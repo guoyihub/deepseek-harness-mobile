@@ -5,6 +5,35 @@ export type MobileThemePreference = 'light' | 'dark' | 'system'
 
 const STORAGE_KEY = 'dsh.mobile.theme'
 
+/** Browser status-bar / safe-area tint in light mode (`--dsw-static-neutral-bluish-00`). */
+export const MOBILE_THEME_COLOR_LIGHT = '#ffffff'
+
+/** Browser status-bar / safe-area tint in dark mode (`--dsw-static-neutral-bluish-950`). */
+export const MOBILE_THEME_COLOR_DARK = '#151517'
+
+/**
+ * Resolve whether one preference renders dark tokens.
+ * @param preference - selected appearance mode.
+ */
+export function isMobileThemeDark(preference: MobileThemePreference): boolean {
+  const systemDark = preference === 'system'
+    && typeof globalThis.matchMedia !== 'undefined'
+    && globalThis.matchMedia('(prefers-color-scheme: dark)').matches
+  return preference === 'dark' || systemDark
+}
+
+/**
+ * Sync OS browser chrome (status bar / safe-area tint) with the active theme.
+ * @param dark - whether the resolved theme is dark.
+ */
+export function syncMobileBrowserChrome(dark: boolean): void {
+  if (typeof document === 'undefined') return
+  const color = dark ? MOBILE_THEME_COLOR_DARK : MOBILE_THEME_COLOR_LIGHT
+  for (const meta of document.querySelectorAll('meta[name="theme-color"]')) {
+    meta.setAttribute('content', color)
+  }
+}
+
 /**
  * Read the stored mobile theme preference.
  * @returns saved preference, or `system` when unset.
@@ -32,12 +61,11 @@ export function writeMobileThemePreference(preference: MobileThemePreference): v
  * @param preference - selected appearance mode.
  */
 export function applyMobileTheme(preference: MobileThemePreference): void {
-  const systemDark = preference === 'system'
-    && typeof globalThis.matchMedia !== 'undefined'
-    && globalThis.matchMedia('(prefers-color-scheme: dark)').matches
-  const dark = preference === 'dark' || systemDark
+  const dark = isMobileThemeDark(preference)
   document.documentElement.style.colorScheme = dark ? 'dark' : 'light'
+  document.documentElement.toggleAttribute('data-ds-dark-theme', dark)
   document.body.toggleAttribute('data-ds-dark-theme', dark)
+  syncMobileBrowserChrome(dark)
 }
 
 /**

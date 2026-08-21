@@ -4,6 +4,19 @@
 @import '@deepseek-ai/dsh-client-ui-theme/src/styles/gradient-shadow-text.css';
 @import '@deepseek-ai/dsh-client-ui-theme/src/styles/shiki.css';
 
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  touch-action: manipulation;
+  background: #ffffff;
+  color-scheme: light;
+}
+
+html[data-ds-dark-theme] {
+  background: #151517;
+  color-scheme: dark;
+}
+
 html,
 body,
 #root {
@@ -42,4 +55,11 @@ input,
 select,
 textarea {
   font-family: inherit;
+}
+
+/* iOS Safari auto-zooms focused fields below 16px; keep mobile inputs at or above that size. */
+input:not([type='checkbox']):not([type='radio']),
+select,
+textarea {
+  font-size: max(16px, 1em);
 }

@@ -7,6 +7,7 @@ import type {
 import { IconChevronDownOutline14, Menu } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { MenuEntry } from '@deepseek-ai/dsh-client-ui-primitives'
 import { mobileApi } from './mobile-api-client.ts'
+import { modelSelectionLabel } from './mobile-model-label.ts'
 import css from './mobile-shell.module.css'
 
 /** Props for {@link MobileModelSelect}. */
@@ -25,24 +26,6 @@ interface ModelDirectoryState {
   current: ModelSelection | null
   groups: readonly ModelProviderGroup[]
   status: 'idle' | 'loading' | 'ready' | 'selecting' | 'error'
-}
-
-function modelLabel(
-  selection: ModelSelection | null,
-  groups: readonly ModelProviderGroup[],
-): string {
-  if (selection === null) return 'Model'
-  for (const group of groups) {
-    if (group.id !== selection.provider) continue
-    const model = group.models.find(item => item.id === selection.model)
-    if (model === undefined) continue
-    const effort = selection.reasoningEffort ?? model.reasoning?.defaultEffort
-    const effortName = effort === undefined
-      ? undefined
-      : model.reasoning?.efforts.find(level => level.id === effort)?.name ?? effort
-    return effortName === undefined ? model.name : `${model.name} ${effortName}`
-  }
-  return `${selection.provider}/${selection.model}`
 }
 
 /**
@@ -173,7 +156,7 @@ export function MobileModelSelect({
         }}
       >
         <span className={variant === 'toolbar' ? css.composerTriggerLabel : css.composerChipLabel}>
-          {modelLabel(state.current, state.groups)}
+          {modelSelectionLabel(state.current, state.groups)}
         </span>
         <IconChevronDownOutline14 size={12} aria-hidden />
       </button>

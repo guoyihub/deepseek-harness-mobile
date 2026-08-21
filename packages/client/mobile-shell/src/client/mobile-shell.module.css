@@ -9,17 +9,23 @@
   border-radius: 0;
   background: var(--dsw-alias-bg-base);
   color: var(--dsw-alias-label-primary);
+  --mobile-chrome-blur: blur(12px);
+  --mobile-chrome-bottom-fill: color-mix(in srgb, var(--dsw-alias-bg-base) 94%, transparent);
+  --mobile-chrome-feather: 24px;
 }
 
 .viewportShell {
   display: flex;
   justify-content: center;
   width: 100%;
-  height: 100dvh;
-  min-height: 0;
+  min-width: 0;
+  height: 100%;
+  min-height: 100dvh;
+  min-height: -webkit-fill-available;
   overflow: hidden;
   border-radius: 0;
   background: var(--dsw-alias-bg-base);
+  touch-action: manipulation;
 }
 
 .viewportFrame {
@@ -31,6 +37,7 @@
   min-height: 0;
   overflow: hidden;
   border-radius: 0;
+  touch-action: manipulation;
 }
 
 .header {
@@ -53,7 +60,63 @@
   composes: header;
 }
 
+/* Top: solid chrome + bottom-edge feather. Bottom: frosted chrome + top-edge feather. */
+.mobileChromeTop {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  isolation: isolate;
+  border-bottom: none;
+  background: var(--dsw-alias-bg-base);
+}
+
+.mobileChromeTop::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: calc(-1 * var(--mobile-chrome-feather));
+  left: 0;
+  height: var(--mobile-chrome-feather);
+  background: linear-gradient(
+    to bottom,
+    var(--dsw-alias-bg-base),
+    transparent
+  );
+  pointer-events: none;
+}
+
+.mobileChromeBottom {
+  position: relative;
+  z-index: 5;
+  isolation: isolate;
+  background: var(--mobile-chrome-bottom-fill);
+  -webkit-backdrop-filter: var(--mobile-chrome-blur);
+  backdrop-filter: var(--mobile-chrome-blur);
+}
+
+.mobileChromeBottom::before {
+  content: '';
+  position: absolute;
+  top: calc(-1 * var(--mobile-chrome-feather));
+  right: 0;
+  left: 0;
+  height: var(--mobile-chrome-feather);
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    color-mix(in srgb, var(--dsw-alias-bg-base) 55%, transparent)
+  );
+  pointer-events: none;
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .mobileChromeBottom {
+    background: var(--dsw-alias-bg-base);
+  }
+}
+
 .shellHeaderMinimal {
+  composes: mobileChromeTop;
   display: flex;
   align-items: center;
   flex: none;
@@ -63,10 +126,10 @@
     calc(16px + env(safe-area-inset-right, 0px))
     8px
     calc(16px + env(safe-area-inset-left, 0px));
-  background: var(--dsw-alias-bg-base);
 }
 
 .shellHeaderChat {
+  composes: mobileChromeTop;
   display: flex;
   align-items: center;
   flex: none;
@@ -76,10 +139,10 @@
     calc(16px + env(safe-area-inset-right, 0px))
     16px
     calc(16px + env(safe-area-inset-left, 0px));
-  background: var(--dsw-alias-bg-base);
 }
 
 .shellHeaderChatWithTabs {
+  composes: mobileChromeTop;
   display: flex;
   align-items: flex-start;
   flex: none;
@@ -89,7 +152,6 @@
     calc(16px + env(safe-area-inset-right, 0px))
     8px
     calc(16px + env(safe-area-inset-left, 0px));
-  background: var(--dsw-alias-bg-base);
 }
 
 .chatHeaderMain {
@@ -153,7 +215,7 @@
   overflow: hidden;
   margin-left: calc(-16px - env(safe-area-inset-left, 0px));
   margin-right: calc(-16px - env(safe-area-inset-right, 0px));
-  --dsh-composer-height: 168px;
+  --dsh-composer-height: 128px;
 }
 
 .trajectoryPaneStatus {
@@ -219,10 +281,11 @@
   gap: 8px;
   min-width: 0;
   /* Same text box + underline reserve as `.sessionTab` so labels share one baseline. */
-  height: 16px;
+  min-height: 16px;
   padding-bottom: 10px;
   box-sizing: content-box;
   color: var(--dsw-alias-label-tertiary);
+  overflow: visible;
 }
 
 .chatHeaderMeta > svg {
@@ -290,6 +353,8 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  box-sizing: border-box;
+  max-width: 100%;
   padding:
     0
     calc(16px + env(safe-area-inset-right, 0px))
@@ -303,6 +368,8 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  box-sizing: border-box;
+  max-width: 100%;
   padding:
     0
     calc(16px + env(safe-area-inset-right, 0px))
@@ -392,6 +459,484 @@
   overflow-y: auto;
 }
 
+/* Mobile settings bottom sheet — consumer list layout (16px gutter). */
+.mSetOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  pointer-events: auto;
+}
+
+.mSetBackdrop {
+  position: absolute;
+  inset: 0;
+  background: var(--dsw-alias-bg-mask-1);
+  backdrop-filter: var(--dsw-mask-blur);
+  transition: opacity 320ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.mSetSheet {
+  --mset-gutter: 16px;
+  --mset-card-gap: 12px;
+  --mset-row-pad-y: 14px;
+  --mset-row-pad-x: 16px;
+  --mset-row-gap: 12px;
+  --mset-icon-size: 22px;
+  --mset-divider-inset: calc(var(--mset-row-pad-x) + var(--mset-icon-size) + var(--mset-row-gap));
+  --mset-sheet-top-gap: 56px;
+
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 480px;
+  max-height: calc(100dvh - var(--mset-sheet-top-gap));
+  overflow: hidden;
+  border-radius: 20px 20px 0 0;
+  background: var(--dsw-alias-bg-layer-1);
+  box-shadow: var(--dsw-shadow-lv3);
+  transform: translateY(100%);
+  transition: transform 320ms cubic-bezier(0.32, 0.72, 0, 1);
+  will-change: transform;
+  touch-action: pan-y;
+}
+
+.mSetSheet[data-phase='open']:not([data-dragging]) {
+  transform: translateY(0);
+}
+
+.mSetSheet[data-phase='exit']:not([data-dragging]) {
+  transform: translateY(100%);
+}
+
+.mSetDragZone {
+  flex: none;
+  touch-action: none;
+  cursor: grab;
+  user-select: none;
+}
+
+.mSetDragZone:active {
+  cursor: grabbing;
+}
+
+.mSetHandle {
+  flex: none;
+  width: 36px;
+  height: 4px;
+  margin: 8px auto 0;
+  border-radius: 999px;
+  background: var(--dsw-alias-border-l2);
+}
+
+.mSetHeader {
+  position: relative;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 4px var(--mset-gutter) 12px;
+}
+
+.mSetTitle {
+  margin: 0;
+  font-size: 17px;
+  line-height: 24px;
+  font-weight: 600;
+  color: var(--dsw-alias-label-primary);
+}
+
+.mSetClose {
+  position: absolute;
+  top: 50%;
+  right: var(--mset-gutter);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: var(--dsw-alias-bg-layer-2);
+  color: var(--dsw-alias-label-secondary);
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+
+.mSetClose:active {
+  background: var(--dsw-alias-bg-layer-3);
+}
+
+.mSetScroll {
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mSetBackdrop,
+  .mSetSheet {
+    transition-duration: 0.01ms;
+  }
+}
+
+.mSetPage {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mset-card-gap);
+  padding: 0 var(--mset-gutter) calc(24px + env(safe-area-inset-bottom, 0px));
+}
+
+.mSetAlert {
+  margin: 0;
+  padding: 12px var(--mset-row-pad-x);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--dsw-alias-state-error-primary) 10%, var(--dsw-alias-bg-base));
+  color: var(--dsw-alias-state-error-primary);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.mSetProfile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 4px var(--mset-gutter) 8px;
+  text-align: center;
+}
+
+.mSetAvatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 72px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--dsw-static-deepseek-500) 16%, var(--dsw-alias-bg-base));
+  color: var(--dsw-alias-label-secondary);
+}
+
+.mSetAvatar[data-online] {
+  background: color-mix(in srgb, var(--dsw-static-deepseek-500) 22%, var(--dsw-alias-bg-base));
+}
+
+.mSetAvatar .fingerprintBadge {
+  width: 100%;
+  height: 100%;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+}
+
+.mSetAvatar .fingerprintGlyph {
+  inset: 10px;
+  width: calc(100% - 20px);
+  height: calc(100% - 20px);
+}
+
+.mSetAvatar .fingerprintCode {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 8px;
+}
+
+.mSetProfileNameRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.mSetProfileName {
+  margin: 0;
+  font-size: 18px;
+  line-height: 26px;
+  font-weight: 600;
+  color: var(--dsw-alias-label-primary);
+}
+
+.mSetProfileBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  line-height: 16px;
+  font-weight: 600;
+  color: var(--dsw-alias-label-secondary);
+  background: var(--dsw-alias-bg-layer-2);
+}
+
+.mSetProfileBadge[data-online] {
+  color: var(--dsw-alias-state-success-primary);
+  background: color-mix(in srgb, var(--dsw-alias-state-success-primary) 12%, transparent);
+}
+
+.mSetProfileSub {
+  margin: 0;
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 14px;
+  line-height: 20px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mSetProfileBtn {
+  margin-top: 8px;
+  padding: 8px 20px;
+  border: none;
+  border-radius: 999px;
+  background: var(--dsw-alias-bg-layer-2);
+  color: var(--dsw-alias-label-primary);
+  font: inherit;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.mSetProfileBtn:active {
+  background: var(--dsw-alias-bg-layer-3);
+}
+
+.mSetSection {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mSetSectionLabel {
+  margin: 0;
+  padding: 0 4px;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 500;
+}
+
+.mSetCard {
+  overflow: hidden;
+  border-radius: 16px;
+  background: var(--dsw-alias-bg-base);
+}
+
+.mSetCardItem {
+  position: relative;
+}
+
+.mSetDivider {
+  height: 1px;
+  margin-left: var(--mset-divider-inset);
+  background: var(--dsw-alias-border-l1);
+}
+
+.mSetRow {
+  display: flex;
+  align-items: center;
+  gap: var(--mset-row-gap);
+  width: 100%;
+  min-height: 48px;
+  padding: var(--mset-row-pad-y) var(--mset-row-pad-x);
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: default;
+  box-sizing: border-box;
+}
+
+button.mSetRow {
+  cursor: pointer;
+}
+
+button.mSetRow:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.mSetRow[data-destructive] .mSetRowLabel {
+  color: var(--dsw-alias-state-error-primary);
+}
+
+.mSetRowIcon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--mset-icon-size);
+  height: var(--mset-icon-size);
+  color: var(--dsw-alias-label-primary);
+}
+
+.mSetRowLabel {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 16px;
+  line-height: 22px;
+  color: var(--dsw-alias-label-primary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mSetRowValue {
+  flex: none;
+  max-width: 46%;
+  overflow: hidden;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 16px;
+  line-height: 22px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mSetRowChevron {
+  flex: none;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.mSetSavedRow {
+  display: flex;
+  align-items: center;
+}
+
+.mSetSavedRow .mSetRow {
+  flex: 1;
+  min-width: 0;
+}
+
+.mSetSavedRemove {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  margin-right: 8px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--dsw-alias-label-tertiary);
+  cursor: pointer;
+}
+
+.mSetSavedRemove:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.mSetSavedRemove:active:not(:disabled) {
+  background: var(--dsw-alias-bg-layer-2);
+  color: var(--dsw-alias-state-error-primary);
+}
+
+.mSetEmptyHint {
+  margin: 0;
+  padding: 4px 4px 8px;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.mSetModalInput {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 10px;
+  background: var(--dsw-alias-bg-layer-2);
+  color: var(--dsw-alias-label-primary);
+  font: inherit;
+  font-size: 16px;
+  line-height: 22px;
+}
+
+.mSetModalInput:focus {
+  outline: none;
+  border-color: var(--dsw-alias-label-primary);
+}
+
+.mSetPickerList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mSetPickerItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--dsw-alias-label-primary);
+  font: inherit;
+  font-size: 16px;
+  line-height: 22px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.mSetPickerItem[data-selected],
+.mSetPickerItem:active {
+  background: var(--dsw-alias-bg-layer-2);
+}
+
+.mSetPickerSectionLabel {
+  padding: 10px 14px 4px;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 500;
+}
+
+.mSetPickerStatus {
+  margin: 0;
+  padding: 12px 14px;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.mSetPickerError {
+  margin: 0;
+  padding: 12px 14px;
+  color: var(--dsw-alias-state-error-primary);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.mSetPickerHint {
+  margin: 8px 0 0;
+  padding: 0 14px 4px;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+  line-height: 18px;
+}
+
 .settingsSection {
   display: flex;
   flex-direction: column;
@@ -419,6 +964,211 @@
   gap: 8px;
   padding: 14px 16px;
   border-bottom: 1px solid var(--dsw-alias-border-l1);
+}
+
+.fingerprintBadge {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  overflow: hidden;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 12px;
+  background: var(--dsw-alias-bg-layer-2);
+}
+
+.fingerprintBadge[data-compact] {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+}
+
+.fingerprintBadge[data-active] {
+  border-color: color-mix(in srgb, var(--dsw-static-deepseek-500) 45%, var(--dsw-alias-border-l2));
+  background: color-mix(in srgb, var(--dsw-static-deepseek-500) 6%, var(--dsw-alias-bg-layer-2));
+}
+
+.fingerprintGlyph {
+  position: absolute;
+  inset: 7px;
+  width: calc(100% - 14px);
+  height: calc(100% - 14px);
+  fill: none;
+  stroke: var(--dsw-alias-label-secondary);
+  stroke-linecap: round;
+  stroke-width: 1.75;
+}
+
+.fingerprintBadge[data-active] .fingerprintGlyph {
+  stroke: var(--dsw-static-deepseek-500);
+}
+
+.fingerprintCode {
+  position: relative;
+  z-index: 1;
+  padding: 0 4px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--dsw-alias-bg-base) 82%, transparent);
+  color: var(--dsw-alias-label-primary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1;
+}
+
+.fingerprintScan {
+  position: absolute;
+  right: 6px;
+  left: 6px;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--dsw-static-deepseek-400),
+    transparent
+  );
+  box-shadow: 0 0 10px color-mix(in srgb, var(--dsw-static-deepseek-400) 80%, transparent);
+  animation: dsh-mobile-fingerprint-scan 1.8s ease-in-out infinite;
+}
+
+@keyframes dsh-mobile-fingerprint-scan {
+  from {
+    top: 8px;
+    opacity: 0.4;
+  }
+
+  50% {
+    opacity: 1;
+  }
+
+  to {
+    top: calc(100% - 10px);
+    opacity: 0.4;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fingerprintScan {
+    animation: none;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+}
+
+.savedConnectionList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.savedConnectionEmpty {
+  margin: 0;
+  padding: 16px;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.savedConnectionItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-top: 1px solid var(--dsw-alias-border-l1);
+}
+
+.savedConnectionList > .savedConnectionItem:first-child {
+  border-top: none;
+}
+
+.savedConnectionBody {
+  flex: 1;
+  min-width: 0;
+}
+
+.savedConnectionTitle {
+  color: var(--dsw-alias-label-primary);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+.savedConnectionMeta {
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+  line-height: 18px;
+  overflow-wrap: anywhere;
+}
+
+.savedConnectionActions {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+}
+
+.savedConnectionRetryBtn,
+.savedConnectionRemoveBtn,
+.savedConnectionCurrent {
+  min-width: 56px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 16px;
+  text-align: center;
+}
+
+.savedConnectionRetryBtn {
+  border: 1px solid color-mix(in srgb, var(--dsw-static-deepseek-500) 45%, var(--dsw-alias-border-l1));
+  background: color-mix(in srgb, var(--dsw-static-deepseek-500) 10%, var(--dsw-alias-bg-base));
+  color: var(--dsw-static-deepseek-600);
+}
+
+.savedConnectionRetryBtn:disabled,
+.savedConnectionRemoveBtn:disabled {
+  opacity: 0.55;
+}
+
+.savedConnectionRemoveBtn {
+  border: none;
+  background: transparent;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.savedConnectionCurrent {
+  color: var(--dsw-alias-state-success-primary);
+  background: color-mix(in srgb, var(--dsw-alias-state-success-primary) 12%, transparent);
+}
+
+.scanSuccessFingerprint {
+  position: absolute;
+  right: 16px;
+  bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  left: 16px;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 16px;
+  border-radius: 16px;
+  background: rgb(0 0 0 / 58%);
+  backdrop-filter: blur(8px);
+}
+
+.scanSuccessCopy {
+  margin: 0;
+  color: #fff;
+  font-size: 13px;
+  line-height: 18px;
+  text-align: center;
 }
 
 .settingsStatusDot {
@@ -620,6 +1370,8 @@
   background: var(--dsw-specific-input-major);
   color: var(--dsw-alias-label-primary);
   font: inherit;
+  font-size: 16px;
+  line-height: 22px;
   resize: vertical;
 }
 
@@ -918,12 +1670,12 @@
   background: var(--dsw-alias-bg-base);
   color: var(--dsw-alias-label-primary);
   font: inherit;
-  font-size: 14px;
-  line-height: 20px;
+  font-size: 16px;
+  line-height: 22px;
 }
 
 .pairInput {
-  height: 40px;
+  height: 44px;
 }
 
 .pairInput:disabled,
@@ -1000,23 +1752,123 @@
   padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
 }
 
+.taskHomeContentHost {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.pullToRefresh {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.pullToRefreshIndicator {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 2;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  overflow: hidden;
+  pointer-events: none;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.pullToRefreshIndicator[data-ready] {
+  color: var(--dsw-alias-state-business-primary);
+}
+
+.pullToRefreshIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin-bottom: 4px;
+  border-radius: 999px;
+  background: var(--dsw-alias-bg-layer-2);
+}
+
+.pullToRefreshIcon[data-spinning] {
+  animation: mobile-pull-refresh-spin 800ms linear infinite;
+}
+
+@keyframes mobile-pull-refresh-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pullToRefreshIcon[data-spinning] {
+    animation: none;
+  }
+}
+
+.pullToRefreshScroll {
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+}
+
+.taskHomePullScroll {
+  /* Clear the sticky header feather so the first workspace row stays legible at rest. */
+  padding:
+    var(--mobile-chrome-feather)
+    calc(16px + env(safe-area-inset-right, 0px))
+    calc(88px + env(safe-area-inset-bottom, 0px))
+    calc(16px + env(safe-area-inset-left, 0px));
+}
+
+.taskHomePullScroll[data-dock] {
+  padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+}
+
 .chatPage {
   display: flex;
   flex: 1;
   flex-direction: column;
+  width: 100%;
+  max-width: 100%;
   height: 100%;
   min-height: 0;
+  min-width: 0;
   overflow: hidden;
-  --dsh-composer-height: 168px;
+  --dsh-composer-height: 128px;
 }
 
-/* Assistant/user message footer: compact metrics on narrow screens. */
+/* Assistant/user message footer: touch-sized icons; metrics wrap on narrow widths. */
+.chatPage .flowItem {
+  container-type: inline-size;
+  min-width: 0;
+  max-width: 100%;
+  overflow: visible;
+}
+
 .chatPage [data-message-actions] {
-  gap: 2px;
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 6px;
   max-width: 100%;
   min-width: 0;
   height: auto;
-  min-height: 24px;
+  min-height: 32px;
+  margin-left: 0;
+  padding: 2px 0 4px;
+  overflow: visible;
 }
 
 .chatPage [data-message-actions] [data-message-clock] {
@@ -1025,20 +1877,59 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  padding-left: 6px;
+  padding-left: 0;
   font-size: 11px;
-  line-height: 18px;
+  line-height: 16px;
 }
 
 .chatPage [data-message-actions] [data-run-dot] {
-  margin: 0 3px;
+  margin: 0 4px;
 }
 
 .chatPage [data-message-actions] button {
-  width: 24px;
-  height: 24px;
-  padding: 4px;
+  box-sizing: border-box;
+  width: 32px;
+  height: 32px;
+  padding: 6px;
   flex: none;
+}
+
+.chatPage [data-turn-tail] {
+  max-width: 100%;
+  min-width: 0;
+  overflow: visible;
+  padding-bottom: 2px;
+}
+
+.chatPage [data-chat-flow-kind='user'] [data-time-hover-root],
+.chatPage [data-chat-flow-kind='steering'] [data-time-hover-root] {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.chatPage [data-chat-flow-kind='user'] [data-message-actions],
+.chatPage [data-chat-flow-kind='steering'] [data-message-actions] {
+  justify-content: flex-end;
+  width: 100%;
+}
+
+@container (max-width: 420px) {
+  .chatPage [data-message-actions] {
+    flex-wrap: wrap;
+    row-gap: 4px;
+    column-gap: 6px;
+  }
+
+  .chatPage [data-message-actions] [data-message-clock] {
+    flex: 1 1 100%;
+    max-width: 100%;
+    padding-left: 0;
+    padding-right: 0;
+  }
 }
 
 @media (max-width: 360px) {
@@ -1046,11 +1937,6 @@
   .chatPage [data-message-actions] [data-metric='tps'] {
     display: none;
   }
-}
-
-.chatPage [data-turn-tail] {
-  max-width: 100%;
-  min-width: 0;
 }
 
 .chatPageBlank {
@@ -1072,26 +1958,44 @@
 .messageList {
   flex: 1;
   min-height: 0;
+  min-width: 0;
+  max-width: 100%;
   overflow-x: hidden;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 16px;
   padding-top: 8px;
-  padding-bottom: 20px;
+  padding-bottom: 24px;
+  scroll-padding-bottom: 12px;
   -webkit-overflow-scrolling: touch;
+}
+
+.chatPage .messageList :where(p, pre, code, table, img, svg, video, iframe) {
+  max-width: 100%;
+}
+
+.chatPage .messageList :where(pre, code) {
+  overflow-x: auto;
+  word-break: break-word;
 }
 
 .userRow {
   display: flex;
-  justify-content: flex-end;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .userBubble {
+  box-sizing: border-box;
   max-width: min(525px, 82%);
   padding: 12px 16px;
   border-radius: 18px;
   background: var(--dsw-specific-bubble);
+  overflow: visible;
 }
 
 .assistantRow {
@@ -1352,20 +2256,26 @@
 }
 
 .composerDock {
+  composes: mobileChromeBottom;
   display: flex;
   flex: none;
   flex-direction: column;
   gap: 0;
+  width: 100%;
+  max-width: 100%;
   min-width: 0;
-  padding-top: 12px;
+  padding-top: 6px;
   border-top: none;
 }
 
 .composerDockBlank {
+  composes: mobileChromeBottom;
   display: flex;
   flex: none;
   flex-direction: column;
   gap: 0;
+  width: 100%;
+  max-width: 100%;
   min-width: 0;
   margin-top: auto;
   padding-top: 0;
@@ -1375,23 +2285,31 @@
 .composerCard {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 8px;
+  box-sizing: border-box;
   width: 100%;
-  min-height: 120px;
-  padding-top: 16px;
+  max-width: 100%;
+  min-width: 0;
+  min-height: 0;
+  padding-top: 10px;
   border: 1px solid var(--dsw-alias-border-l2-darkmode-thin);
-  border-radius: 28px;
+  border-radius: 24px;
   background: var(--dsw-specific-input-major);
   box-shadow: var(--dsw-shadow-lv2);
   font-size: 16px;
   line-height: 24px;
+  overflow-x: hidden;
+  overflow-y: visible;
   container-type: inline-size;
 }
 
 .composerTextarea {
+  box-sizing: border-box;
   width: 100%;
-  min-height: 56px;
-  padding: 0 16px;
+  max-width: 100%;
+  min-width: 0;
+  min-height: 40px;
+  padding: 0 14px;
   border: none;
   background: transparent;
   color: var(--dsw-alias-label-primary);
@@ -1470,8 +2388,13 @@
   flex-wrap: nowrap;
   align-items: center;
   gap: 8px;
-  padding: 0 12px 12px;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
   min-width: 0;
+  padding: 0 10px 8px;
+  overflow-x: hidden;
+  overflow-y: visible;
 }
 
 .composerTools,
@@ -1483,7 +2406,7 @@
 }
 
 .composerTools {
-  flex: 1 1 160px;
+  flex: 1 1 0;
   flex-wrap: wrap;
   /* Keep + and permission adjacent (2px); row gap still allows wrap breathing room. */
   gap: 8px 2px;
@@ -1495,10 +2418,11 @@
 }
 
 .composerTrailing {
-  flex: 0 0 auto;
+  flex: 0 1 auto;
   gap: 8px;
   margin-left: auto;
   align-items: center;
+  min-width: 0;
 }
 
 .composerAdd {
@@ -1540,7 +2464,7 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  max-width: 220px;
+  max-width: min(220px, 100%);
   min-width: 0;
   height: 28px;
   padding: 0 4px 0 8px;
@@ -1557,9 +2481,15 @@
   opacity: 0.6;
 }
 
+.composerTriggerToolbar {
+  flex: 0 1 auto;
+  max-width: min(148px, 42vw);
+}
+
 .composerTriggerToolbar .composerTriggerLabel {
-  overflow: visible;
-  text-overflow: unset;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Match `.composerAdd` hit target and glyph size (28px button, 14px icon). */
@@ -1632,6 +2562,10 @@
   white-space: nowrap;
 }
 
+.chatHeaderTabRow .headerWorkspaceChip {
+  margin-left: auto;
+}
+
 .headerWorkspaceChip {
   composes: composerChip;
   max-width: min(220px, calc(100% - 48px));
@@ -1686,17 +2620,31 @@
 .statsLine {
   display: block;
   flex: none;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
   overflow: hidden;
   min-height: 20px;
   padding:
-    8px 8px
-    calc(10px + env(safe-area-inset-bottom, 0px));
+    4px 14px
+    calc(6px + env(safe-area-inset-bottom, 0px));
   color: var(--dsw-alias-label-tertiary);
   font-size: 12px;
   line-height: 20px;
   text-align: center;
   white-space: nowrap;
   text-overflow: ellipsis;
+}
+
+@container (max-width: 360px) {
+  .composerRow {
+    gap: 6px;
+    padding-inline: 10px;
+  }
+
+  .composerTriggerToolbar {
+    max-width: min(112px, 36vw);
+  }
 }
 
 .statsSep {
@@ -1718,15 +2666,15 @@
 }
 
 .taskHomeHeader {
-  position: sticky;
-  top: 0;
-  z-index: 2;
+  composes: mobileChromeTop;
+  --task-home-motion-ms: 320ms;
+  --task-home-motion-ease: cubic-bezier(0.32, 0.72, 0, 1);
+
   padding:
     calc(8px + env(safe-area-inset-top, 0px))
     calc(16px + env(safe-area-inset-right, 0px))
     8px
     calc(16px + env(safe-area-inset-left, 0px));
-  background: var(--dsw-alias-bg-base);
 }
 
 .taskHomeHeaderRow {
@@ -1739,26 +2687,30 @@
 
 .taskHomeTitleWrap {
   position: relative;
-  flex: none;
+  flex: 1 1 auto;
   min-width: 0;
   max-width: 100%;
   overflow: hidden;
   opacity: 1;
   visibility: visible;
+  transform: translateX(0) scale(1);
+  transform-origin: left center;
   transition:
-    max-width 180ms var(--ds-ease-in-out, ease-in-out),
-    opacity 120ms var(--ds-ease-in-out, ease-in-out),
-    transform 180ms var(--ds-ease-in-out, ease-in-out),
+    flex 320ms var(--task-home-motion-ease),
+    max-width 320ms var(--task-home-motion-ease),
+    opacity 220ms var(--task-home-motion-ease),
+    transform 320ms var(--task-home-motion-ease),
     visibility 0s linear;
 }
 
 .taskHomeTitleWrapHidden {
+  flex: 0 0 0;
   max-width: 0;
   opacity: 0;
-  transform: translateX(-4px);
+  transform: translateX(-12px) scale(0.96);
   visibility: hidden;
   pointer-events: none;
-  transition-delay: 0s, 0s, 0s, 180ms;
+  transition-delay: 0s, 0s, 0s, 0s, 320ms;
 }
 
 .taskHomeTitleButton {
@@ -1814,24 +2766,32 @@
 
 .taskHomeTrailing {
   display: inline-flex;
-  flex: none;
+  flex: 0 0 auto;
   align-items: center;
   gap: 8px;
   height: 36px;
   margin-left: auto;
   padding: 2px 2px 2px 10px;
+  border: 1px solid transparent;
   border-radius: 999px;
   background: var(--dsw-alias-bg-base);
   box-shadow:
     0 1px 3px color-mix(in srgb, var(--dsw-alias-label-primary) 10%, transparent),
     0 0 0 0.5px color-mix(in srgb, var(--dsw-alias-label-primary) 8%, transparent);
+  transform-origin: right center;
   transition:
-    flex 180ms var(--ds-ease-in-out, ease-in-out),
-    max-width 180ms var(--ds-ease-in-out, ease-in-out),
-    padding 180ms var(--ds-ease-in-out, ease-in-out),
-    border-radius 180ms var(--ds-ease-in-out, ease-in-out),
-    box-shadow 180ms var(--ds-ease-in-out, ease-in-out),
-    background-color 180ms var(--ds-ease-in-out, ease-in-out);
+    flex 320ms var(--task-home-motion-ease),
+    width 320ms var(--task-home-motion-ease),
+    max-width 320ms var(--task-home-motion-ease),
+    height 320ms var(--task-home-motion-ease),
+    padding 320ms var(--task-home-motion-ease),
+    gap 320ms var(--task-home-motion-ease),
+    border-radius 320ms var(--task-home-motion-ease),
+    border-color 320ms var(--task-home-motion-ease),
+    box-shadow 320ms var(--task-home-motion-ease),
+    background-color 320ms var(--task-home-motion-ease),
+    transform 320ms var(--task-home-motion-ease);
+  will-change: flex, max-width, transform;
 }
 
 .taskHomeTrailingExpanded {
@@ -1841,21 +2801,24 @@
   min-width: 0;
   height: 40px;
   padding: 0 4px 0 0;
-  border: 1px solid var(--dsw-alias-border-l2);
+  gap: 0;
+  border-color: var(--dsw-alias-border-l2);
   border-radius: 12px;
   background: transparent;
   box-shadow: none;
+  transform: scale(1);
 }
 
 .taskHomeSearch {
   display: flex;
-  flex: none;
+  flex: 1 1 auto;
   align-items: center;
   gap: 0;
   min-width: 0;
   height: 32px;
   color: var(--dsw-alias-label-primary);
   overflow: hidden;
+  transition: color 220ms var(--task-home-motion-ease);
 }
 
 .taskHomeSearchExpanded {
@@ -1878,6 +2841,10 @@
   background: transparent;
   color: inherit;
   cursor: pointer;
+  transition:
+    width 320ms var(--task-home-motion-ease),
+    height 320ms var(--task-home-motion-ease),
+    transform 320ms var(--task-home-motion-ease);
 }
 
 .taskHomeSearchButton:disabled {
@@ -1888,6 +2855,15 @@
 .taskHomeSearchExpanded .taskHomeSearchButton {
   width: 36px;
   height: 100%;
+}
+
+.taskHomeSearchIcon {
+  display: inline-flex;
+  transition: transform 320ms var(--task-home-motion-ease);
+}
+
+.taskHomeSearchExpanded .taskHomeSearchIcon {
+  transform: scale(0.92);
 }
 
 .taskHomeSearchInput {
@@ -1905,12 +2881,17 @@
   font: inherit;
   font-size: 16px;
   line-height: 22px;
-  transition: opacity 120ms var(--ds-ease-in-out, ease-in-out);
+  transform: translateX(10px);
+  transition:
+    opacity 260ms var(--task-home-motion-ease),
+    transform 320ms var(--task-home-motion-ease);
 }
 
 .taskHomeSearchExpanded .taskHomeSearchInput {
   opacity: 1;
   pointer-events: auto;
+  transform: translateX(0);
+  transition-delay: 60ms, 60ms;
 }
 
 .taskHomeSearchInput::placeholder {
@@ -1922,7 +2903,7 @@
   flex: none;
   align-items: center;
   justify-content: center;
-  width: 32px;
+  width: 0;
   height: 32px;
   padding: 0;
   border: none;
@@ -1930,6 +2911,22 @@
   background: transparent;
   color: var(--dsw-alias-label-secondary);
   cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0.84);
+  overflow: hidden;
+  transition:
+    width 320ms var(--task-home-motion-ease),
+    opacity 220ms var(--task-home-motion-ease),
+    transform 320ms var(--task-home-motion-ease);
+}
+
+.taskHomeSearchExpanded .taskHomeSearchClear {
+  width: 32px;
+  opacity: 1;
+  pointer-events: auto;
+  transform: scale(1);
+  transition-delay: 80ms, 80ms, 80ms;
 }
 
 .taskHomeAvatarButton {
@@ -1941,24 +2938,28 @@
   border: none;
   background: transparent;
   color: var(--dsw-alias-label-primary);
-  max-width: 40px;
+  width: 32px;
+  max-width: 32px;
   opacity: 1;
   overflow: hidden;
   visibility: visible;
+  transform: translateX(0) scale(1);
   transition:
-    max-width 180ms var(--ds-ease-in-out, ease-in-out),
-    opacity 120ms var(--ds-ease-in-out, ease-in-out),
-    transform 180ms var(--ds-ease-in-out, ease-in-out),
+    width 320ms var(--task-home-motion-ease),
+    max-width 320ms var(--task-home-motion-ease),
+    opacity 220ms var(--task-home-motion-ease),
+    transform 320ms var(--task-home-motion-ease),
     visibility 0s linear;
 }
 
 .taskHomeAvatarHidden {
+  width: 0;
   max-width: 0;
   opacity: 0;
-  transform: translateX(4px);
+  transform: translateX(8px) scale(0.88);
   visibility: hidden;
   pointer-events: none;
-  transition-delay: 0s, 0s, 0s, 180ms;
+  transition-delay: 0s, 0s, 0s, 0s, 320ms;
 }
 
 .taskHomeAvatar {
@@ -2005,6 +3006,40 @@
     calc(16px + env(safe-area-inset-right, 0px))
     calc(16px + env(safe-area-inset-bottom, 0px))
     calc(16px + env(safe-area-inset-left, 0px));
+  animation: taskHomeSearchBodyIn 320ms var(--task-home-motion-ease) both;
+}
+
+@keyframes taskHomeSearchBodyIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .taskHomeHeader,
+  .taskHomeTitleWrap,
+  .taskHomeTitleWrapHidden,
+  .taskHomeTrailing,
+  .taskHomeTrailingExpanded,
+  .taskHomeSearch,
+  .taskHomeSearchButton,
+  .taskHomeSearchIcon,
+  .taskHomeSearchInput,
+  .taskHomeSearchClear,
+  .taskHomeAvatarButton,
+  .taskHomeAvatarHidden {
+    transition-duration: 0.01ms;
+  }
+
+  .taskHomeSearchBody {
+    animation: none;
+  }
 }
 
 .taskHomeSearchList {
@@ -2088,6 +3123,9 @@
 }
 
 .taskHomeContent {
+  --task-home-motion-ms: 320ms;
+  --task-home-motion-ease: cubic-bezier(0.32, 0.72, 0, 1);
+
   flex: 1;
   min-height: 0;
   overflow-x: hidden;
@@ -2095,7 +3133,7 @@
   display: flex;
   flex-direction: column;
   padding:
-    0
+    var(--mobile-chrome-feather)
     calc(16px + env(safe-area-inset-right, 0px))
     calc(88px + env(safe-area-inset-bottom, 0px))
     calc(16px + env(safe-area-inset-left, 0px));
@@ -2105,15 +3143,150 @@
   display: flex;
   flex: 1;
   flex-direction: column;
+  width: 100%;
+  max-width: 100%;
   min-height: 0;
+  min-width: 0;
   overflow: hidden;
   border-radius: 0;
+}
+
+.chatSurface:has(.shellHeaderChatWithTabs) {
+  --mobile-chat-header-body: 86px;
+}
+
+.chatSurface:has(.shellHeaderMinimal) {
+  --mobile-chat-header-body: 54px;
+}
+
+.chatSurface:has(.shellHeaderChat):not(:has(.shellHeaderChatWithTabs)) {
+  --mobile-chat-header-body: 54px;
+}
+
+.chatSurface .chatContent {
+  margin-top: calc(-1 * (var(--mobile-chat-header-body, 80px) + env(safe-area-inset-top, 0px)));
+}
+
+.chatSurface .chatPage .messageList {
+  padding-top: calc(4px + var(--mobile-chat-header-body, 80px) + env(safe-area-inset-top, 0px));
+  scroll-padding-top: calc(var(--mobile-chat-header-body, 80px) + env(safe-area-inset-top, 0px));
+  padding-bottom: calc(24px + var(--mobile-chrome-feather));
+}
+
+.chatSurface .chatPageBlank .messageList {
+  padding-top: calc(4px + var(--mobile-chat-header-body, 80px) + env(safe-area-inset-top, 0px));
+  scroll-padding-top: calc(var(--mobile-chat-header-body, 80px) + env(safe-area-inset-top, 0px));
+}
+
+.chatPageBlank .chatHero {
+  padding-top: 16px;
+}
+
+.chatSurface .trajectoryPane {
+  padding-top: calc(4px + var(--mobile-chat-header-body, 80px) + env(safe-area-inset-top, 0px));
 }
 
 .taskHomeGroups {
   display: flex;
   flex-direction: column;
   gap: 20px;
+}
+
+.taskHomeGroup {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.taskHomeGroupHeader {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.taskHomeGroupToggle {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 0 0 8px;
+  border: none;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.taskHomeGroupChevron {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  color: var(--dsw-alias-label-caption);
+  transition: transform 320ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.taskHomeGroupChevron[data-expanded] {
+  transform: rotate(180deg);
+}
+
+.taskHomeGroupFolder {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  color: var(--dsw-alias-label-secondary);
+}
+
+.taskHomeGroupTitle {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--dsw-alias-label-primary);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 18px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.taskHomeGroupCount {
+  flex: none;
+  min-width: 18px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--dsw-alias-bg-layer-2);
+  color: var(--dsw-alias-label-caption);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 18px;
+  text-align: center;
+}
+
+.taskHomeGroupMenuButton {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  margin-bottom: 8px;
+  padding: 0;
+  border: none;
+  border-radius: 16px;
+  background: transparent;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.taskHomeGroupMenuButton:active {
+  background: var(--dsw-alias-bg-layer-2);
 }
 
 .taskHomeGroupLabel {
@@ -2390,17 +3563,4 @@
   background: var(--dsw-alias-button-primary-fill);
   color: var(--dsw-alias-label-primary-foreground);
   box-shadow: 0 4px 16px color-mix(in srgb, var(--dsw-alias-button-primary-fill) 45%, transparent);
-}
-
-.mobileFabIconStack {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.mobileFabPlus {
-  position: absolute;
-  right: -2px;
-  bottom: -2px;
 }

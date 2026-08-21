@@ -20,6 +20,8 @@ export interface MobileShellLayoutProps {
   headerSlot?: ReactNode
   /** Apply task-home content padding and FAB clearance. */
   taskHomeContent?: boolean | undefined
+  /** Task home with nested pull-to-refresh scrollport (see {@link MobilePullToRefresh}). */
+  taskHomeNestedScroll?: boolean | undefined
   /** Blank chat hero layout: titleless header and bottom-anchored composer padding. */
   blankChat?: boolean | undefined
 }
@@ -37,15 +39,18 @@ export function MobileShellLayout({
   dock,
   headerSlot,
   taskHomeContent = false,
+  taskHomeNestedScroll = false,
   blankChat = false,
 }: MobileShellLayoutProps): JSX.Element {
-  const contentClass = taskHomeContent
-    ? css.taskHomeContent
-    : blankChat
-      ? css.chatBlankContent
-      : headerSlot !== undefined
-        ? css.chatContent
-        : css.content
+  const contentClass = taskHomeNestedScroll
+    ? css.taskHomeContentHost
+    : taskHomeContent
+      ? css.taskHomeContent
+      : blankChat
+        ? css.chatBlankContent
+        : headerSlot !== undefined
+          ? css.chatContent
+          : css.content
 
   const showTitle = !blankChat && (title !== undefined || subtitle !== undefined)
 

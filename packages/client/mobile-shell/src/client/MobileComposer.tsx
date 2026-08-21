@@ -136,7 +136,7 @@ export function MobileComposer({
               value={claim.args}
               placeholder={hint}
               disabled={sending}
-              rows={2}
+              rows={1}
               onChange={(event) => {
                 onClaimChange({ ...claim, args: event.target.value })
               }}
@@ -150,7 +150,7 @@ export function MobileComposer({
             value={draft}
             placeholder={hint}
             disabled={sending}
-            rows={2}
+            rows={1}
             onChange={(event) => { onDraftChange(event.target.value) }}
             onKeyDown={onKeyDown}
           />
