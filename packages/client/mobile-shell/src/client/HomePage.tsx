@@ -536,6 +536,7 @@ export function HomePage({
                         <TaskHomeRow
                           key={session.id}
                           item={item}
+                          variant="grouped"
                           {...(session.pendingInteraction !== undefined
                             ? { pendingInteraction: session.pendingInteraction }
                             : {})}

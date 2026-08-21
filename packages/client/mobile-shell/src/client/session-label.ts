@@ -78,10 +78,16 @@ export function sessionChatHeaderMeta(
  * Format one session row subtitle: workspace and preset labels.
  * @param summary - one session.list row.
  * @param hostLabel - optional Host provider or model label.
+ * @param options - layout hints for grouped vs flat lists.
  */
-export function sessionDisplayMeta(summary: SessionSummary, hostLabel?: string): string {
-  const workspace = sessionWorkspaceLabel(summary)
+export function sessionDisplayMeta(
+  summary: SessionSummary,
+  hostLabel?: string,
+  options?: { omitWorkspace?: boolean },
+): string {
   const preset = summary.agentPreset ?? hostLabel ?? 'DSH'
+  if (options?.omitWorkspace) return preset
+  const workspace = sessionWorkspaceLabel(summary)
   return `· ${workspace} · ${preset}`
 }
 

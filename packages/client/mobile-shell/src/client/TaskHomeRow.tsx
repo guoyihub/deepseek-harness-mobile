@@ -34,7 +34,7 @@ export interface TaskHomeRowProps {
   /** Optional Host label for metadata fallback. */
   hostLabel?: string | undefined
   /** Home list or search-result layout. */
-  variant?: 'home' | 'search' | undefined
+  variant?: 'home' | 'search' | 'grouped' | undefined
   /** Search-result workspace label (Host registry title). */
   workspaceLabel?: string | undefined
   /** Optional Host content-match excerpt. */
@@ -81,6 +81,7 @@ export function TaskHomeRow({
   onArchive,
 }: TaskHomeRowProps): JSX.Element {
   const search = variant === 'search'
+  const grouped = variant === 'grouped'
   const statuses = mobileSessionStatuses({
     running: item.running,
     ...(pendingInteraction !== undefined ? { pendingInteraction } : {}),
@@ -163,7 +164,9 @@ export function TaskHomeRow({
               </span>
             ) : (
               <span className={css.taskHomeMeta}>
-                {sessionDisplayMeta(item, hostLabel)}
+                {grouped
+                  ? sessionDisplayMeta(item, hostLabel, { omitWorkspace: true })
+                  : sessionDisplayMeta(item, hostLabel)}
                 {showStatus ? ` · ${primaryStatus.label}` : ''}
               </span>
             )}
