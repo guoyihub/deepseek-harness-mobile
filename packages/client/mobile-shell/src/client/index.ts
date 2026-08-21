@@ -3,5 +3,7 @@
 export { MobileApp } from './MobileApp.tsx'
 export { MobilePairApp, PairPage } from './PairPage.tsx'
 export { MobileConnectionProvider, useMobileConnection } from './MobileConnectionContext.tsx'
+export { MobilePullToRefresh } from './MobilePullToRefresh.tsx'
+export type { MobilePullToRefreshProps } from './MobilePullToRefresh.tsx'
 export { parsePairingInput, postPair, verifyHostDescribe } from './pair-api.ts'
 export type { PairingInput, PairResponse } from './pair-api.ts'

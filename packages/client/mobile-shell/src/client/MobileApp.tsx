@@ -25,15 +25,26 @@ import {
 
 import { readPairingLaunchContext } from './pairing-launch.ts'
 
+import { ServerSetupPage } from './ServerSetupPage.tsx'
+
+import { isNativeShell, readStoredServerUrl } from '@deepseek-ai/dsh-client-connection/client'
+
 import { MobileViewportShell } from './MobileViewportShell.tsx'
 import css from './mobile-shell.module.css'
 
 /** Mobile shell route discriminant. */
 type MobileRoute =
+  | { page: 'server-setup'; returnTo?: 'connection' }
   | { page: 'home' }
   | { page: 'pair' }
   | { page: 'chat'; sessionId: SessionId; draft?: string }
   | { page: 'connection' }
+
+function resolveInitialRoute(launch: ReturnType<typeof readPairingLaunchContext>): MobileRoute {
+  if (isNativeShell() && readStoredServerUrl() === undefined) return { page: 'server-setup' }
+  if (launch.startPairPage) return { page: 'pair' }
+  return { page: 'home' }
+}
 
 /**
  * DeepSeek Harness Mobile PWA shell: pairing, task list, and minimal chat.
@@ -41,9 +52,7 @@ type MobileRoute =
 export function MobileApp(): JSX.Element {
   const launch = readPairingLaunchContext()
   const [pairLaunchRaw] = useState(() => launch.initialRaw)
-  const [route, setRoute] = useState<MobileRoute>(() => (
-    launch.startPairPage ? { page: 'pair' } : { page: 'home' }
-  ))
+  const [route, setRoute] = useState<MobileRoute>(() => resolveInitialRoute(launch))
   const [showA2hs, setShowA2hs] = useState(false)
 
   useEffect(() => {
@@ -53,13 +62,34 @@ export function MobileApp(): JSX.Element {
   }, [])
 
   useEffect(() => {
-    if (isStandaloneDisplayMode() || isA2hsDismissed()) return
+    if (isNativeShell() || isStandaloneDisplayMode() || isA2hsDismissed()) return
     setShowA2hs(true)
   }, [])
 
   const body = useMemo(() => {
     switch (route.page) {
+      case 'server-setup':
+        return (
+          <ServerSetupPage
+            allowBack={readStoredServerUrl() !== undefined}
+            {...(readStoredServerUrl() !== undefined
+              ? {
+                onBack: () => {
+                  setRoute(route.returnTo === 'connection' ? { page: 'connection' } : { page: 'home' })
+                },
+              }
+              : {})}
+            onConfigured={() => {
+              if (route.returnTo === 'connection') {
+                setRoute({ page: 'connection' })
+                return
+              }
+              setRoute(launch.startPairPage ? { page: 'pair' } : { page: 'home' })
+            }}
+          />
+        )
       case 'home':
+      case 'connection':
         return (
           <HomePage
             onPair={() => { setRoute({ page: 'pair' }) }}
@@ -88,20 +118,23 @@ export function MobileApp(): JSX.Element {
             onSessionChange={(nextSessionId, draft) => { setRoute({ page: 'chat', sessionId: nextSessionId, draft }) }}
           />
         )
-      case 'connection':
-        return (
-          <ConnectionPage
-            onBack={() => { setRoute({ page: 'home' }) }}
-            onPair={() => { setRoute({ page: 'pair' }) }}
-          />
-        )
     }
-  }, [pairLaunchRaw, route])
+  }, [launch.startPairPage, pairLaunchRaw, route])
+
+  const connectionOverlay = route.page === 'connection'
+    ? (
+      <ConnectionPage
+        onBack={() => { setRoute({ page: 'home' }) }}
+        onPair={() => { setRoute({ page: 'pair' }) }}
+        onEditServer={() => { setRoute({ page: 'server-setup', returnTo: 'connection' }) }}
+      />
+    )
+    : null
 
   return (
     <MobileConnectionProvider>
       <MobileViewportShell>
-        {showA2hs && (
+        {showA2hs && !isNativeShell() && (
           <div className={css.a2hsBanner}>
             <p className={css.a2hsText}>添加到主屏幕，获得更接近 App 的体验。</p>
             <div className={css.actionRow}>
@@ -119,6 +152,7 @@ export function MobileApp(): JSX.Element {
           </div>
         )}
         {body}
+        {connectionOverlay}
       </MobileViewportShell>
     </MobileConnectionProvider>
   )

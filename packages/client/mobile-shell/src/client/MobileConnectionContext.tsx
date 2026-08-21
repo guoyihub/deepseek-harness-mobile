@@ -32,7 +32,13 @@ import {
   findReusableBlankSession,
   resolveDefaultWorkspaceId,
 } from './mobile-workspace-connect.ts'
+import { prefetchMobileConversationRuntime } from './mobile-conversation-runtime.ts'
 import { readSessionToken, readStoredHostBase } from './mobile-session.ts'
+import {
+  readStoredDeviceId,
+  readStoredFingerprint,
+  rememberMobileConnection,
+} from '@deepseek-ai/dsh-client-connection/client'
 import {
   isMobileSessionRoutedFrame,
   routeMobileMuxEnvelope,
@@ -82,6 +88,8 @@ interface MobileConnectionContextValue {
   disconnect: () => void
   /** Re-read pairing storage after a successful pair flow. */
   reloadPairing: () => void
+  /** Refresh the cached host.describe snapshot. */
+  refreshHostDescription: () => Promise<void>
 }
 
 /** Consecutive failed generations after which mobile pairing is dropped. */
@@ -140,6 +148,13 @@ export function MobileConnectionProvider({ children }: { children: ReactNode }):
     }
   }, [])
 
+  const refreshHostDescription = useCallback(async (): Promise<void> => {
+    const response = await mobileApi.host.describe({})
+    if (response.result.ok) {
+      setHostDescription(response.result.value)
+    }
+  }, [])
+
   const getPendingInteraction = useCallback((
     sessionId: SessionId,
   ): PendingInteractionStatus | undefined => mobilePendingInteraction(sessionId), [])
@@ -184,6 +199,26 @@ export function MobileConnectionProvider({ children }: { children: ReactNode }):
     }
   }, [handleAuthFailure])
 
+  const prependBlankSession = useCallback((
+    sessionId: SessionId,
+    workspaceId: WorkspaceId | undefined,
+  ): void => {
+    const workspace = workspaceId === undefined
+      ? undefined
+      : workspaces.find(item => item.workspaceId === workspaceId)
+    setSessions((current) => {
+      if (current.some(item => item.sessionId === sessionId)) return current
+      const row: SessionSummary = {
+        sessionId,
+        updatedAt: Date.now(),
+        running: false,
+        blank: true,
+        ...(workspace?.path !== undefined ? { cwd: workspace.path } : {}),
+      }
+      return [row, ...current]
+    })
+  }, [workspaces])
+
   const createSession = useCallback(async (workspaceId?: WorkspaceId): Promise<SessionId | undefined> => {
     const targetWorkspaceId = workspaceId ?? (
       workspaces.length > 0 ? resolveDefaultWorkspaceId(workspaces, sessions) : undefined
@@ -205,9 +240,11 @@ export function MobileConnectionProvider({ children }: { children: ReactNode }):
       }
       return undefined
     }
-    await refreshSessions()
-    return response.result.value.sessionId
-  }, [archivedSessionIds, handleAuthFailure, refreshSessions, sessions, workspaces])
+    const sessionId = response.result.value.sessionId
+    prependBlankSession(sessionId, targetWorkspaceId)
+    void refreshSessions()
+    return sessionId
+  }, [archivedSessionIds, handleAuthFailure, prependBlankSession, refreshSessions, sessions, workspaces])
 
   const subscribeMux = useCallback((listener: (frame: MuxFrame) => void): (() => void) => {
     muxListeners.current.add(listener)
@@ -276,7 +313,26 @@ export function MobileConnectionProvider({ children }: { children: ReactNode }):
         clearMobilePendingInteractions()
         setPendingRevision(revision => revision + 1)
         setHostDescription(description)
+        const sessionToken = readSessionToken()
+        const hostBase = readStoredHostBase()
+        const fingerprint = readStoredFingerprint()
+        const deviceId = readStoredDeviceId()
+        if (
+          sessionToken !== undefined
+          && hostBase !== undefined
+          && fingerprint !== undefined
+          && deviceId !== undefined
+        ) {
+          rememberMobileConnection({
+            fingerprint,
+            hostBase,
+            sessionToken,
+            deviceId,
+            hostDisplayName: description.provider ?? 'DSH Host',
+          })
+        }
         void refreshSessions()
+        prefetchMobileConversationRuntime()
       },
       onStateChange: (state: ConnectionState) => { setConnectionState(state) },
       onGiveUp: dropPairingAfterReconnect,
@@ -308,6 +364,7 @@ export function MobileConnectionProvider({ children }: { children: ReactNode }):
     subscribeMuxEnvelope,
     disconnect,
     reloadPairing,
+    refreshHostDescription,
   }), [
     paired,
     hostBase,
@@ -327,6 +384,7 @@ export function MobileConnectionProvider({ children }: { children: ReactNode }):
     subscribeMuxEnvelope,
     disconnect,
     reloadPairing,
+    refreshHostDescription,
   ])
 
   return (

@@ -7,12 +7,13 @@ import {
 import { resolveMobileApiBase } from '@deepseek-ai/dsh-client-connection/client'
 
 import { useMobileConnection } from './MobileConnectionContext.tsx'
-import { clearPairingStorage, resolveDeviceLabel, writePairingResult } from './mobile-session.ts'
+import { clearPairingStorage, rememberMobileConnection, resolveDeviceLabel, writePairingResult } from './mobile-session.ts'
 import {
   pairWithPolling,
   parsePairingInput,
   verifyHostDescribe,
 } from './pair-api.ts'
+import { HostFingerprintBadge } from './HostFingerprintBadge.tsx'
 import { QrCameraScanner } from './QrCameraScanner.tsx'
 import { decodeQrFromFile } from './qr-decode.ts'
 import { mobileConversationT } from './mobile-locale.ts'
@@ -54,6 +55,7 @@ export function PairPage({
       ? '正在打开摄像头…'
       : '对准二维码，或点右下角从相册选择',
   )
+  const [successFingerprint, setSuccessFingerprint] = useState<string | undefined>(undefined)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const finishPair = useCallback(async (decoded: string): Promise<void> => {
@@ -82,9 +84,17 @@ export function PairPage({
       const options = pairPassword.trim() === '' ? {} : { pairPassword: pairPassword.trim() }
       const result = await pairWithPolling(input, resolveDeviceLabel(), options)
       setPhase('success')
+      setSuccessFingerprint(result.fingerprint)
       setStatus('配对成功，正在验证连接…')
       const storedBase = resolveMobileApiBase(input.baseUrl)
       writePairingResult(storedBase, result.sessionToken, result.deviceId, result.fingerprint)
+      rememberMobileConnection({
+        fingerprint: result.fingerprint,
+        hostBase: storedBase,
+        sessionToken: result.sessionToken,
+        deviceId: result.deviceId,
+        hostDisplayName: result.hostDisplayName,
+      })
       await verifyHostDescribe(storedBase, result.sessionToken)
       reloadPairing()
       onPaired()
@@ -208,6 +218,13 @@ export function PairPage({
             ? '请在电脑上点击「允许」，手机会自动继续…'
             : status}
         </p>
+
+        {phase === 'success' && successFingerprint !== undefined && (
+          <div className={css.scanSuccessFingerprint}>
+            <HostFingerprintBadge fingerprint={successFingerprint} active />
+            <p className={css.scanSuccessCopy}>主机指纹已保存，可在设置中一键重连</p>
+          </div>
+        )}
 
         {!busy && (
           <button
