@@ -8,6 +8,12 @@ export interface TaskHomeRenameModalProps {
   open: boolean
   /** Seed title when the dialog opens. */
   initialTitle: string
+  /** Dialog title; defaults to session rename copy. */
+  dialogTitle?: string | undefined
+  /** Primary action label; defaults to session rename copy. */
+  confirmLabel?: string | undefined
+  /** Input accessible name. */
+  inputLabel?: string | undefined
   /** Close without saving. */
   onClose: () => void
   /** Commit the trimmed title. */
@@ -21,6 +27,9 @@ export interface TaskHomeRenameModalProps {
 export function TaskHomeRenameModal({
   open,
   initialTitle,
+  dialogTitle = '重命名会话',
+  confirmLabel = '重命名',
+  inputLabel = '会话标题',
   onClose,
   onConfirm,
 }: TaskHomeRenameModalProps): JSX.Element {
@@ -59,12 +68,12 @@ export function TaskHomeRenameModal({
     <Modal
       open={open}
       onClose={() => { if (!busy) onClose() }}
-      title="重命名会话"
+      title={dialogTitle}
       closeLabel="关闭"
       footer={(
         <>
           <Button variant="outline" disabled={busy} onClick={onClose}>取消</Button>
-          <Button variant="primary" disabled={blocked} onClick={submit}>重命名</Button>
+          <Button variant="primary" disabled={blocked} onClick={submit}>{confirmLabel}</Button>
         </>
       )}
     >
@@ -74,7 +83,7 @@ export function TaskHomeRenameModal({
         type="text"
         value={draft}
         disabled={busy}
-        aria-label="会话标题"
+        aria-label={inputLabel}
         onChange={(event) => {
           setDraft(event.target.value)
           setError(undefined)

@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
-import type { SessionId, SessionSearchItem } from '@deepseek-ai/dsh-client-connection/client'
+import type { SessionId, SessionSearchItem, WorkspaceId } from '@deepseek-ai/dsh-client-connection/client'
 import type { PendingInteractionStatus } from '@deepseek-ai/dsh-client-runtime/client'
 
 import { Button } from '@deepseek-ai/dsh-client-ui-primitives'
 
 import { useMobileConnection } from './MobileConnectionContext.tsx'
+import { prefetchMobileConversationRuntime } from './mobile-conversation-runtime.ts'
 import { mobileApi } from './mobile-api-client.ts'
 import { MobileFab } from './MobileFab.tsx'
+import { MobilePullToRefresh } from './MobilePullToRefresh.tsx'
 import { MobileShellLayout } from './MobileShellLayout.tsx'
 import {
   archiveMobileSession,
@@ -17,11 +19,21 @@ import {
   renameMobileSession,
 } from './mobile-session-actions.ts'
 import {
+  deleteMobileWorkspace,
+  renameMobileWorkspace,
+} from './mobile-workspace-actions.ts'
+import {
   deriveMobileSearchResults,
   MOBILE_SEARCH_DEBOUNCE_MS,
   MOBILE_SEARCH_RESULT_LIMIT,
   type MobileRemoteSearchState,
 } from './mobile-session-search.ts'
+import {
+  loadMobileGroupExpansion,
+  mobileExpandedGroupKeys,
+  pruneMobileGroupExpansion,
+  saveMobileGroupExpansion,
+} from './mobile-task-group-expansion.ts'
 import {
   deriveMobileTaskGroups,
   groupDisplayLabel,
@@ -30,9 +42,12 @@ import { mobileSessionIsActive } from './mobile-session-status.ts'
 import { sessionDisplayTitle } from './session-label.ts'
 import { StatusPanel } from './StatusPanel.tsx'
 import { TaskHomeHeader, type TaskHomeFilter } from './TaskHomeHeader.tsx'
+import { TaskHomeGroupHeader } from './TaskHomeGroupHeader.tsx'
 import { TaskHomeRenameModal } from './TaskHomeRenameModal.tsx'
 import { TaskHomeRow } from './TaskHomeRow.tsx'
 import { TaskHomeSelectDock } from './TaskHomeSelectDock.tsx'
+import { TaskHomeWorkspaceDeleteModal } from './TaskHomeWorkspaceDeleteModal.tsx'
+import { TASK_HOME_MOTION_MS } from './task-home-motion.ts'
 import css from './mobile-shell.module.css'
 
 /** Props for {@link HomePage}. */
@@ -87,6 +102,15 @@ export function HomePage({
     sessionId: SessionId
     title: string
   } | null>(null)
+  const [workspaceRenameTarget, setWorkspaceRenameTarget] = useState<{
+    workspaceId: WorkspaceId
+    title: string
+  } | null>(null)
+  const [workspaceDeleteTarget, setWorkspaceDeleteTarget] = useState<{
+    workspaceId: WorkspaceId
+    title: string
+  } | null>(null)
+  const [groupExpansion, setGroupExpansion] = useState(loadMobileGroupExpansion)
 
   const normalizedQuery = searchQuery.trim()
 
@@ -110,6 +134,12 @@ export function HomePage({
     }
     return map
   }, [getPendingInteraction, pendingRevision, sessions])
+
+  useEffect(() => {
+    if (paired && connectionState === 'connected') {
+      prefetchMobileConversationRuntime()
+    }
+  }, [connectionState, paired])
 
   useEffect(() => {
     if (normalizedQuery === '') {
@@ -180,25 +210,69 @@ export function HomePage({
     && remoteSearch.query === normalizedQuery
     && remoteSearch.status === 'error'
 
+  const expandedAllGroups = useMemo(
+    () => deriveMobileTaskGroups(sessions, workspaces, archivedSessionIds, pendingBySession),
+    [archivedSessionIds, pendingBySession, sessions, workspaces],
+  )
+
+  const groupKeys = useMemo(
+    () => expandedAllGroups.map(group => group.key),
+    [expandedAllGroups],
+  )
+
+  const allGroups = useMemo(
+    () => deriveMobileTaskGroups(
+      sessions,
+      workspaces,
+      archivedSessionIds,
+      pendingBySession,
+      mobileExpandedGroupKeys(groupKeys, groupExpansion),
+    ),
+    [archivedSessionIds, groupExpansion, groupKeys, pendingBySession, sessions, workspaces],
+  )
+
   const visibleGroups = useMemo(() => {
-    const groups = deriveMobileTaskGroups(sessions, workspaces, archivedSessionIds, pendingBySession)
-    return groups
-      .map(group => ({
-        ...group,
-        sessions: group.sessions.filter(session => filter !== 'running'
-          || mobileSessionIsActive({
-            running: session.running,
-            ...(session.pendingInteraction !== undefined
-              ? { pendingInteraction: session.pendingInteraction }
-              : {}),
-          })),
-      }))
-      .filter(group => group.sessions.length > 0)
-  }, [archivedSessionIds, filter, pendingBySession, sessions, workspaces])
+    const allowed = new Set(
+      expandedAllGroups
+        .map(group => ({
+          ...group,
+          sessions: group.sessions.filter(session => filter !== 'running'
+            || mobileSessionIsActive({
+              running: session.running,
+              ...(session.pendingInteraction !== undefined
+                ? { pendingInteraction: session.pendingInteraction }
+                : {}),
+            })),
+        }))
+        .filter(group => group.sessions.length > 0)
+        .map(group => group.key),
+    )
+    return allGroups.filter(group => allowed.has(group.key))
+  }, [allGroups, expandedAllGroups, filter])
+
+  useEffect(() => {
+    setGroupExpansion(current => pruneMobileGroupExpansion(current, groupKeys))
+  }, [groupKeys])
+
+  const toggleGroup = useCallback((key: string): void => {
+    setGroupExpansion((current) => {
+      const expanded = mobileExpandedGroupKeys(groupKeys, current).includes(key)
+      return saveMobileGroupExpansion(current, key, !expanded)
+    })
+  }, [groupKeys])
 
   const visibleSessionCount = useMemo(
-    () => visibleGroups.reduce((count, group) => count + group.sessions.length, 0),
-    [visibleGroups],
+    () => expandedAllGroups
+      .flatMap(group => group.sessions)
+      .filter(session => filter !== 'running'
+        || mobileSessionIsActive({
+          running: session.running,
+          ...(session.pendingInteraction !== undefined
+            ? { pendingInteraction: session.pendingInteraction }
+            : {}),
+        }))
+      .length,
+    [expandedAllGroups, filter],
   )
 
   const exitSelect = useCallback((): void => {
@@ -302,6 +376,7 @@ export function HomePage({
       onPair()
       return
     }
+    prefetchMobileConversationRuntime()
     void (async () => {
       const sessionId = await createSession()
       if (sessionId !== undefined) onOpenChat(sessionId)
@@ -310,8 +385,15 @@ export function HomePage({
 
   const collapseSearch = useCallback((): void => {
     setSearchExpanded(false)
-    setSearchQuery('')
+    window.setTimeout(() => {
+      setSearchQuery('')
+    }, TASK_HOME_MOTION_MS)
   }, [])
+
+  const onPullRefresh = useCallback(async (): Promise<void> => {
+    setActionError(undefined)
+    await refreshSessions()
+  }, [refreshSessions])
 
   const reconnecting = connectionState === 'reconnecting'
   const reconnectFailed = !paired && !revoked && error !== undefined
@@ -323,7 +405,7 @@ export function HomePage({
 
   return (
     <MobileShellLayout
-      taskHomeContent
+      taskHomeNestedScroll
       headerSlot={(
         <TaskHomeHeader
           paired={paired}
@@ -355,110 +437,133 @@ export function HomePage({
         />
       ) : undefined}
     >
-      <StatusPanel error={paired && !reconnecting ? (actionError ?? error) : undefined} />
+      <MobilePullToRefresh
+        onRefresh={onPullRefresh}
+        disabled={!paired || searching || selecting}
+        dock={selecting}
+        scrollClassName={css.taskHomePullScroll}
+        ariaLabel="任务列表"
+      >
+        <StatusPanel error={paired && !reconnecting ? (actionError ?? error) : undefined} />
 
-      {!paired && (
-        <div className={css.taskHomeEmpty}>
-          <p className={css.taskHomeEmptyCopy}>{unpairedCopy}</p>
-          <Button variant="primary" onClick={onPair}>扫码连接电脑</Button>
-        </div>
-      )}
+        {!paired && (
+          <div className={css.taskHomeEmpty}>
+            <p className={css.taskHomeEmptyCopy}>{unpairedCopy}</p>
+            <Button variant="primary" onClick={onPair}>扫码连接电脑</Button>
+          </div>
+        )}
 
-      {paired && searching && (
-        <div className={css.taskHomeSearchBody} role="list" aria-label="搜索结果">
-          <ul className={css.taskHomeSearchList}>
-            {searchResults.items.map((result) => {
-              const item = sessionById.get(result.id)
-              if (item === undefined) return null
-              return (
-                <TaskHomeRow
-                  key={result.id}
-                  item={item}
-                  {...(result.pendingInteraction !== undefined
-                    ? { pendingInteraction: result.pendingInteraction }
-                    : {})}
-                  variant="search"
-                  workspaceLabel={result.workspace}
-                  {...(result.snippet !== undefined ? { snippet: result.snippet } : {})}
-                  onOpen={() => { onOpenChat(result.id) }}
+        {paired && searching && (
+          <div className={css.taskHomeSearchBody} role="list" aria-label="搜索结果">
+            <ul className={css.taskHomeSearchList}>
+              {searchResults.items.map((result) => {
+                const item = sessionById.get(result.id)
+                if (item === undefined) return null
+                return (
+                  <TaskHomeRow
+                    key={result.id}
+                    item={item}
+                    {...(result.pendingInteraction !== undefined
+                      ? { pendingInteraction: result.pendingInteraction }
+                      : {})}
+                    variant="search"
+                    workspaceLabel={result.workspace}
+                    {...(result.snippet !== undefined ? { snippet: result.snippet } : {})}
+                    onOpen={() => { onOpenChat(result.id) }}
+                  />
+                )
+              })}
+            </ul>
+            {searchPending && (
+              <div className={css.taskHomeSearchStatus} role="status">正在搜索会话历史…</div>
+            )}
+            {searchFailed && (
+              <div className={css.taskHomeSearchWarning} role="status">
+                内容搜索暂不可用，仅显示名称匹配。
+              </div>
+            )}
+            {!searchPending && searchResults.items.length === 0 && (
+              <div className={css.taskHomeEmpty}>无匹配会话</div>
+            )}
+            {searchResults.hasMore && (
+              <div className={css.taskHomeSearchStatus}>
+                {`仅显示前 ${MOBILE_SEARCH_RESULT_LIMIT} 条结果，请缩小搜索范围。`}
+              </div>
+            )}
+          </div>
+        )}
+
+        {paired && !searching && reconnecting && visibleSessionCount === 0 && (
+          <div className={css.taskHomeEmpty} role="status">正在重连…</div>
+        )}
+
+        {paired && !searching && !reconnecting && sessionsLoading && visibleSessionCount === 0 && (
+          <div className={css.taskHomeEmpty}>正在加载任务…</div>
+        )}
+
+        {paired && !searching && !reconnecting && !sessionsLoading && visibleSessionCount === 0 && (
+          <div className={css.taskHomeEmpty}>
+            {filter === 'running'
+              ? '没有匹配的任务'
+              : '暂无任务，点击右下角按钮新建一个'}
+          </div>
+        )}
+
+        {paired && !searching && visibleSessionCount > 0 && (
+          <div className={css.taskHomeGroups}>
+            {visibleGroups.map(group => (
+              <section key={group.key} className={css.taskHomeGroup} aria-label={groupDisplayLabel(group)}>
+                <TaskHomeGroupHeader
+                  group={group}
+                  onToggle={() => { toggleGroup(group.key) }}
+                  {...(group.workspaceId === undefined
+                    ? {}
+                    : {
+                      onRename: (workspaceId, title) => {
+                        setWorkspaceRenameTarget({ workspaceId, title })
+                      },
+                      onDelete: (workspaceId, title) => {
+                        setWorkspaceDeleteTarget({ workspaceId, title })
+                      },
+                    })}
                 />
-              )
-            })}
-          </ul>
-          {searchPending && (
-            <div className={css.taskHomeSearchStatus} role="status">正在搜索会话历史…</div>
-          )}
-          {searchFailed && (
-            <div className={css.taskHomeSearchWarning} role="status">
-              内容搜索暂不可用，仅显示名称匹配。
-            </div>
-          )}
-          {!searchPending && searchResults.items.length === 0 && (
-            <div className={css.taskHomeEmpty}>无匹配会话</div>
-          )}
-          {searchResults.hasMore && (
-            <div className={css.taskHomeSearchStatus}>
-              {`仅显示前 ${MOBILE_SEARCH_RESULT_LIMIT} 条结果，请缩小搜索范围。`}
-            </div>
-          )}
-        </div>
-      )}
-
-      {paired && !searching && reconnecting && visibleSessionCount === 0 && (
-        <div className={css.taskHomeEmpty} role="status">正在重连…</div>
-      )}
-
-      {paired && !searching && !reconnecting && sessionsLoading && visibleSessionCount === 0 && (
-        <div className={css.taskHomeEmpty}>正在加载任务…</div>
-      )}
-
-      {paired && !searching && !reconnecting && !sessionsLoading && visibleSessionCount === 0 && (
-        <div className={css.taskHomeEmpty}>
-          {filter === 'running'
-            ? '没有匹配的任务'
-            : '暂无任务，点击右下角按钮新建一个'}
-        </div>
-      )}
-
-      {paired && !searching && visibleSessionCount > 0 && (
-        <div className={css.taskHomeGroups}>
-          {visibleGroups.map(group => (
-            <section key={group.key} className={css.taskHomeGroup} aria-label={groupDisplayLabel(group)}>
-              <h2 className={css.taskHomeGroupLabel}>{groupDisplayLabel(group)}</h2>
-              <ul className={css.taskHomeList}>
-                {group.sessions.map((session) => {
-                  const item = sessionById.get(session.id)
-                  if (item === undefined) return null
-                  return (
-                    <TaskHomeRow
-                      key={session.id}
-                      item={item}
-                      {...(session.pendingInteraction !== undefined
-                        ? { pendingInteraction: session.pendingInteraction }
-                        : {})}
-                      hostLabel={hostLabel}
-                      selecting={selecting}
-                      selected={selectedIds.has(session.id)}
-                      onOpen={() => { onOpenChat(session.id) }}
-                      onToggleSelect={() => { toggleSelect(session.id) }}
-                      onEnterSelect={() => { enterSelect(session.id) }}
-                      onRename={() => {
-                        setRenameTarget({
-                          sessionId: session.id,
-                          title: sessionDisplayTitle(item),
-                        })
-                      }}
-                      onFork={() => { void onForkOne(session.id) }}
-                      onPin={() => { void onPinOne(session.id) }}
-                      onArchive={() => { void onArchiveOne(session.id) }}
-                    />
-                  )
-                })}
-              </ul>
-            </section>
-          ))}
-        </div>
-      )}
+                {group.expanded && (
+                  <ul className={css.taskHomeList}>
+                    {group.sessions.map((session) => {
+                      const item = sessionById.get(session.id)
+                      if (item === undefined) return null
+                      return (
+                        <TaskHomeRow
+                          key={session.id}
+                          item={item}
+                          {...(session.pendingInteraction !== undefined
+                            ? { pendingInteraction: session.pendingInteraction }
+                            : {})}
+                          hostLabel={hostLabel}
+                          selecting={selecting}
+                          selected={selectedIds.has(session.id)}
+                          onOpen={() => { onOpenChat(session.id) }}
+                          onToggleSelect={() => { toggleSelect(session.id) }}
+                          onEnterSelect={() => { enterSelect(session.id) }}
+                          onRename={() => {
+                            setRenameTarget({
+                              sessionId: session.id,
+                              title: sessionDisplayTitle(item),
+                            })
+                          }}
+                          onFork={() => { void onForkOne(session.id) }}
+                          onPin={() => { void onPinOne(session.id) }}
+                          onArchive={() => { void onArchiveOne(session.id) }}
+                        />
+                      )
+                    })}
+                  </ul>
+                )}
+              </section>
+            ))}
+          </div>
+        )}
+      </MobilePullToRefresh>
 
       {renameTarget !== null && (
         <TaskHomeRenameModal
@@ -467,6 +572,33 @@ export function HomePage({
           onClose={() => { setRenameTarget(null) }}
           onConfirm={async (title) => {
             await renameMobileSession(renameTarget.sessionId, title)
+            await refreshSessions()
+          }}
+        />
+      )}
+
+      {workspaceRenameTarget !== null && (
+        <TaskHomeRenameModal
+          open
+          dialogTitle="重命名分组"
+          confirmLabel="保存"
+          inputLabel="分组名称"
+          initialTitle={workspaceRenameTarget.title}
+          onClose={() => { setWorkspaceRenameTarget(null) }}
+          onConfirm={async (title) => {
+            await renameMobileWorkspace(workspaceRenameTarget.workspaceId, title)
+            await refreshSessions()
+          }}
+        />
+      )}
+
+      {workspaceDeleteTarget !== null && (
+        <TaskHomeWorkspaceDeleteModal
+          open
+          workspaceTitle={workspaceDeleteTarget.title}
+          onClose={() => { setWorkspaceDeleteTarget(null) }}
+          onConfirm={async () => {
+            await deleteMobileWorkspace(workspaceDeleteTarget.workspaceId)
             await refreshSessions()
           }}
         />

@@ -53,6 +53,24 @@ describe('deriveMobileTaskGroups', () => {
     )
     expect(groupDisplayLabel(groups[0]!)).toBe(MOBILE_UNGROUPED_LABEL)
   })
+
+  it('honors caller-supplied expanded group keys', () => {
+    const sessions = [
+      wireSummary('owned', 1, '/projects/first'),
+      wireSummary('other', 2, '/projects/second'),
+    ]
+    const groups = deriveMobileTaskGroups(
+      sessions,
+      [workspace('first', ['owned']), workspace('second', ['other'])],
+      [],
+      undefined,
+      ['second'],
+    )
+    expect(groups[0]?.expanded).toBe(false)
+    expect(groups[0]?.sessions).toEqual([])
+    expect(groups[1]?.expanded).toBe(true)
+    expect(groups[1]?.sessions.map(session => session.id)).toEqual([sid('other')])
+  })
 })
 
 describe('visibleWireSessions', () => {

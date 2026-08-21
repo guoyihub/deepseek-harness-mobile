@@ -7,6 +7,7 @@ import {
   IconUserOutline16,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import { sanitizeSearchQuery } from './mobile-session-search.ts'
+import { TASK_HOME_MOTION_MS } from './task-home-motion.ts'
 import css from './mobile-shell.module.css'
 
 /** Task list filter mode for the home surface. */
@@ -73,9 +74,21 @@ export function TaskHomeHeader({
   onOpenConnection,
 }: TaskHomeHeaderProps): JSX.Element {
   const [filterOpen, setFilterOpen] = useState(false)
+  const [visualSearchExpanded, setVisualSearchExpanded] = useState(searchExpanded)
   const filterRef = useRef<HTMLDivElement>(null)
   const searchRoot = useRef<HTMLDivElement>(null)
   const searchInput = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (searchExpanded) {
+      setVisualSearchExpanded(true)
+      return
+    }
+    const timer = window.setTimeout(() => {
+      setVisualSearchExpanded(false)
+    }, TASK_HOME_MOTION_MS)
+    return () => { window.clearTimeout(timer) }
+  }, [searchExpanded])
 
   useEffect(() => {
     if (!filterOpen || selecting || searchExpanded) return
@@ -142,7 +155,7 @@ export function TaskHomeHeader({
     <header className={css.taskHomeHeader}>
       <div className={css.taskHomeHeaderRow}>
         <div
-          className={`${css.taskHomeTitleWrap}${searchExpanded ? ` ${css.taskHomeTitleWrapHidden}` : ''}`}
+          className={`${css.taskHomeTitleWrap}${visualSearchExpanded ? ` ${css.taskHomeTitleWrapHidden}` : ''}`}
           ref={filterRef}
         >
           <button
@@ -181,10 +194,10 @@ export function TaskHomeHeader({
 
         <div
           ref={searchRoot}
-          className={`${css.taskHomeTrailing}${searchExpanded ? ` ${css.taskHomeTrailingExpanded}` : ''}`}
+          className={`${css.taskHomeTrailing}${visualSearchExpanded ? ` ${css.taskHomeTrailingExpanded}` : ''}`}
         >
           <div
-            className={`${css.taskHomeSearch}${searchExpanded ? ` ${css.taskHomeSearchExpanded}` : ''}`}
+            className={`${css.taskHomeSearch}${visualSearchExpanded ? ` ${css.taskHomeSearchExpanded}` : ''}`}
             onClick={() => {
               expandSearch()
               searchInput.current?.focus({ preventScroll: true })
@@ -201,7 +214,9 @@ export function TaskHomeHeader({
                 expandSearch()
               }}
             >
-              <IconSearchOutline16 size={searchExpanded ? 14 : 16} />
+              <span className={css.taskHomeSearchIcon} aria-hidden="true">
+                <IconSearchOutline16 size={16} />
+              </span>
             </button>
             <input
               ref={searchInput}
@@ -223,24 +238,23 @@ export function TaskHomeHeader({
                 onSearchCollapse()
               }}
             />
-            {searchExpanded && (
-              <button
-                type="button"
-                className={css.taskHomeSearchClear}
-                aria-label="清除搜索"
-                onClick={(event) => {
-                  event.stopPropagation()
-                  onSearchCollapse()
-                }}
-              >
-                <IconCloseFill14 size={14} />
-              </button>
-            )}
+            <button
+              type="button"
+              className={css.taskHomeSearchClear}
+              aria-label="清除搜索"
+              tabIndex={searchExpanded ? 0 : -1}
+              onClick={(event) => {
+                event.stopPropagation()
+                onSearchCollapse()
+              }}
+            >
+              <IconCloseFill14 size={14} />
+            </button>
           </div>
 
           <button
             type="button"
-            className={`${css.taskHomeAvatarButton}${searchExpanded ? ` ${css.taskHomeAvatarHidden}` : ''}`}
+            className={`${css.taskHomeAvatarButton}${visualSearchExpanded ? ` ${css.taskHomeAvatarHidden}` : ''}`}
             aria-label={connectionAriaLabel(paired, connected)}
             tabIndex={searchExpanded ? -1 : 0}
             onClick={onOpenConnection}

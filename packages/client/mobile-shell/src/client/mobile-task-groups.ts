@@ -67,19 +67,21 @@ export function toSessionListState(
  * @param workspaces - durable workspace registry order.
  * @param archivedSessionIds - registry-global archive set from `workspace.list`.
  * @param pendingBySession - live pending-interaction status by session id.
+ * @param expandedGroups - group keys that should render open; omit to expand every group.
  */
 export function deriveMobileTaskGroups(
   sessions: readonly WireSessionSummary[],
   workspaces: readonly WorkspaceView[],
   archivedSessionIds: readonly SessionId[],
   pendingBySession?: ReadonlyMap<SessionId, PendingInteractionStatus>,
+  expandedGroups?: readonly string[],
 ): GroupNode[] {
   const list = toSessionListState(sessions, pendingBySession)
-  const expandedGroups = [
+  const expanded = expandedGroups ?? [
     ...workspaces.map(workspace => workspace.workspaceId as string),
     UNGROUPED_KEY,
   ]
-  return deriveGroups(list, workspaces, archivedSessionIds, { expandedGroups })
+  return deriveGroups(list, workspaces, archivedSessionIds, { expandedGroups: expanded })
 }
 
 /**
