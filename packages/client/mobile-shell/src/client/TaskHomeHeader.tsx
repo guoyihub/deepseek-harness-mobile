@@ -155,7 +155,7 @@ export function TaskHomeHeader({
     <header className={css.taskHomeHeader}>
       <div className={css.taskHomeHeaderRow}>
         <div
-          className={`${css.taskHomeTitleWrap}${visualSearchExpanded ? ` ${css.taskHomeTitleWrapHidden}` : ''}`}
+          className={`${css.taskHomeTitleWrap}${visualSearchExpanded ? ` ${css.taskHomeTitleWrapHidden}` : ''}${filterOpen ? ` ${css.taskHomeTitleWrapFilterOpen}` : ''}`}
           ref={filterRef}
         >
           <button
