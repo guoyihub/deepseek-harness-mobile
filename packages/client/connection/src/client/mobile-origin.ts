@@ -1,6 +1,37 @@
-/** Resolve Host API base URL for mobile PWA (dev proxy, LAN, and tunnel). */
+/** Resolve Host API base URL for mobile PWA (dev proxy, LAN, tunnel, and native shell). */
 
 import { isLoopbackHostname } from '../loopback-hostname.ts'
+import { readStoredServerUrl } from './mobile-session.ts'
+
+/**
+ * Whether the page runs inside a native Capacitor shell rather than a browser tab.
+ */
+export function isNativeShell(): boolean {
+  const env = (import.meta as ImportMeta & { env?: Record<string, string | boolean> }).env
+  if (env?.VITE_DSH_NATIVE_SHELL === 'true' || env?.VITE_DSH_NATIVE_SHELL === true) return true
+  const capacitor = (globalThis as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor
+  if (capacitor?.isNativePlatform?.() === true) return true
+  const location = globalThis.location
+  if (location === undefined) return false
+  return location.protocol === 'capacitor:' || location.protocol === 'ionic:'
+}
+
+/**
+ * Normalize a user-entered Mobile server URL to a canonical origin.
+ * @param raw - hostname, host:port, or full URL.
+ * @returns normalized origin, or empty string when invalid.
+ */
+export function normalizeMobileServerUrl(raw: string): string {
+  const trimmed = raw.trim()
+  if (trimmed === '') return ''
+  const withScheme = trimmed.includes('://') ? trimmed : `https://${trimmed}`
+  try {
+    const url = new URL(withScheme)
+    return normalizeHostBaseUrl(url.origin)
+  } catch {
+    return ''
+  }
+}
 
 /**
  * Downgrade legacy https loopback URLs to http for the plain-HTTP M1 Host.
@@ -20,6 +51,24 @@ export function normalizeHostBaseUrl(baseUrl: string): string {
 }
 
 /**
+ * Resolve the configured Mobile deployment origin.
+ *
+ * Native shell apps require an explicit server URL. Browser PWAs on LAN or
+ * tunnel surfaces use the page origin so `/api` stays same-origin through Vite.
+ */
+export function resolveMobileServerBase(): string | undefined {
+  const stored = readStoredServerUrl()
+  if (stored !== undefined && stored !== '') {
+    return normalizeHostBaseUrl(stored)
+  }
+  if (isNativeShell()) return undefined
+  const location = globalThis.location
+  if (location === undefined || location.origin === 'null') return undefined
+  if (isLoopbackHostname(location.hostname)) return undefined
+  return location.origin
+}
+
+/**
  * Base URL for browser fetch/WebSocket calls.
  *
  * Prefer the page origin whenever the phone is already on a reachable Mobile
@@ -28,6 +77,9 @@ export function normalizeHostBaseUrl(baseUrl: string): string {
  * @param configured - stored Host origin from pairing.
  */
 export function resolveMobileApiBase(configured: string | undefined): string {
+  const serverBase = resolveMobileServerBase()
+  if (serverBase !== undefined) return serverBase
+
   if (configured === undefined || configured === '') {
     return globalThis.location?.origin ?? 'http://127.0.0.1:3080'
   }

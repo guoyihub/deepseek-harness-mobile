@@ -14,19 +14,39 @@ export {
   MOBILE_STORAGE_KEYS,
   clearPairingStorage,
   readSessionToken,
+  readStoredFingerprint,
+  readStoredDeviceId,
   readStoredDeviceLabel,
   readDeviceLabelCustomized,
   readStoredHostBase,
+  readStoredServerUrl,
   writePairingResult,
   writeStoredDeviceLabel,
   writeStoredHostBase,
+  writeStoredServerUrl,
 } from './mobile-session.ts'
+export {
+  MAX_MOBILE_CONNECTION_HISTORY,
+  connectionHistoryId,
+  readMobileConnectionHistory,
+  rememberMobileConnection,
+  removeMobileConnectionHistory,
+  touchMobileConnectionHistory,
+  type RememberMobileConnectionInput,
+  type SavedMobileConnection,
+} from './mobile-connection-history.ts'
 export {
   DEFAULT_DEVICE_LABEL,
   resolveDefaultDeviceLabel,
   resolveDeviceLabel,
 } from './device-label.ts'
-export { normalizeHostBaseUrl, resolveMobileApiBase } from './mobile-origin.ts'
+export {
+  isNativeShell,
+  normalizeHostBaseUrl,
+  normalizeMobileServerUrl,
+  resolveMobileApiBase,
+  resolveMobileServerBase,
+} from './mobile-origin.ts'
 import { createWebConnectionRpc } from './rpc.ts'
 import { isLoopbackHostname } from '../loopback-hostname.ts'
 import type { ClientConnectionRpc } from '../rpc.ts'

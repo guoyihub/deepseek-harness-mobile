@@ -13,6 +13,7 @@
     "src/client/index.ts",
     "src/client/random-uuid.ts",
     "src/client/mobile-session.ts",
+    "src/client/mobile-connection-history.ts",
     "src/client/device-label.ts",
     "src/client/mobile-origin.ts",
     "src/client/rpc.ts",

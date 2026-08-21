@@ -6,6 +6,8 @@
 
 /** localStorage keys for mobile pairing persistence. */
 export const MOBILE_STORAGE_KEYS = {
+  /** User-configured Mobile server URL for native shell apps. */
+  serverUrl: 'dsh.mobile.serverUrl',
   /** Canonical Host base URL (`https://host:port`). */
   host: 'dsh.mobile.host',
   /** Opaque session token. */
@@ -18,6 +20,8 @@ export const MOBILE_STORAGE_KEYS = {
   deviceLabel: 'dsh.mobile.deviceLabel',
   /** Whether the user explicitly edited {@link MOBILE_STORAGE_KEYS.deviceLabel}. */
   deviceLabelCustomized: 'dsh.mobile.deviceLabelCustomized',
+  /** Saved successful Host connections for settings quick reconnect. */
+  connectionHistory: 'dsh.mobile.connectionHistory',
 } as const
 
 const PAIRING_ONLY_STORAGE_KEYS = [
@@ -26,6 +30,27 @@ const PAIRING_ONLY_STORAGE_KEYS = [
   MOBILE_STORAGE_KEYS.deviceId,
   MOBILE_STORAGE_KEYS.fingerprint,
 ] as const
+
+/**
+ * Read the user-configured Mobile server URL (native shell).
+ * @returns stored server URL, or undefined when unset or storage is unavailable.
+ */
+export function readStoredServerUrl(): string | undefined {
+  try {
+    const value = globalThis.localStorage?.getItem(MOBILE_STORAGE_KEYS.serverUrl)
+    return value === null || value === '' ? undefined : value
+  } catch {
+    return undefined
+  }
+}
+
+/**
+ * Persist the Mobile server URL for native shell API calls.
+ * @param url - canonical origin (`https://mobile.example.com`).
+ */
+export function writeStoredServerUrl(url: string): void {
+  globalThis.localStorage?.setItem(MOBILE_STORAGE_KEYS.serverUrl, url)
+}
 
 /**
  * Read the configured Host base URL for cross-origin mobile clients.
@@ -55,6 +80,32 @@ export function writeStoredHostBase(base: string): void {
 export function readSessionToken(): string | undefined {
   try {
     const value = globalThis.localStorage?.getItem(MOBILE_STORAGE_KEYS.sessionToken)
+    return value === null || value === '' ? undefined : value
+  } catch {
+    return undefined
+  }
+}
+
+/**
+ * Read the stored Host fingerprint for the active pairing.
+ * @returns fingerprint string, or undefined when unset or storage is unavailable.
+ */
+export function readStoredFingerprint(): string | undefined {
+  try {
+    const value = globalThis.localStorage?.getItem(MOBILE_STORAGE_KEYS.fingerprint)
+    return value === null || value === '' ? undefined : value
+  } catch {
+    return undefined
+  }
+}
+
+/**
+ * Read the stored registered device id for the active pairing.
+ * @returns device id, or undefined when unset or storage is unavailable.
+ */
+export function readStoredDeviceId(): string | undefined {
+  try {
+    const value = globalThis.localStorage?.getItem(MOBILE_STORAGE_KEYS.deviceId)
     return value === null || value === '' ? undefined : value
   } catch {
     return undefined

@@ -5,7 +5,7 @@ import { AbstractApiClient } from './api.ts'
 import { hostFrameSchema, muxFrameSchema } from '@deepseek-ai/dsh-host-apiproxy/api/events.schema'
 import { serverRequestSchema } from '@deepseek-ai/dsh-host-apiproxy/api/rpc.schema'
 import { HOST_EVENTS_PATH, MUX_EVENTS_PATH } from '../api-path.ts'
-import { resolveMobileApiBase } from './mobile-origin.ts'
+import { resolveMobileApiBase, resolveMobileServerBase } from './mobile-origin.ts'
 import { readSessionToken, readStoredHostBase } from './mobile-session.ts'
 
 type SocketItem<F> = { kind: 'frame'; envelope: RpcRequest<F> } | { kind: 'end' }
@@ -17,6 +17,8 @@ export class WebApiClient extends AbstractApiClient {
   protected override resolveBase(): string {
     const stored = readStoredHostBase()
     if (stored !== undefined) return resolveMobileApiBase(stored)
+    const server = resolveMobileServerBase()
+    if (server !== undefined) return server
     return super.resolveBase()
   }
 
