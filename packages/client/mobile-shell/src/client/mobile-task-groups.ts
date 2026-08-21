@@ -15,6 +15,9 @@ import {
 } from '@deepseek-ai/dsh-client-ui-workspace/src/client/tree.ts'
 import { sessionDisplayTitle } from './session-label.ts'
 
+/** Default visible session rows per expanded workspace group (matches desktop sidebar). */
+export const MOBILE_COLLAPSED_SESSION_LIMIT = 5
+
 /** Mobile label for sessions outside every workspace (desktop `group.ungrouped`). */
 export const MOBILE_UNGROUPED_LABEL = '未分组'
 
@@ -22,6 +25,7 @@ export const MOBILE_UNGROUPED_LABEL = '未分组'
 export function wireToRuntimeSummary(
   item: WireSessionSummary,
   pendingInteraction?: PendingInteractionStatus,
+  completed?: boolean,
 ): RuntimeSessionSummary {
   return {
     id: item.sessionId,
@@ -30,6 +34,7 @@ export function wireToRuntimeSummary(
     running: item.running,
     updatedAt: item.updatedAt,
     ...(pendingInteraction !== undefined ? { pendingInteraction } : {}),
+    ...(completed === true ? { completed: true } : {}),
     ...(item.cwd !== undefined ? { cwd: item.cwd } : {}),
     ...(item.agentPreset !== undefined ? { agentPreset: item.agentPreset } : {}),
     ...(item.origin !== undefined ? { origin: item.origin } : {}),
@@ -41,14 +46,17 @@ export function wireToRuntimeSummary(
  * Build a runtime session list snapshot from mobile wire rows.
  * @param items - raw `session.list` rows.
  * @param pendingBySession - live pending-interaction status by session id.
+ * @param completedBySession - local completion reminders by session id.
  */
 export function toSessionListState(
   items: readonly WireSessionSummary[],
   pendingBySession?: ReadonlyMap<SessionId, PendingInteractionStatus>,
+  completedBySession?: ReadonlyMap<SessionId, boolean>,
 ): SessionListState {
   const runtimeItems = items.map(item => wireToRuntimeSummary(
     item,
     pendingBySession?.get(item.sessionId),
+    completedBySession?.get(item.sessionId),
   ))
   return {
     ids: runtimeItems.map(item => item.id),
@@ -68,6 +76,7 @@ export function toSessionListState(
  * @param archivedSessionIds - registry-global archive set from `workspace.list`.
  * @param pendingBySession - live pending-interaction status by session id.
  * @param expandedGroups - group keys that should render open; omit to expand every group.
+ * @param completedBySession - local completion reminders by session id.
  */
 export function deriveMobileTaskGroups(
   sessions: readonly WireSessionSummary[],
@@ -75,8 +84,9 @@ export function deriveMobileTaskGroups(
   archivedSessionIds: readonly SessionId[],
   pendingBySession?: ReadonlyMap<SessionId, PendingInteractionStatus>,
   expandedGroups?: readonly string[],
+  completedBySession?: ReadonlyMap<SessionId, boolean>,
 ): GroupNode[] {
-  const list = toSessionListState(sessions, pendingBySession)
+  const list = toSessionListState(sessions, pendingBySession, completedBySession)
   const expanded = expandedGroups ?? [
     ...workspaces.map(workspace => workspace.workspaceId as string),
     UNGROUPED_KEY,
@@ -99,15 +109,24 @@ export function groupDisplayLabel(group: GroupNode): string {
  * @param workspaces - durable workspace registry order.
  * @param archivedSessionIds - registry-global archive set from `workspace.list`.
  * @param pendingBySession - live pending-interaction status by session id.
+ * @param completedBySession - local completion reminders by session id.
  */
 export function visibleWireSessions(
   sessions: readonly WireSessionSummary[],
   workspaces: readonly WorkspaceView[],
   archivedSessionIds: readonly SessionId[],
   pendingBySession?: ReadonlyMap<SessionId, PendingInteractionStatus>,
+  completedBySession?: ReadonlyMap<SessionId, boolean>,
 ): WireSessionSummary[] {
   const byId = new Map(sessions.map(item => [item.sessionId, item]))
-  const groups = deriveMobileTaskGroups(sessions, workspaces, archivedSessionIds, pendingBySession)
+  const groups = deriveMobileTaskGroups(
+    sessions,
+    workspaces,
+    archivedSessionIds,
+    pendingBySession,
+    undefined,
+    completedBySession,
+  )
   const ids = groups.flatMap(group => group.sessions.map(session => session.id))
   return ids
     .map(id => byId.get(id))

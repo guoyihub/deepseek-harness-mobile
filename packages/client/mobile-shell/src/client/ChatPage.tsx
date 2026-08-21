@@ -61,7 +61,14 @@ export function ChatPage({
   onBack,
   onSessionChange,
 }: ChatPageProps): JSX.Element {
-  const { subscribeMux, sessions, workspaces, refreshSessions, error: connectionError } = useMobileConnection()
+  const {
+    subscribeMux,
+    sessions,
+    workspaces,
+    refreshSessions,
+    error: connectionError,
+    markSessionViewed,
+  } = useMobileConnection()
   const mobileSession = useMobileSession(sessionId)
   const { ready, error: sessionError, useSession, useProjection, loadOlder } = mobileSession
   const [draft, setDraft] = useState(initialDraft)
@@ -87,6 +94,12 @@ export function ChatPage({
     setSessionView('chat')
     stickToBottomRef.current = true
   }
+
+  useEffect(() => {
+    markSessionViewed(sessionId)
+  }, [markSessionViewed, sessionId])
+
+  useEffect(() => () => { markSessionViewed(undefined) }, [markSessionViewed])
 
   useEffect(() => {
     setDraft(initialDraft)

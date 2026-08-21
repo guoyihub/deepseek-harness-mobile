@@ -29,6 +29,12 @@ import {
   mobilePendingInteraction,
 } from './mobile-session-pending-tracker.ts'
 import {
+  clearMobileCompletedNotifications,
+  mobileSessionCompleted,
+  setMobileSelectedSession,
+  syncMobileCompletedNotifications,
+} from './mobile-session-completed-tracker.ts'
+import {
   findReusableBlankSession,
   resolveDefaultWorkspaceId,
 } from './mobile-workspace-connect.ts'
@@ -78,6 +84,10 @@ interface MobileConnectionContextValue {
   pendingRevision: number
   /** Read one session's pending-interaction status for list rows. */
   getPendingInteraction: (sessionId: SessionId) => PendingInteractionStatus | undefined
+  /** Read one session's green completion reminder for list rows. */
+  getSessionCompleted: (sessionId: SessionId) => boolean
+  /** Mirror desktop select: opening a session clears its completion reminder. */
+  markSessionViewed: (sessionId: SessionId | undefined) => void
   /** Create a new session and refresh the list. */
   createSession: (workspaceId?: WorkspaceId) => Promise<SessionId | undefined>
   /** Subscribe to mux frames for chat streaming. */
@@ -158,6 +168,22 @@ export function MobileConnectionProvider({ children }: { children: ReactNode }):
   const getPendingInteraction = useCallback((
     sessionId: SessionId,
   ): PendingInteractionStatus | undefined => mobilePendingInteraction(sessionId), [])
+
+  const getSessionCompleted = useCallback((
+    sessionId: SessionId,
+  ): boolean => mobileSessionCompleted(sessionId), [])
+
+  const markSessionViewed = useCallback((sessionId: SessionId | undefined): void => {
+    if (setMobileSelectedSession(sessionId)) {
+      setPendingRevision(revision => revision + 1)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (syncMobileCompletedNotifications(sessions)) {
+      setPendingRevision(revision => revision + 1)
+    }
+  }, [sessions])
 
   const refreshSessions = useCallback(async (): Promise<void> => {
     if (readSessionToken() === undefined) {
@@ -311,6 +337,7 @@ export function MobileConnectionProvider({ children }: { children: ReactNode }):
       },
       onConnected: (description: HostDescription) => {
         clearMobilePendingInteractions()
+        clearMobileCompletedNotifications()
         setPendingRevision(revision => revision + 1)
         setHostDescription(description)
         const sessionToken = readSessionToken()
@@ -359,6 +386,8 @@ export function MobileConnectionProvider({ children }: { children: ReactNode }):
     refreshSessions,
     pendingRevision,
     getPendingInteraction,
+    getSessionCompleted,
+    markSessionViewed,
     createSession,
     subscribeMux,
     subscribeMuxEnvelope,
@@ -379,6 +408,8 @@ export function MobileConnectionProvider({ children }: { children: ReactNode }):
     refreshSessions,
     pendingRevision,
     getPendingInteraction,
+    getSessionCompleted,
+    markSessionViewed,
     createSession,
     subscribeMux,
     subscribeMuxEnvelope,

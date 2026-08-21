@@ -75,6 +75,20 @@ export function sessionChatHeaderMeta(
 }
 
 /**
+ * Resolve a session row preset label, omitting the default built-in preset.
+ * @param summary - one session.list row.
+ * @param hostLabel - optional Host provider or model label.
+ */
+function sessionPresetLabel(
+  summary: SessionSummary,
+  hostLabel?: string,
+): string | undefined {
+  const preset = summary.agentPreset ?? hostLabel ?? 'DSH'
+  if (preset === 'standard') return undefined
+  return preset
+}
+
+/**
  * Format one session row subtitle: workspace and preset labels.
  * @param summary - one session.list row.
  * @param hostLabel - optional Host provider or model label.
@@ -85,9 +99,10 @@ export function sessionDisplayMeta(
   hostLabel?: string,
   options?: { omitWorkspace?: boolean },
 ): string {
-  const preset = summary.agentPreset ?? hostLabel ?? 'DSH'
-  if (options?.omitWorkspace) return preset
+  const preset = sessionPresetLabel(summary, hostLabel)
+  if (options?.omitWorkspace) return preset ?? ''
   const workspace = sessionWorkspaceLabel(summary)
+  if (preset === undefined) return `· ${workspace}`
   return `· ${workspace} · ${preset}`
 }
 

@@ -1864,6 +1864,7 @@ button.mSetRow:disabled,
 }
 
 .taskHomePullScroll {
+  /* Keep the list tight at rest; the sticky header feather overlays rows while scrolling. */
   padding:
     4px
     calc(16px + env(safe-area-inset-right, 0px))
@@ -2741,11 +2742,6 @@ button.mSetRow:disabled,
     calc(16px + env(safe-area-inset-left, 0px));
 }
 
-/* Task home uses a solid sticky header; the scroll feather only fades the first rows. */
-.taskHomeHeader::after {
-  content: none;
-}
-
 .taskHomeHeaderRow {
   display: flex;
   align-items: center;
@@ -2780,6 +2776,11 @@ button.mSetRow:disabled,
   visibility: hidden;
   pointer-events: none;
   transition-delay: 0s, 0s, 0s, 0s, 320ms;
+}
+
+.taskHomeTitleWrapFilterOpen {
+  overflow: visible;
+  z-index: 2;
 }
 
 .taskHomeTitleButton {
@@ -3141,8 +3142,8 @@ button.mSetRow:disabled,
 }
 
 .taskHomeSearchRowItem .taskHomeRowMain {
-  gap: 12px;
-  padding: 12px 0;
+  gap: 8px;
+  padding: 8px 0;
 }
 
 .taskHomeSearchIconBox {
@@ -3150,8 +3151,8 @@ button.mSetRow:disabled,
   flex: none;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 32px;
+  height: 32px;
   border-radius: 10px;
   background: var(--dsw-alias-bg-layer-2);
   color: var(--dsw-alias-label-primary);
@@ -3319,24 +3320,30 @@ button.mSetRow:disabled,
   min-width: 0;
   overflow: hidden;
   color: var(--dsw-alias-label-primary);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
-  line-height: 18px;
+  line-height: 20px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.taskHomeGroupCount {
-  flex: none;
-  min-width: 18px;
-  padding: 0 6px;
-  border-radius: 999px;
-  background: var(--dsw-alias-bg-layer-2);
-  color: var(--dsw-alias-label-caption);
+.taskHomeSessionOverflow {
+  width: 100%;
+  height: 32px;
+  margin: 0;
+  padding: 0 0 0 20px;
+  border: none;
+  background: transparent;
+  color: var(--dsw-alias-label-tertiary);
+  font: inherit;
   font-size: 12px;
-  font-weight: 500;
   line-height: 18px;
-  text-align: center;
+  text-align: left;
+  cursor: pointer;
+}
+
+.taskHomeSessionOverflow:active {
+  color: var(--dsw-alias-label-secondary);
 }
 
 .taskHomeGroupMenuButton {
@@ -3391,9 +3398,9 @@ button.mSetRow:disabled,
   display: flex;
   flex: 1;
   align-items: center;
-  gap: 12px;
+  gap: 4px;
   min-width: 0;
-  padding: 10px 0;
+  padding: 6px 0;
   border: none;
   background: transparent;
   color: inherit;
@@ -3406,17 +3413,25 @@ button.mSetRow:disabled,
   padding-right: 8px;
 }
 
+.taskHomeRowTrailing {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 0;
+  padding: 6px 0 6px 4px;
+}
+
 .taskHomeRowMenuButton {
   display: inline-flex;
   flex: none;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 28px;
+  height: 28px;
   margin: 0;
   padding: 0;
   border: none;
-  border-radius: 20px;
+  border-radius: 16px;
   background: transparent;
   color: var(--dsw-alias-label-tertiary);
 }
@@ -3430,8 +3445,8 @@ button.mSetRow:disabled,
   flex: none;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
   margin: 0;
   border: 1.5px solid var(--dsw-alias-border-l2);
   border-radius: 50%;
@@ -3548,8 +3563,8 @@ button.mSetRow:disabled,
   flex: none;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 16px;
+  height: 20px;
 }
 
 .taskHomeStatusA11y {
@@ -3569,15 +3584,8 @@ button.mSetRow:disabled,
   min-width: 0;
 }
 
-.taskHomeRowTop {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
-}
-
 .taskHomeTitle {
-  flex: 1;
+  display: block;
   min-width: 0;
   overflow: hidden;
   font-size: 15px;

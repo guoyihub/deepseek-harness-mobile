@@ -56,8 +56,12 @@ export function pruneMobileGroupExpansion(
   return next
 }
 
+/** Number of workspace groups expanded by default when no persisted preference exists. */
+export const MOBILE_DEFAULT_EXPANDED_GROUP_COUNT = 2
+
 /**
- * Resolve whether one group is expanded: persisted value wins; otherwise only the first group opens.
+ * Resolve whether one group is expanded: persisted value wins; otherwise the first
+ * {@link MOBILE_DEFAULT_EXPANDED_GROUP_COUNT} groups start open (desktop sidebar parity).
  * @param key - group key.
  * @param groupKeys - ordered group keys for the current list.
  * @param persisted - stored flags.
@@ -68,7 +72,8 @@ export function isMobileGroupExpanded(
   persisted: Record<string, boolean>,
 ): boolean {
   if (key in persisted) return persisted[key] === true
-  return key === groupKeys[0]
+  const index = groupKeys.indexOf(key)
+  return index >= 0 && index < MOBILE_DEFAULT_EXPANDED_GROUP_COUNT
 }
 
 /**

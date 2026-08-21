@@ -31,6 +31,10 @@ export interface TaskHomeRowProps {
   item: SessionSummary
   /** Live pending-interaction status from the mux tracker. */
   pendingInteraction?: PendingInteractionStatus
+  /** Finished while not viewed — the green completion reminder dot. */
+  completed?: boolean | undefined
+  /** Running descendants through subagent-origin lineage. */
+  runningSubagentCount?: number | undefined
   /** Optional Host label for metadata fallback. */
   hostLabel?: string | undefined
   /** Home list or search-result layout. */
@@ -66,6 +70,8 @@ export interface TaskHomeRowProps {
 export function TaskHomeRow({
   item,
   pendingInteraction,
+  completed = false,
+  runningSubagentCount = 0,
   hostLabel,
   variant = 'home',
   workspaceLabel,
@@ -84,10 +90,13 @@ export function TaskHomeRow({
   const grouped = variant === 'grouped'
   const statuses = mobileSessionStatuses({
     running: item.running,
+    runningSubagentCount,
+    completed,
     ...(pendingInteraction !== undefined ? { pendingInteraction } : {}),
   })
   const primaryStatus = statuses[0]
   const showStatus = primaryStatus !== undefined
+    && (primaryStatus.state !== 'done' || completed)
   const [menuOpen, setMenuOpen] = useState(false)
   const menuAnchorRef = useRef<HTMLButtonElement>(null)
   const actionsEnabled = !search && !item.blank && !selecting
@@ -116,6 +125,13 @@ export function TaskHomeRow({
     onOpen()
   }
 
+  const metaBase = search
+    ? ''
+    : grouped
+      ? sessionDisplayMeta(item, hostLabel, { omitWorkspace: true })
+      : sessionDisplayMeta(item, hostLabel)
+  const metaContent = search ? '' : metaBase
+
   return (
     <li>
       <div
@@ -138,21 +154,19 @@ export function TaskHomeRow({
             </span>
           ) : (
             <span
-              className={showStatus ? css.taskHomeStatusSlot : (search ? css.taskHomeSearchIconBox : css.taskHomeIconBox)}
+              className={search ? css.taskHomeSearchIconBox : css.taskHomeStatusSlot}
               aria-hidden={showStatus ? undefined : true}
+              aria-label={showStatus ? primaryStatus.label : undefined}
             >
-              {showStatus
-                ? <StateDot state={primaryStatus.state} size={10} />
-                : <IconBrowseOutline16 size={search ? 16 : 18} />}
+              {search
+                ? <IconBrowseOutline16 size={16} />
+                : showStatus
+                  ? <StateDot state={primaryStatus.state} size={10} />
+                  : null}
             </span>
           )}
           <span className={css.taskHomeRowBody}>
-            <span className={css.taskHomeRowTop}>
-              <span className={css.taskHomeTitle}>{sessionDisplayTitle(item)}</span>
-              {!search && !item.blank && !selecting && (
-                <span className={css.taskHomeTime}>{formatSessionRelativeTime(item.updatedAt)}</span>
-              )}
-            </span>
+            <span className={css.taskHomeTitle}>{sessionDisplayTitle(item)}</span>
             {search ? (
               <span className={css.taskHomeSearchMeta}>
                 <span className={css.taskHomeSearchMetaLead}>
@@ -162,34 +176,34 @@ export function TaskHomeRow({
                   <span className={css.taskHomeSearchSnippet}>{snippet}</span>
                 )}
               </span>
-            ) : (
-              <span className={css.taskHomeMeta}>
-                {grouped
-                  ? sessionDisplayMeta(item, hostLabel, { omitWorkspace: true })
-                  : sessionDisplayMeta(item, hostLabel)}
-                {showStatus ? ` · ${primaryStatus.label}` : ''}
-              </span>
-            )}
+            ) : metaContent !== '' ? (
+              <span className={css.taskHomeMeta}>{metaContent}</span>
+            ) : null}
             {showStatus && (
               <span className={css.taskHomeStatusA11y}>{primaryStatus.label}</span>
             )}
           </span>
         </button>
-        {actionsEnabled && (
-          <button
-            ref={menuAnchorRef}
-            type="button"
-            className={css.taskHomeRowMenuButton}
-            aria-label={`会话操作：${sessionDisplayTitle(item)}`}
-            aria-haspopup="menu"
-            aria-expanded={menuOpen}
-            onClick={(event) => {
-              event.stopPropagation()
-              setMenuOpen(open => !open)
-            }}
-          >
-            <IconEllipsisOutline16 size={16} />
-          </button>
+        {!search && !item.blank && !selecting && (
+          <div className={css.taskHomeRowTrailing}>
+            <span className={css.taskHomeTime}>{formatSessionRelativeTime(item.updatedAt)}</span>
+            {actionsEnabled && (
+              <button
+                ref={menuAnchorRef}
+                type="button"
+                className={css.taskHomeRowMenuButton}
+                aria-label={`会话操作：${sessionDisplayTitle(item)}`}
+                aria-haspopup="menu"
+                aria-expanded={menuOpen}
+                onClick={(event) => {
+                  event.stopPropagation()
+                  setMenuOpen(open => !open)
+                }}
+              >
+                <IconEllipsisOutline16 size={16} />
+              </button>
+            )}
+          </div>
         )}
       </div>
       {actionsEnabled && (

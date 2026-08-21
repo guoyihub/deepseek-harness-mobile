@@ -37,7 +37,6 @@ export function TaskHomeGroupHeader({
   onDelete,
 }: TaskHomeGroupHeaderProps): JSX.Element {
   const label = groupDisplayLabel(group)
-  const countLabel = `${group.sessionCount}`
   const actionsEnabled = group.workspaceId !== undefined
     && onRename !== undefined
     && onDelete !== undefined
@@ -73,7 +72,6 @@ export function TaskHomeGroupHeader({
           {group.expanded ? <IconFolderOpen16 size={16} /> : <IconFolderClose16 size={16} />}
         </span>
         <span className={css.taskHomeGroupTitle}>{label}</span>
-        <span className={css.taskHomeGroupCount}>{countLabel}</span>
       </button>
       {actionsEnabled && (
         <>

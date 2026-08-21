@@ -27,11 +27,12 @@ describe('mobile task group expansion', () => {
     localStorage.removeItem(STORAGE_KEY)
   })
 
-  it('defaults to only the first group expanded', () => {
+  it('defaults to the first two groups expanded', () => {
     const keys = ['a', 'b', 'ungrouped']
     expect(isMobileGroupExpanded('a', keys, {})).toBe(true)
-    expect(isMobileGroupExpanded('b', keys, {})).toBe(false)
-    expect(mobileExpandedGroupKeys(keys, {})).toEqual(['a'])
+    expect(isMobileGroupExpanded('b', keys, {})).toBe(true)
+    expect(isMobileGroupExpanded('ungrouped', keys, {})).toBe(false)
+    expect(mobileExpandedGroupKeys(keys, {})).toEqual(['a', 'b'])
   })
 
   it('persists explicit expansion changes', () => {

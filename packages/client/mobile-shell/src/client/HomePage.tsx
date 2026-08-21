@@ -37,8 +37,10 @@ import {
 import {
   deriveMobileTaskGroups,
   groupDisplayLabel,
+  MOBILE_COLLAPSED_SESSION_LIMIT,
 } from './mobile-task-groups.ts'
 import { mobileSessionIsActive } from './mobile-session-status.ts'
+import { mobileConversationT } from './mobile-locale.ts'
 import { sessionDisplayTitle } from './session-label.ts'
 import { StatusPanel } from './StatusPanel.tsx'
 import { TaskHomeHeader, type TaskHomeFilter } from './TaskHomeHeader.tsx'
@@ -83,6 +85,8 @@ export function HomePage({
     refreshSessions,
     pendingRevision,
     getPendingInteraction,
+    getSessionCompleted,
+    markSessionViewed,
   } = useMobileConnection()
 
   const [filter, setFilter] = useState<TaskHomeFilter>('all')
@@ -111,6 +115,7 @@ export function HomePage({
     title: string
   } | null>(null)
   const [groupExpansion, setGroupExpansion] = useState(loadMobileGroupExpansion)
+  const [expandedSessionGroups, setExpandedSessionGroups] = useState<readonly string[]>([])
 
   const normalizedQuery = searchQuery.trim()
 
@@ -134,6 +139,20 @@ export function HomePage({
     }
     return map
   }, [getPendingInteraction, pendingRevision, sessions])
+
+  const completedBySession = useMemo(() => {
+    void pendingRevision
+    const map = new Map<SessionId, boolean>()
+    for (const item of sessions) {
+      if (getSessionCompleted(item.sessionId)) map.set(item.sessionId, true)
+    }
+    return map
+  }, [getSessionCompleted, pendingRevision, sessions])
+
+  const openChat = useCallback((sessionId: SessionId): void => {
+    markSessionViewed(sessionId)
+    onOpenChat(sessionId)
+  }, [markSessionViewed, onOpenChat])
 
   useEffect(() => {
     if (paired && connectionState === 'connected') {
@@ -198,8 +217,9 @@ export function HomePage({
       normalizedQuery,
       remoteSearch,
       pendingBySession,
+      completedBySession,
     ),
-    [archivedSessionIds, normalizedQuery, pendingBySession, remoteSearch, sessions, workspaces],
+    [archivedSessionIds, completedBySession, normalizedQuery, pendingBySession, remoteSearch, sessions, workspaces],
   )
 
   const searching = normalizedQuery !== ''
@@ -211,8 +231,15 @@ export function HomePage({
     && remoteSearch.status === 'error'
 
   const expandedAllGroups = useMemo(
-    () => deriveMobileTaskGroups(sessions, workspaces, archivedSessionIds, pendingBySession),
-    [archivedSessionIds, pendingBySession, sessions, workspaces],
+    () => deriveMobileTaskGroups(
+      sessions,
+      workspaces,
+      archivedSessionIds,
+      pendingBySession,
+      undefined,
+      completedBySession,
+    ),
+    [archivedSessionIds, completedBySession, pendingBySession, sessions, workspaces],
   )
 
   const groupKeys = useMemo(
@@ -227,8 +254,9 @@ export function HomePage({
       archivedSessionIds,
       pendingBySession,
       mobileExpandedGroupKeys(groupKeys, groupExpansion),
+      completedBySession,
     ),
-    [archivedSessionIds, groupExpansion, groupKeys, pendingBySession, sessions, workspaces],
+    [archivedSessionIds, completedBySession, groupExpansion, groupKeys, pendingBySession, sessions, workspaces],
   )
 
   const visibleGroups = useMemo(() => {
@@ -257,9 +285,19 @@ export function HomePage({
   const toggleGroup = useCallback((key: string): void => {
     setGroupExpansion((current) => {
       const expanded = mobileExpandedGroupKeys(groupKeys, current).includes(key)
+      if (expanded) {
+        setExpandedSessionGroups(currentKeys => currentKeys.filter(groupKey => groupKey !== key))
+      }
       return saveMobileGroupExpansion(current, key, !expanded)
     })
   }, [groupKeys])
+
+  const toggleSessionGroup = useCallback((key: string): void => {
+    setExpandedSessionGroups((current) => {
+      if (current.includes(key)) return current.filter(groupKey => groupKey !== key)
+      return [...current, key]
+    })
+  }, [])
 
   const visibleSessionCount = useMemo(
     () => expandedAllGroups
@@ -363,13 +401,13 @@ export function HomePage({
     try {
       const childId = await forkMobileSession(sessionId)
       await refreshSessions()
-      onOpenChat(childId)
+      openChat(childId)
     } catch (reason) {
       setActionError(reason instanceof Error ? reason.message : String(reason))
     } finally {
       setActionBusy(false)
     }
-  }, [onOpenChat, refreshSessions])
+  }, [openChat, refreshSessions])
 
   const onFabClick = (): void => {
     if (!paired) {
@@ -466,10 +504,14 @@ export function HomePage({
                     {...(result.pendingInteraction !== undefined
                       ? { pendingInteraction: result.pendingInteraction }
                       : {})}
+                    {...(result.completed ? { completed: true } : {})}
+                    {...(result.runningSubagentCount > 0
+                      ? { runningSubagentCount: result.runningSubagentCount }
+                      : {})}
                     variant="search"
                     workspaceLabel={result.workspace}
                     {...(result.snippet !== undefined ? { snippet: result.snippet } : {})}
-                    onOpen={() => { onOpenChat(result.id) }}
+                    onOpen={() => { openChat(result.id) }}
                   />
                 )
               })}
@@ -529,7 +571,10 @@ export function HomePage({
                 />
                 {group.expanded && (
                   <ul className={css.taskHomeList}>
-                    {group.sessions.map((session) => {
+                    {(expandedSessionGroups.includes(group.key)
+                      ? group.sessions
+                      : group.sessions.slice(0, MOBILE_COLLAPSED_SESSION_LIMIT)
+                    ).map((session) => {
                       const item = sessionById.get(session.id)
                       if (item === undefined) return null
                       return (
@@ -540,10 +585,14 @@ export function HomePage({
                           {...(session.pendingInteraction !== undefined
                             ? { pendingInteraction: session.pendingInteraction }
                             : {})}
+                          {...(session.completed ? { completed: true } : {})}
+                          {...(session.runningSubagentCount > 0
+                            ? { runningSubagentCount: session.runningSubagentCount }
+                            : {})}
                           hostLabel={hostLabel}
                           selecting={selecting}
                           selected={selectedIds.has(session.id)}
-                          onOpen={() => { onOpenChat(session.id) }}
+                          onOpen={() => { openChat(session.id) }}
                           onToggleSelect={() => { toggleSelect(session.id) }}
                           onEnterSelect={() => { enterSelect(session.id) }}
                           onRename={() => {
@@ -559,6 +608,20 @@ export function HomePage({
                       )
                     })}
                   </ul>
+                )}
+                {group.expanded && group.sessions.length > MOBILE_COLLAPSED_SESSION_LIMIT && (
+                  <button
+                    type="button"
+                    className={css.taskHomeSessionOverflow}
+                    aria-expanded={expandedSessionGroups.includes(group.key)}
+                    onClick={() => { toggleSessionGroup(group.key) }}
+                  >
+                    {expandedSessionGroups.includes(group.key)
+                      ? mobileConversationT('taskHome.sessions.collapse')
+                      : mobileConversationT('taskHome.sessions.expand', {
+                        n: group.sessions.length - MOBILE_COLLAPSED_SESSION_LIMIT,
+                      })}
+                  </button>
                 )}
               </section>
             ))}

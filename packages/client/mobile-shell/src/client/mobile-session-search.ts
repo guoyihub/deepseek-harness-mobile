@@ -57,6 +57,7 @@ export interface MobileRemoteSearchState {
  * @param query - trimmed sanitized query.
  * @param remote - current remote page (must match query when ready).
  * @param pendingBySession - live pending status by session id.
+ * @param completedBySession - local completion reminders by session id.
  * @returns bounded merged rows plus hasMore.
  */
 export function deriveMobileSearchResults(
@@ -66,8 +67,9 @@ export function deriveMobileSearchResults(
   query: string,
   remote: MobileRemoteSearchState,
   pendingBySession?: ReadonlyMap<SessionId, PendingInteractionStatus>,
+  completedBySession?: ReadonlyMap<SessionId, boolean>,
 ): SearchResultSet {
-  const list = toSessionListState(sessions, pendingBySession)
+  const list = toSessionListState(sessions, pendingBySession, completedBySession)
   const currentRemote = remote.query === query
     ? remote
     : { query, status: 'loading' as const, items: [], hasMore: false }

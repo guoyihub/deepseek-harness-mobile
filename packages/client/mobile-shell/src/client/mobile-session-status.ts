@@ -24,12 +24,25 @@ function t(key: string, params?: Params): string {
 
 /**
  * Resolve session row statuses using the same priority as desktop Rows.tsx.
- * @param node - running and pending fields from one list row.
+ * @param node - running, descendant activity, pending, and completion fields.
  */
 export function mobileSessionStatuses(node: {
   pendingInteraction?: PendingInteractionStatus
   running: boolean
+  runningSubagentCount?: number
+  completed?: boolean
 }): readonly MobileSessionStatus[] {
+  const subagents: MobileSessionStatus | undefined = (node.runningSubagentCount ?? 0) === 0
+    ? undefined
+    : {
+      state: 'ongoing',
+      label: t(
+        node.runningSubagentCount === 1
+          ? 'status.subagentsRunning.one'
+          : 'status.subagentsRunning.other',
+        { n: node.runningSubagentCount as number },
+      ),
+    }
   let pending: MobileSessionStatus | undefined
   switch (node.pendingInteraction) {
     case 'approval':
@@ -44,9 +57,14 @@ export function mobileSessionStatuses(node: {
     default:
       break
   }
-  if (pending !== undefined) return [pending]
-  if (node.running) return [{ state: 'ongoing', label: t('status.running') }]
-  return []
+  if (pending !== undefined) return subagents === undefined ? [pending] : [pending, subagents]
+  if (node.running) {
+    const primary: MobileSessionStatus = { state: 'ongoing', label: t('status.running') }
+    return subagents === undefined ? [primary] : [primary, subagents]
+  }
+  if (subagents !== undefined) return [subagents]
+  if (node.completed === true) return [{ state: 'done', label: t('status.completed') }]
+  return [{ state: 'done', label: t('status.idle') }]
 }
 
 /**
