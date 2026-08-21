@@ -34,7 +34,7 @@ export interface MobileWorkspaceSelectProps {
   onSessionChange: (sessionId: SessionId, draft: string) => void
   /** Surface workspace.create / sessions.create failures outside the browse dialog. */
   onError?: ((message: string) => void) | undefined
-  /** Inline chip, composer foot, toolbar trigger, or header chip beside the back button. */
+  /** Inline chip, composer foot, toolbar trigger, or header chip on the tab row. */
   variant?: 'chip' | 'foot' | 'toolbar' | 'header' | undefined
 }
 
@@ -269,7 +269,13 @@ export function MobileWorkspaceSelect({
         {showClosedFolder
           ? <IconFolderClose16 size={14} aria-hidden />
           : <IconFolderOpen16 size={14} aria-hidden />}
-        <span className={variant === 'toolbar' ? css.composerTriggerLabel : css.composerChipLabel}>{label}</span>
+        <span className={
+          variant === 'toolbar'
+            ? css.composerTriggerLabel
+            : variant === 'header'
+              ? css.chatHeaderMetaText
+              : css.composerChipLabel
+        }>{label}</span>
         <IconChevronDownOutline14 size={12} aria-hidden />
       </button>
       <Menu
