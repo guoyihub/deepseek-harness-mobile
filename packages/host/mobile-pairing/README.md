@@ -8,8 +8,18 @@ LAN mobile pairing for the Web Host: `pairToken` mint/consume, opaque `sessionTo
 |-----|---------|------|
 | `confirmMode` | `off` | `strict` requires desktop confirmation; `off` issues session tokens immediately |
 | `pairTokenTtlMs` | `86400000` (24h) | No-password QR lifetime; password-protected QRs stay valid until replaced |
-| `sessionTokenTtlMs` | `2592000000` | Paired session lifetime (~30 days) |
+| `sessionTokenTtlMs` | `86400000` (24h) | No-password paired session lifetime; password-protected sessions do not expire |
+| `dshHome` | `$DSH_HOME` / `~/.dsh` | Harness home for `mobile-pairing.json` durable state |
 | `trustedHosts` | `[]` | Same LAN authority list as `client-connection` |
+
+## Persistence
+
+Paired devices and session tokens are written to `<harness home>/mobile-pairing.json`. Host restart reloads active sessions so phones can reconnect without re-scanning. The host fingerprint is stable across restarts.
+
+Session expiry follows the pair-password policy:
+
+- **No password:** sessions expire after `sessionTokenTtlMs` (default 24h).
+- **Password required:** sessions do not expire until revoked.
 
 ## HTTP routes
 
@@ -38,5 +48,4 @@ No model-visible prompt or tool changes. Pairing is transport-only; session cont
 
 ## Known Limitations and Deferred Work
 
-- In-memory token store (M1); Host restart clears pending pair tokens, not yet durable devices.
 - mDNS hostname in QR payload deferred to Phase 4.
