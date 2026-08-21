@@ -15,7 +15,11 @@ export interface MobileCommandEntry extends CommandEntry {
 export const MOBILE_COMMANDS: readonly MobileCommandEntry[] = [
   { name: 'compact', description: '压缩较早的对话历史' },
   { name: 'export', description: '导出会话日志为 ZIP' },
-  { name: 'feedback', description: '记录对本会话的反馈' },
+  {
+    name: 'feedback',
+    description: '记录对本会话的反馈',
+    input: { hint: '<text>' },
+  },
   {
     name: 'goal',
     description: '设置或查看长期任务目标',

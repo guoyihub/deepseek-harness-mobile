@@ -45,6 +45,7 @@ import {
   PassthroughSessionProvider,
   useMobileInputKit,
 } from './mobile-framework-kit.ts'
+import { localizeCommandNode } from './mobile-command-outcome.ts'
 import { mobileChatT } from './mobile-conversation-t.ts'
 import { useMobileConnection } from './MobileConnectionContext.tsx'
 
@@ -160,7 +161,7 @@ export const MobileChatNodeSeat = memo(function MobileChatNodeSeat({
     case 'command':
       body = (
         <div className={chatCss.callRow}>
-          <GenericCommandCard node={routedOwner.node.data} t={t} />
+          <GenericCommandCard node={localizeCommandNode(routedOwner.node.data)} t={t} />
         </div>
       )
       break
@@ -169,7 +170,7 @@ export const MobileChatNodeSeat = memo(function MobileChatNodeSeat({
       body = (
         <div className={chatCss.callRow}>
           <CompactionCommandCard
-            node={data.command}
+            node={localizeCommandNode(data.command)}
             {...data.compaction === null ? {} : { compaction: data.compaction }}
             t={t}
           />

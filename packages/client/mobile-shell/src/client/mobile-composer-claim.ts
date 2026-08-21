@@ -1,5 +1,5 @@
 /**
- * Mobile composer claim for leadingInput slash commands (`/plan`, `/goal`).
+ * Mobile composer claim for leadingInput slash commands (`/plan`, `/goal`, `/feedback`).
  * Mirrors desktop `CommandClaim`: token stays in the field until submit.
  */
 

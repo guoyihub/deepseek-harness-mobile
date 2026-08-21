@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { DisclosureRow, IconApiOutline14, StateDot } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { CommandChatRow } from './chat-projection.ts'
+import { localizeCommandOutcome } from './mobile-command-outcome.ts'
 import { mobileConversationT } from './mobile-locale.ts'
 import css from './mobile-shell.module.css'
 
@@ -25,22 +26,8 @@ function runningSummary(name: string | null): string {
   return mobileConversationT('command.running')
 }
 
-const COMPACTED = /^Compacted (\d+) history items \(~(\d+) tokens\)\.$/u
-
 function settledSummary(name: string | null, text: string | undefined, kind: 'success' | 'error'): string {
-  if (name === 'compact' && kind === 'success') {
-    if (text === 'No compactable history yet.') return mobileConversationT('message.compaction.empty')
-    const match = text === undefined ? null : COMPACTED.exec(text)
-    if (match !== null) {
-      return mobileConversationT('message.compaction.completed', {
-        items: match[1] ?? '0',
-        tokens: match[2] ?? '0',
-      })
-    }
-  }
-  return text ?? (kind === 'error'
-    ? mobileConversationT('command.failed')
-    : mobileConversationT('command.done'))
+  return localizeCommandOutcome(name, text, kind)
 }
 
 /**

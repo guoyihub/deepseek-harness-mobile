@@ -699,11 +699,20 @@
   white-space: nowrap;
 }
 
-.mSetProfileBtn {
+.mSetProfileActions {
+  display: flex;
+  gap: 10px;
+  width: 100%;
   margin-top: 8px;
-  padding: 8px 20px;
+}
+
+.mSetProfileActionBtn {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 44px;
+  padding: 10px 12px;
   border: none;
-  border-radius: 999px;
+  border-radius: 12px;
   background: var(--dsw-alias-bg-layer-2);
   color: var(--dsw-alias-label-primary);
   font: inherit;
@@ -713,8 +722,17 @@
   cursor: pointer;
 }
 
-.mSetProfileBtn:active {
+.mSetProfileActionBtn:active {
   background: var(--dsw-alias-bg-layer-3);
+}
+
+.mSetProfileActionBtnDestructive {
+  color: var(--dsw-alias-state-error-primary);
+  background: color-mix(in srgb, var(--dsw-alias-state-error-primary) 10%, var(--dsw-alias-bg-layer-2));
+}
+
+.mSetProfileActionBtnDestructive:active {
+  background: color-mix(in srgb, var(--dsw-alias-state-error-primary) 16%, var(--dsw-alias-bg-layer-2));
 }
 
 .mSetSection {
@@ -768,7 +786,8 @@ button.mSetRow {
   cursor: pointer;
 }
 
-button.mSetRow:disabled {
+button.mSetRow:disabled,
+.mSetRow[data-disabled] {
   cursor: default;
   opacity: 0.55;
 }
@@ -935,6 +954,27 @@ button.mSetRow:disabled {
   color: var(--dsw-alias-label-tertiary);
   font-size: 12px;
   line-height: 18px;
+}
+
+.mSetPickerItemText {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+}
+
+.mSetPickerItemMeta {
+  color: var(--dsw-alias-state-error-primary);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.mSetDesktopHintBody {
+  margin: 0;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 14px;
+  line-height: 22px;
 }
 
 .settingsSection {

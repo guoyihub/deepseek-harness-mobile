@@ -125,6 +125,7 @@ export function ChatPage({
   )
 
   const showHero = blank
+    && chatOrder.length === 0
     && draft.trim() === ''
     && claim === undefined
     && optimisticText === undefined

@@ -41,6 +41,7 @@ export function MobileSettingsRow({
       type={interactive ? 'button' : undefined}
       className={css.mSetRow}
       data-destructive={destructive || undefined}
+      data-disabled={disabled || undefined}
       disabled={interactive ? disabled : undefined}
       onClick={interactive ? onClick : undefined}
     >
