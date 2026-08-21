@@ -47,7 +47,7 @@ export {
   resolveMobileApiBase,
   resolveMobileServerBase,
 } from './mobile-origin.ts'
-import { createWebConnectionRpc } from './rpc.ts'
+import { createWebConnectionRpc, type RpcFetch } from './rpc.ts'
 import { isLoopbackHostname } from '../loopback-hostname.ts'
 import type { ClientConnectionRpc } from '../rpc.ts'
 
@@ -80,6 +80,7 @@ export {
 // controller remains package-internal.
 export type { ConnectionConfig, ConnectionSinks, ConnectionState }
 export type { ClientConnectionRpc } from '../rpc.ts'
+export type { RpcFetch } from './rpc.ts'
 
 /** Observable Host description published by each completed connection handshake. */
 export interface HostDescriptionSource {
@@ -91,6 +92,30 @@ export interface HostDescriptionSource {
 
 /** Required services (none — this is the wire root). */
 export const inject: string[] = []
+
+/**
+ * Carrier override installed on the page global before plugin boot. The served
+ * web app leaves it unset and gets HTTP + WebSocket; a shell that owns a
+ * different physical transport (the worker preview's postMessage tunnel)
+ * provides both halves here instead of forking this plugin.
+ */
+export interface ClientTransportHooks {
+  /** Build the API carrier: unary calls plus the two downstream event streams. */
+  createApiClient(): IApiClient
+  /** Transport for generic unary RPC channels (the Typert gateway). */
+  fetch: RpcFetch
+  /**
+   * Bundle transport for the module system, present when the carrier also owns
+   * bundle bytes (the worker tunnel). Absent in the served web app, whose
+   * bundles load over HTTP.
+   */
+  loadBundle?(url: string): Promise<void>
+}
+
+/** Page global carrying {@link ClientTransportHooks}; absent in the served web app. */
+interface ClientTransportGlobal {
+  __DSH_TRANSPORT__?: ClientTransportHooks
+}
 
 /**
  * The ctx.connection service API: the API client plus a one-shot
@@ -125,8 +150,9 @@ export function apply(ctx: Context): void {
   const pageLocation = typeof location === 'undefined' ? undefined : location
   const fixture = pageLocation !== undefined && new URLSearchParams(pageLocation.search).has('fixture')
   const fixtureClient = fixture ? new FixtureApiClient() : undefined
-  const api: IApiClient = fixtureClient ?? new WebApiClient()
-  const rpc = fixtureClient?.rpc ?? createWebConnectionRpc()
+  const transport = (globalThis as ClientTransportGlobal).__DSH_TRANSPORT__
+  const api: IApiClient = fixtureClient ?? transport?.createApiClient() ?? new WebApiClient()
+  const rpc = fixtureClient?.rpc ?? createWebConnectionRpc(transport?.fetch)
   let started = false
   let description: HostDescription | undefined
   const descriptionListeners = new Set<() => void>()
