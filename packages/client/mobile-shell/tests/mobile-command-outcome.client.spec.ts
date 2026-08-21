@@ -1,5 +1,18 @@
 import { describe, expect, it } from 'vitest'
+import type { CommandNode } from '@deepseek-ai/dsh-client-runtime/client'
 import { localizeCommandNode, localizeCommandOutcome } from '../src/client/mobile-command-outcome.ts'
+
+function commandNode(over: Partial<CommandNode> & Pick<CommandNode, 'commandId'>): CommandNode {
+  return {
+    kind: 'command',
+    seq: 1,
+    time: 1,
+    name: null,
+    args: null,
+    outcome: null,
+    ...over,
+  }
+}
 
 describe('localizeCommandOutcome', () => {
   it('localizes feedback usage errors', () => {
@@ -31,21 +44,20 @@ describe('localizeCommandOutcome', () => {
 
 describe('localizeCommandNode', () => {
   it('rewrites settled outcome text without mutating running nodes', () => {
-    const running = {
-      commandId: '1',
+    const running = commandNode({
+      commandId: '1' as CommandNode['commandId'],
       name: 'compact',
-      outcome: null,
-    } as const
+    })
     expect(localizeCommandNode(running)).toBe(running)
 
-    const settled = {
-      commandId: '1',
+    const settled = commandNode({
+      commandId: '1' as CommandNode['commandId'],
       name: 'feedback',
       outcome: {
-        kind: 'error' as const,
+        kind: 'error',
         text: 'Feedback text is required. Usage: /feedback <text>',
       },
-    }
+    })
     expect(localizeCommandNode(settled).outcome?.text)
       .toBe('请填写反馈内容。用法：/feedback <文字>')
   })
