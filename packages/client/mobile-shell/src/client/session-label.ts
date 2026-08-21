@@ -5,6 +5,9 @@ import type { SessionId, SessionSummary, WorkspaceView } from '@deepseek-ai/dsh-
 /** Label when a session belongs to no registered workspace. */
 const UNGROUPED_WORKSPACE_LABEL = '未分组'
 
+/** Default title for blank sessions before the Host assigns one. */
+export const NEW_SESSION_TITLE = '新建会话'
+
 /**
  * Resolve the Host workspace display title (registry `title`, then path leaf).
  * @param view - one workspace.list row.
@@ -53,6 +56,7 @@ export function sessionDisplayTitle(summary: SessionSummary): string {
   const projections = summary.projections?.values as { title?: unknown } | undefined
   const title = projections?.title
   if (typeof title === 'string' && title.trim() !== '') return title
+  if (summary.blank) return NEW_SESSION_TITLE
   const workspace = sessionWorkspaceLabel(summary)
   if (summary.cwd !== undefined && summary.cwd !== '') return workspace
   return summary.sessionId.slice(0, 8)

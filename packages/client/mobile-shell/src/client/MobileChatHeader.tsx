@@ -7,8 +7,10 @@ import css from './mobile-shell.module.css'
 export interface MobileChatHeaderProps {
   /** Session title shown on the primary line. */
   title: string
-  /** Host workspace title on the tab-row chip. */
+  /** Host workspace title on the tab-row chip when {@link MobileChatHeaderProps.metaSlot} is absent. */
   meta: string
+  /** Optional tab-row control replacing the static workspace chip (e.g. blank-session picker). */
+  metaSlot?: ReactNode
   /** Navigate back to the task list. */
   onBack: () => void
   /** Optional Conversation / Trajectory tablist under the title row. */
@@ -19,8 +21,8 @@ export interface MobileChatHeaderProps {
  * Chat header: back control, title, then tabs with the workspace chip on the right.
  * @param props - title copy and navigation.
  */
-export function MobileChatHeader({ title, meta, onBack, tabs }: MobileChatHeaderProps): JSX.Element {
-  const workspace = (
+export function MobileChatHeader({ title, meta, metaSlot, onBack, tabs }: MobileChatHeaderProps): JSX.Element {
+  const workspace = metaSlot ?? (
     <div className={css.chatHeaderMeta} title={meta}>
       <IconFolderOpen16 size={14} aria-hidden />
       <span className={css.chatHeaderMetaText}>{meta}</span>

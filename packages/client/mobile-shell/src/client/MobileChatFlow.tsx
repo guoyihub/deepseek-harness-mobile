@@ -40,6 +40,18 @@ export interface MobileChatFlowProps {
   onScroll: () => void
 }
 
+/** Pin the scrollport to the latest transcript row after layout settles. */
+function scrollListToBottom(list: HTMLDivElement): void {
+  const apply = (): void => {
+    list.scrollTop = list.scrollHeight
+  }
+  apply()
+  requestAnimationFrame(() => {
+    apply()
+    requestAnimationFrame(apply)
+  })
+}
+
 function runningTurnStartTime(timeline: ConversationTimelineSnapshot): number | null {
   let latest: number | null = null
   for (const turn of timeline.turns.values()) {
@@ -104,14 +116,14 @@ export function MobileChatFlow({
     const list = listRef.current
     if (list === null || !ready || showHero) return
     if (!openedRef.current) {
-      list.scrollTop = list.scrollHeight
+      scrollListToBottom(list)
       stickRef.current = true
       openedRef.current = true
       followSigRef.current = followSig
       return
     }
     if (followSigRef.current !== followSig && stickRef.current) {
-      list.scrollTop = list.scrollHeight
+      scrollListToBottom(list)
     }
     followSigRef.current = followSig
   }, [followSig, listRef, ready, showHero])
@@ -122,6 +134,21 @@ export function MobileChatFlow({
     stickRef.current = true
   }, [sessionId])
 
+  useEffect(() => {
+    const list = listRef.current
+    if (list === null || !ready || showHero) return
+
+    const onResize = (): void => {
+      if (stickRef.current) scrollListToBottom(list)
+    }
+
+    const observer = new ResizeObserver(onResize)
+    observer.observe(list)
+    for (const node of list.children) observer.observe(node)
+
+    return () => { observer.disconnect() }
+  }, [listRef, ready, showHero, sessionId, followSig])
+
   const onListScroll = (): void => {
     const list = listRef.current
     if (list === null) return
@@ -130,10 +157,18 @@ export function MobileChatFlow({
     onScroll()
   }
 
-  if (!ready) {
+  if (!ready && !showHero) {
     return (
       <div ref={listRef} className={css.messageList} onScroll={onListScroll}>
         <div className={css.loadingState}>正在加载历史消息…</div>
+      </div>
+    )
+  }
+
+  if (!ready && showHero) {
+    return (
+      <div ref={listRef} className={css.messageList} onScroll={onListScroll}>
+        <MobileChatHero />
       </div>
     )
   }

@@ -42,3 +42,8 @@ export function getMobileConversationRuntime(): Promise<ConversationRuntime> {
   })()
   return runtimePromise
 }
+
+/** Warm the Cordis conversation registries before the first chat open. */
+export function prefetchMobileConversationRuntime(): void {
+  void getMobileConversationRuntime()
+}

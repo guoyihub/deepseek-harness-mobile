@@ -62,6 +62,7 @@ export function MobileWorkspaceSelect({
     workspaces,
     archivedSessionIds,
     refreshSessions,
+    createSession,
   } = useMobileConnection()
   const [listReady, setListReady] = useState(workspaces.length > 0)
   const [open, setOpen] = useState(false)
@@ -95,14 +96,12 @@ export function MobileWorkspaceSelect({
       onSessionChange(reusable, draft)
       return
     }
-    const response = await mobileApi.sessions.create({ workspaceId })
-    if (response.result.ok) {
-      await refreshSessions()
-      onSessionChange(response.result.value.sessionId, draft)
-      return
+    const sessionId = await createSession(workspaceId)
+    if (sessionId === undefined) {
+      throw new Error('session create failed')
     }
-    throw new Error(response.result.error.message)
-  }, [archivedSessionIds, draft, onSessionChange, refreshSessions, sessions, workspaces])
+    onSessionChange(sessionId, draft)
+  }, [archivedSessionIds, createSession, draft, onSessionChange, sessions, workspaces])
 
   const onSelectWorkspace = useCallback(async (workspaceId: string): Promise<void> => {
     if (!switchable || locked || workspaceId === assigned?.workspaceId) {

@@ -7,7 +7,6 @@ import type { PermissionSelect as PermissionSelectValue } from '@deepseek-ai/dsh
 import type { GoalProjection } from '@deepseek-ai/dsh-goal/client'
 import type { PlanProjection } from '@deepseek-ai/dsh-plan-mode/client'
 import { deriveAgentWorkingFromSnapshot } from './chat-projection.ts'
-import { MobileBackButton } from './MobileBackButton.tsx'
 import { MobileChatFlow } from './MobileChatFlow.tsx'
 import { MobileChatHeader } from './MobileChatHeader.tsx'
 import { MobileComposer } from './MobileComposer.tsx'
@@ -26,7 +25,7 @@ import {
 import { useMobileConnection } from './MobileConnectionContext.tsx'
 import { MobileShellLayout } from './MobileShellLayout.tsx'
 import { mobileApi } from './mobile-api-client.ts'
-import { sessionChatHeaderMeta, sessionDisplayTitle } from './session-label.ts'
+import { sessionChatHeaderMeta, sessionDisplayTitle, NEW_SESSION_TITLE } from './session-label.ts'
 import { mobileConversationT } from './mobile-locale.ts'
 import { StatusPanel } from './StatusPanel.tsx'
 import { useMobileSession } from './useMobileSession.ts'
@@ -101,18 +100,6 @@ export function ChatPage({
 
   const projectionMap = useMemo(() => projectionValues(projections), [projections])
 
-  const title = useMemo(() => {
-    const fromProjection = projectionMap.title
-    if (typeof fromProjection === 'string' && fromProjection.trim() !== '') return fromProjection
-    if (sessionSummary !== undefined) return sessionDisplayTitle(sessionSummary)
-    return sessionId.slice(0, 8)
-  }, [projectionMap.title, sessionId, sessionSummary])
-
-  const headerMeta = useMemo(
-    () => sessionChatHeaderMeta(sessionId, workspaces),
-    [sessionId, workspaces],
-  )
-
   const pending = useSession(snapshot => snapshot.pending)
   const blank = useSession(snapshot => snapshot.blank)
   const chatOrder = useSession(snapshot => snapshot.chat.order)
@@ -124,12 +111,25 @@ export function ChatPage({
     chat: snapshot.chat,
   }))
 
-  const showHero = ready
-    && blank
+  const title = useMemo(() => {
+    const fromProjection = projectionMap.title
+    if (typeof fromProjection === 'string' && fromProjection.trim() !== '') return fromProjection
+    if (blank && optimisticText === undefined) return NEW_SESSION_TITLE
+    if (sessionSummary !== undefined) return sessionDisplayTitle(sessionSummary)
+    return sessionId.slice(0, 8)
+  }, [blank, optimisticText, projectionMap.title, sessionId, sessionSummary])
+
+  const headerMeta = useMemo(
+    () => sessionChatHeaderMeta(sessionId, workspaces),
+    [sessionId, workspaces],
+  )
+
+  const showHero = blank
     && draft.trim() === ''
     && claim === undefined
     && optimisticText === undefined
   const switchableWorkspace = blank && optimisticText === undefined
+  const newSessionHeader = switchableWorkspace
 
   const planProjection = projectionMap.plan as PlanProjection | undefined
   const planActive = planProjection !== undefined
@@ -277,32 +277,29 @@ export function ChatPage({
   return (
     <div className={css.chatSurface}>
       <MobileShellLayout
-        blankChat={showHero}
-        headerSlot={showHero
-          ? (
-            <header className={css.shellHeaderMinimal}>
-              <MobileBackButton onClick={onBack} />
-              <MobileWorkspaceSelect
-                sessionId={sessionId}
-                switchable={switchableWorkspace}
-                locked={agentWorking || sending}
-                draft={draft}
-                variant="header"
-                onSessionChange={onSessionChange}
-                onError={setError}
-              />
-            </header>
-          )
-          : (
-            <MobileChatHeader
-              title={title}
-              meta={headerMeta}
-              onBack={onBack}
-              tabs={(
-                <MobileSessionTabs active={sessionView} onChange={setSessionView} />
-              )}
-            />
-          )}
+        headerSlot={(
+          <MobileChatHeader
+            title={title}
+            meta={headerMeta}
+            metaSlot={newSessionHeader
+              ? (
+                <MobileWorkspaceSelect
+                  sessionId={sessionId}
+                  switchable={switchableWorkspace}
+                  locked={agentWorking || sending}
+                  draft={draft}
+                  variant="header"
+                  onSessionChange={onSessionChange}
+                  onError={setError}
+                />
+              )
+              : undefined}
+            onBack={onBack}
+            tabs={(
+              <MobileSessionTabs active={sessionView} onChange={setSessionView} />
+            )}
+          />
+        )}
       >
         <div className={showHero ? css.chatPageBlank : css.chatPage}>
           {sessionView === 'trajectory' && !showHero
