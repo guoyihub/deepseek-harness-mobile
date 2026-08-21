@@ -21,6 +21,12 @@
       "path": "../webserver"
     },
     {
+      "path": "../../util/atomic-write"
+    },
+    {
+      "path": "../../util/home-paths"
+    },
+    {
       "path": "../../runtime-diagnostics/invariants"
     }
   ]

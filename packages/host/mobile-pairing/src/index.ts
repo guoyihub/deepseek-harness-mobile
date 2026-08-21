@@ -25,8 +25,10 @@ export interface Config {
   confirmMode?: MobilePairingConfig['confirmMode']
   /** pairToken TTL in milliseconds. */
   pairTokenTtlMs?: number
-  /** sessionToken TTL in milliseconds. */
+  /** sessionToken TTL in milliseconds for no-password deployments. */
   sessionTokenTtlMs?: number
+  /** Harness home for durable pairing state; defaults to `$DSH_HOME` or `~/.dsh`. */
+  dshHome?: string
   /** Non-loopback authorities accepted by the /api trust fence. */
   trustedHosts?: string[]
 }
@@ -42,7 +44,8 @@ export const Config: z<Config> = z.object({
     z.const('off'),
   ]).default('off'),
   pairTokenTtlMs: z.natural().min(60_000).default(DEFAULT_PAIR_TOKEN_TTL_MS),
-  sessionTokenTtlMs: z.natural().min(3_600_000).default(30 * 24 * 3_600_000),
+  sessionTokenTtlMs: z.natural().min(3_600_000).default(DEFAULT_PAIR_TOKEN_TTL_MS),
+  dshHome: z.string(),
   trustedHosts: z.array(String).default([]),
 })
 
@@ -56,7 +59,8 @@ export function apply(ctx: Context, config?: Config): void {
     publicScheme: config?.publicScheme ?? 'http',
     confirmMode: config?.confirmMode ?? 'off',
     pairTokenTtlMs: config?.pairTokenTtlMs ?? DEFAULT_PAIR_TOKEN_TTL_MS,
-    sessionTokenTtlMs: config?.sessionTokenTtlMs ?? 30 * 24 * 3_600_000,
+    sessionTokenTtlMs: config?.sessionTokenTtlMs ?? DEFAULT_PAIR_TOKEN_TTL_MS,
+    ...(config?.dshHome !== undefined ? { dshHome: config.dshHome } : {}),
   }
   const trustedHosts = config?.trustedHosts ?? []
   const service = new MobilePairingService(ctx, resolved, trustedHosts)

@@ -9,6 +9,9 @@ export type PairPasswordMode = 'none' | 'required'
 /** Sentinel `expiresAt` for password-protected pairTokens (no time-based expiry). */
 export const PAIR_TOKEN_NO_EXPIRY_MS = Number.MAX_SAFE_INTEGER
 
+/** ISO-8601 value returned for password-protected sessions that do not expire. */
+export const SESSION_NO_EXPIRY_ISO = '9999-12-31T23:59:59.999Z'
+
 /** Default no-password pairToken lifetime (24 hours). */
 export const DEFAULT_PAIR_TOKEN_TTL_MS = 24 * 60 * 60 * 1000
 

@@ -1,9 +1,17 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { mkdtemp, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { Context } from '@deepseek-ai/cordis'
 import type { WebRoute } from '@deepseek-ai/dsh-host-webserver'
 import { apply, Config, inject, name } from '../src/index.ts'
+import {
+  loadMobilePairingSnapshot,
+  resolveMobilePairingPath,
+  saveMobilePairingSnapshot,
+} from '../src/persistence.ts'
 import { MobilePairingStore } from '../src/store.ts'
-import { PAIR_TOKEN_NO_EXPIRY_MS } from '../src/types.ts'
+import { PAIR_TOKEN_NO_EXPIRY_MS, SESSION_NO_EXPIRY_ISO } from '../src/types.ts'
 
 const contexts: Context[] = []
 
@@ -197,6 +205,114 @@ describe('MobilePairingStore', () => {
     store.revokeDevice(paired.value.deviceId)
     expect(store.validateSessionToken(paired.value.sessionToken)).toBeUndefined()
     expect(store.listDevices()[0]?.revoked).toBe(true)
+  })
+
+  it('expires no-password sessions after the configured TTL', () => {
+    vi.useFakeTimers()
+    const store = new MobilePairingStore({
+      publicScheme: 'http',
+      confirmMode: 'off',
+      pairTokenTtlMs: 60_000,
+      sessionTokenTtlMs: 60_000,
+      fingerprint: 'abc12345',
+      hostDisplayName: 'test-host',
+    })
+    const offer = store.createPairing('192.168.1.10', 3080)
+    const paired = store.attemptPair(offer.pairToken, 'Phone', 'mobile/0.1.0')
+    if (paired.kind !== 'success') throw new Error('expected success')
+    expect(store.validateSessionToken(paired.value.sessionToken)).toBeDefined()
+    vi.advanceTimersByTime(60_001)
+    expect(store.validateSessionToken(paired.value.sessionToken)).toBeUndefined()
+    vi.useRealTimers()
+  })
+
+  it('keeps password-protected sessions valid beyond the no-password TTL', () => {
+    vi.useFakeTimers()
+    const store = new MobilePairingStore({
+      publicScheme: 'http',
+      confirmMode: 'off',
+      pairTokenTtlMs: 60_000,
+      sessionTokenTtlMs: 60_000,
+      fingerprint: 'abc12345',
+      hostDisplayName: 'test-host',
+    })
+    store.setPairPasswordSettings('required', 'secret')
+    const offer = store.createPairing('192.168.1.10', 3080)
+    const paired = store.attemptPair(offer.pairToken, 'Phone', 'mobile/0.1.0', 'secret')
+    if (paired.kind !== 'success') throw new Error('expected success')
+    expect(paired.value.expiresAt).toBe(SESSION_NO_EXPIRY_ISO)
+    vi.advanceTimersByTime(25 * 60 * 60 * 1000)
+    expect(store.validateSessionToken(paired.value.sessionToken)).toBeDefined()
+    vi.useRealTimers()
+  })
+
+  it('restores paired sessions from a persisted snapshot after restart', async () => {
+    const home = await mkdtemp(join(tmpdir(), 'dsh-mobile-pairing-'))
+    const path = resolveMobilePairingPath(home)
+    const before = new MobilePairingStore({
+      publicScheme: 'http',
+      confirmMode: 'off',
+      pairTokenTtlMs: 60_000,
+      sessionTokenTtlMs: 3_600_000,
+      fingerprint: 'persist01',
+      hostDisplayName: 'test-host',
+    })
+    const offer = before.createPairing('192.168.1.10', 3080)
+    const paired = before.attemptPair(offer.pairToken, 'Phone', 'mobile/0.1.0')
+    if (paired.kind !== 'success') throw new Error('expected success')
+    await saveMobilePairingSnapshot(path, before.snapshot())
+
+    const loaded = loadMobilePairingSnapshot(path)
+    expect(loaded?.fingerprint).toBe('persist01')
+    const after = new MobilePairingStore({
+      publicScheme: 'http',
+      confirmMode: 'off',
+      pairTokenTtlMs: 60_000,
+      sessionTokenTtlMs: 3_600_000,
+      fingerprint: loaded!.fingerprint,
+      hostDisplayName: 'test-host',
+    })
+    after.hydrate(loaded!)
+    expect(after.validateSessionToken(paired.value.sessionToken)).toBeDefined()
+    await rm(home, { recursive: true, force: true })
+  })
+})
+
+describe('MobilePairingService persistence', () => {
+  it('loads durable state on construction', async () => {
+    const home = await mkdtemp(join(tmpdir(), 'dsh-mobile-pairing-service-'))
+    const ctx = new Context()
+    contexts.push(ctx)
+    ctx.provide('webServer', fakeWebServer([]) as never)
+    await saveMobilePairingSnapshot(resolveMobilePairingPath(home), {
+      version: 1,
+      fingerprint: 'svc12345',
+      pairPasswordMode: 'none',
+      pairPassword: '',
+      mobilePublicBaseUrl: '',
+      devices: {
+        'device-1': { label: 'Pixel', revoked: false, issuedAt: Date.now() },
+      },
+      sessions: {
+        'session-token': {
+          token: 'session-token',
+          deviceId: 'device-1',
+          deviceLabel: 'Pixel',
+          scopes: ['session:read', 'session:write', 'command:execute'],
+          expiresAt: Date.now() + 3_600_000,
+        },
+      },
+    })
+    const fiber = ctx.plugin({ name, inject: [...inject], apply, Config }, {
+      confirmMode: 'off',
+      trustedHosts: ['192.168.1.10'],
+      dshHome: home,
+    })
+    await fiber.await()
+    expect(ctx.mobilePairing.fingerprint).toBe('svc12345')
+    expect(ctx.mobilePairing.validateSessionToken('session-token')).toBeDefined()
+    await fiber.dispose()
+    await rm(home, { recursive: true, force: true })
   })
 })
 

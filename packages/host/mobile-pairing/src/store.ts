@@ -16,7 +16,8 @@ import type {
   PublicScheme,
   SessionRecord,
 } from './types.ts'
-import { DEFAULT_MOBILE_SCOPES, MOBILE_PWA_PORT, PAIR_TOKEN_NO_EXPIRY_MS } from './types.ts'
+import type { MobilePairingSnapshot, PersistedDeviceRecord } from './persistence.ts'
+import { DEFAULT_MOBILE_SCOPES, MOBILE_PWA_PORT, PAIR_TOKEN_NO_EXPIRY_MS, SESSION_NO_EXPIRY_ISO } from './types.ts'
 
 /** Mutable pairing state owned by {@link MobilePairingStore}. */
 export interface MobilePairingStoreOptions {
@@ -32,6 +33,8 @@ export interface MobilePairingStoreOptions {
   fingerprint: string
   /** Host display name for pair responses. */
   hostDisplayName: string
+  /** Optional callback invoked after durable state changes. */
+  onPersist?: () => void | Promise<void>
 }
 
 /** Result of a pair attempt before session issuance. */
@@ -44,14 +47,7 @@ export type PairAttemptResult =
   | { kind: 'password-required' }
   | { kind: 'password-invalid' }
 
-interface DeviceRecord {
-  /** User-visible device label. */
-  label: string
-  /** Whether the device was revoked. */
-  revoked: boolean
-  /** Session issuance instant (Unix ms). */
-  issuedAt: number
-}
+type DeviceRecord = PersistedDeviceRecord
 
 /**
  * Owns pairToken minting, pending approval, and sessionToken lookup.
@@ -104,6 +100,7 @@ export class MobilePairingStore {
       this.pairPasswordMode = 'none'
       this.pairPassword = ''
       this.refreshActivePairExpiry()
+      this.schedulePersist()
       return true
     }
     const trimmed = password?.trim() ?? ''
@@ -114,6 +111,7 @@ export class MobilePairingStore {
     this.pairPasswordMode = 'required'
     this.pairPassword = trimmed
     this.refreshActivePairExpiry()
+    this.schedulePersist()
     return true
   }
 
@@ -126,12 +124,14 @@ export class MobilePairingStore {
     const trimmed = baseUrl.trim()
     if (trimmed === '') {
       this.mobilePublicBaseUrl = ''
+      this.schedulePersist()
       return true
     }
     try {
       const url = new URL(trimmed)
       if (url.protocol !== 'http:' && url.protocol !== 'https:') return false
       this.mobilePublicBaseUrl = url.origin
+      this.schedulePersist()
       return true
     } catch {
       return false
@@ -261,8 +261,9 @@ export class MobilePairingStore {
   validateSessionToken(token: string): SessionRecord | undefined {
     const session = this.sessions.get(token)
     if (session === undefined) return undefined
-    if (session.expiresAt <= Date.now()) {
+    if (session.expiresAt !== PAIR_TOKEN_NO_EXPIRY_MS && session.expiresAt <= Date.now()) {
       this.sessions.delete(token)
+      this.schedulePersist()
       return undefined
     }
     const device = this.devices.get(session.deviceId)
@@ -285,7 +286,47 @@ export class MobilePairingStore {
     for (const [token, session] of this.sessions) {
       if (session.deviceId === deviceId) this.sessions.delete(token)
     }
+    this.schedulePersist()
     return true
+  }
+
+  /** Replace in-memory durable state from a persisted snapshot. */
+  hydrate(snapshot: MobilePairingSnapshot): void {
+    this.pairPasswordMode = snapshot.pairPasswordMode
+    this.pairPassword = snapshot.pairPassword
+    this.mobilePublicBaseUrl = snapshot.mobilePublicBaseUrl
+    this.devices.clear()
+    for (const [deviceId, device] of Object.entries(snapshot.devices)) {
+      this.devices.set(deviceId, { ...device })
+    }
+    this.sessions.clear()
+    for (const [token, session] of Object.entries(snapshot.sessions)) {
+      this.sessions.set(token, { ...session, scopes: [...session.scopes] })
+    }
+  }
+
+  /** Serialize durable pairing state for persistence. */
+  snapshot(): MobilePairingSnapshot {
+    const devices: Record<string, DeviceRecord> = {}
+    for (const [deviceId, device] of this.devices) {
+      devices[deviceId] = { ...device }
+    }
+    const sessions: Record<string, SessionRecord> = {}
+    for (const [token, session] of this.sessions) {
+      sessions[token] = {
+        ...session,
+        scopes: [...session.scopes],
+      }
+    }
+    return {
+      version: 1,
+      fingerprint: this.options.fingerprint,
+      pairPasswordMode: this.pairPasswordMode,
+      pairPassword: this.pairPassword,
+      mobilePublicBaseUrl: this.mobilePublicBaseUrl,
+      devices,
+      sessions,
+    }
   }
 
   /** Pending devices awaiting desktop confirmation. */
@@ -330,7 +371,7 @@ export class MobilePairingStore {
   }
 
   private issueSession(deviceId: string, deviceLabel: string): PairSuccess {
-    const expiresAtMs = Date.now() + this.options.sessionTokenTtlMs
+    const expiresAtMs = this.sessionExpiresAt(Date.now())
     const token = randomBytes(32).toString('base64url')
     const scopes: readonly MobileScope[] = DEFAULT_MOBILE_SCOPES
     this.devices.set(deviceId, { label: deviceLabel, revoked: false, issuedAt: Date.now() })
@@ -341,14 +382,30 @@ export class MobilePairingStore {
       scopes,
       expiresAt: expiresAtMs,
     })
+    this.schedulePersist()
     return {
       sessionToken: token,
       deviceId,
       hostDisplayName: this.options.hostDisplayName,
       fingerprint: this.options.fingerprint,
       scopes,
-      expiresAt: new Date(expiresAtMs).toISOString(),
+      expiresAt: expiresAtMs === PAIR_TOKEN_NO_EXPIRY_MS
+        ? SESSION_NO_EXPIRY_ISO
+        : new Date(expiresAtMs).toISOString(),
     }
+  }
+
+  private sessionExpiresAt(now: number): number {
+    if (this.pairPasswordMode === 'required') return PAIR_TOKEN_NO_EXPIRY_MS
+    return now + this.options.sessionTokenTtlMs
+  }
+
+  private schedulePersist(): void {
+    const persist = this.options.onPersist
+    if (persist === undefined) return
+    void Promise.resolve(persist()).catch(() => {
+      // Best-effort persistence: pairing stays live in memory when the home is unwritable.
+    })
   }
 
   private mintShortCode(): string {
