@@ -81,6 +81,7 @@ DSH Mobile 把 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harnes
 | 目标 | 入口 |
 | --- | --- |
 | 本地开发与配对细节 | [手机端开发文档](docs/mobile/README.md) |
+| iOS / Android 原生 App | [原生 App 打包](docs/mobile/native-app.md) |
 | Host 配对 API 与配置 | [`packages/host/mobile-pairing/README.md`](packages/host/mobile-pairing/README.md) |
 | 手机壳与桌面 QR 代码地图 | [手机端开发文档 — 相关代码](docs/mobile/README.md#相关代码) |
 | Harness 架构与插件系统 | [架构文档](docs/architecture.md) |

@@ -54,3 +54,7 @@ pnpm dsh            # 同时启动两者
 Mobile 的 `/api` 与 WebSocket 由 Vite 代理到本机 Host `:3080`；代理会去掉 Origin/Referer，避免穿透来源被 Host Origin 校验拒绝。二维码应指向 Mobile 地址，无需把 Host 域名填给手机。
 
 生产构建：`pnpm build:mobile`（输出 `apps/mobile/dist`）。
+
+## 原生 App（Capacitor）
+
+需要 iOS / Android 安装包、且由用户手动配置已部署 Mobile 服务器地址时，见 [原生 App 打包](./native-app.md)。

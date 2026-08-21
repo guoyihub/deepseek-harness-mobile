@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">DSH Mobile</string>
+    <string name="title_activity_main">DSH Mobile</string>
+    <string name="package_name">com.deepseek.dsh.mobile</string>
+    <string name="custom_url_scheme">com.deepseek.dsh.mobile</string>
+</resources>

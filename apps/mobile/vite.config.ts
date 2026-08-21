@@ -6,7 +6,13 @@ import { fileURLToPath } from 'node:url'
 
 const src = (rel: string): string => fileURLToPath(new URL(rel, import.meta.url))
 
+const isNativeBuild = process.env.VITE_DSH_NATIVE_SHELL === 'true'
+
 export default defineConfig({
+  base: isNativeBuild ? './' : '/',
+  define: {
+    'import.meta.env.VITE_DSH_NATIVE_SHELL': JSON.stringify(isNativeBuild ? 'true' : 'false'),
+  },
   plugins: [
     react(),
     VitePWA({
