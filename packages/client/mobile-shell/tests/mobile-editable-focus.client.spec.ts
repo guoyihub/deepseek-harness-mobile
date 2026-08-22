@@ -80,7 +80,7 @@ describe('bindMobileEditableFocusWithoutScroll', () => {
     vi.unstubAllGlobals()
   })
 
-  it('focuses with preventScroll on iOS touchstart and toggles readonly', () => {
+  it('unlocks readonly and pins the viewport on iOS touchstart without blocking paste', () => {
     vi.stubGlobal('navigator', {
       userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)',
       platform: 'iPhone',
@@ -102,9 +102,9 @@ describe('bindMobileEditableFocusWithoutScroll', () => {
     element.dispatchEvent(event)
 
     expect(element.readOnly).toBe(false)
-    expect(preventDefault).toHaveBeenCalled()
+    expect(preventDefault).not.toHaveBeenCalled()
     expect(scrollTo).toHaveBeenCalledWith(0, 0)
-    expect(focus).toHaveBeenCalledWith({ preventScroll: true })
+    expect(focus).not.toHaveBeenCalled()
 
     element.dispatchEvent(new Event('blur'))
     expect(element.readOnly).toBe(true)

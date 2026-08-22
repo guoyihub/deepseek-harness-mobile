@@ -2554,6 +2554,10 @@ button.mSetRow:disabled,
   overflow-y: auto;
   resize: none;
   -webkit-overflow-scrolling: touch;
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
+  touch-action: manipulation;
 }
 
 .composerTextarea:focus {

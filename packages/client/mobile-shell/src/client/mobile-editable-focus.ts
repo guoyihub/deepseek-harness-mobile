@@ -32,8 +32,10 @@ export function keepMobileEditableFocus(event: { preventDefault(): void }): HTML
 }
 
 /**
- * Bind touch-to-focus that blocks iOS layout viewport scroll on first composer focus.
- * Starts readonly on iOS to suppress the native keyboard accessory bar; editing unlocks on touch.
+ * Bind iOS composer focus helpers that pin the layout viewport without blocking paste.
+ * Starts readonly while blurred to suppress the keyboard accessory bar on unfocused fields;
+ * touchstart unlocks editing without {@link TouchEvent.preventDefault} so long-press can
+ * reach WebKit's Paste callout. Layout scroll is handled by passive pin plus global focusin hooks.
  * @param element - textarea or text input receiving focus.
  * @returns disposer for the touch listener.
  */
@@ -42,7 +44,7 @@ export function bindMobileEditableFocusWithoutScroll(element: HTMLElement): () =
 
   const lockAccessoryBar = (): void => {
     if (element instanceof HTMLTextAreaElement || element instanceof HTMLInputElement) {
-      if (!element.disabled) element.readOnly = true
+      if (!element.disabled && document.activeElement !== element) element.readOnly = true
     }
   }
 
@@ -54,18 +56,16 @@ export function bindMobileEditableFocusWithoutScroll(element: HTMLElement): () =
 
   lockAccessoryBar()
 
-  const onTouchStart = (event: TouchEvent): void => {
-    if (!event.cancelable) return
-    event.preventDefault()
+  const onTouchStart = (): void => {
     unlockEditing()
-    focusMobileEditableWithoutScroll(element)
+    pinMobileLayoutViewport()
   }
 
   const onBlur = (): void => {
     lockAccessoryBar()
   }
 
-  element.addEventListener('touchstart', onTouchStart, { passive: false })
+  element.addEventListener('touchstart', onTouchStart, { passive: true })
   element.addEventListener('blur', onBlur)
   return () => {
     element.removeEventListener('touchstart', onTouchStart)
