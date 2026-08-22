@@ -12,6 +12,8 @@ import { HomePage } from './HomePage.tsx'
 
 import { MobileConnectionProvider } from './MobileConnectionContext.tsx'
 
+import { MobilePageStack } from './MobilePageStack.tsx'
+
 import { PairPage } from './PairPage.tsx'
 
 import {
@@ -30,20 +32,75 @@ import { ServerSetupPage } from './ServerSetupPage.tsx'
 import { isNativeShell, readStoredServerUrl } from '@deepseek-ai/dsh-client-connection/client'
 
 import { MobileViewportShell } from './MobileViewportShell.tsx'
+import type { MobileRoute } from './mobile-route.ts'
+import { useMobileNavigation } from './useMobileNavigation.ts'
 import css from './mobile-shell.module.css'
-
-/** Mobile shell route discriminant. */
-type MobileRoute =
-  | { page: 'server-setup'; returnTo?: 'connection' }
-  | { page: 'home' }
-  | { page: 'pair' }
-  | { page: 'chat'; sessionId: SessionId; draft?: string }
-  | { page: 'connection' }
 
 function resolveInitialRoute(launch: ReturnType<typeof readPairingLaunchContext>): MobileRoute {
   if (isNativeShell() && readStoredServerUrl() === undefined) return { page: 'server-setup' }
   if (launch.startPairPage) return { page: 'pair' }
   return { page: 'home' }
+}
+
+function renderRoute(
+  route: MobileRoute,
+  nav: Pick<ReturnType<typeof useMobileNavigation>, 'push' | 'replace' | 'reset' | 'goBack'>,
+  launch: ReturnType<typeof readPairingLaunchContext>,
+  pairLaunchRaw: string | undefined,
+  onPaired: () => void,
+): JSX.Element {
+  switch (route.page) {
+    case 'server-setup':
+      return (
+        <ServerSetupPage
+          allowBack={readStoredServerUrl() !== undefined}
+          {...(readStoredServerUrl() !== undefined ? { onBack: nav.goBack } : {})}
+          onConfigured={() => {
+            if (route.returnTo === 'connection') {
+              nav.replace({ page: 'connection' })
+              return
+            }
+            nav.reset(launch.startPairPage ? { page: 'pair' } : { page: 'home' })
+          }}
+        />
+      )
+    case 'home':
+      return (
+        <HomePage
+          onPair={() => { nav.push({ page: 'pair' }) }}
+          onOpenChat={(sessionId) => { nav.push({ page: 'chat', sessionId }) }}
+          onOpenConnection={() => { nav.push({ page: 'connection' }) }}
+        />
+      )
+    case 'connection':
+      return (
+        <ConnectionPage
+          onBack={nav.goBack}
+          onPair={() => { nav.push({ page: 'pair' }) }}
+          onEditServer={() => { nav.push({ page: 'server-setup', returnTo: 'connection' }) }}
+        />
+      )
+    case 'pair':
+      return (
+        <PairPage
+          {...(pairLaunchRaw !== undefined ? { initialPairingRaw: pairLaunchRaw } : {})}
+          autoStartCamera={pairLaunchRaw === undefined}
+          onBack={nav.goBack}
+          onPaired={onPaired}
+        />
+      )
+    case 'chat':
+      return (
+        <ChatPage
+          sessionId={route.sessionId}
+          {...(route.draft !== undefined ? { initialDraft: route.draft } : {})}
+          onBack={nav.goBack}
+          onSessionChange={(nextSessionId: SessionId, draft: string) => {
+            nav.replace({ page: 'chat', sessionId: nextSessionId, draft })
+          }}
+        />
+      )
+  }
 }
 
 /**
@@ -52,7 +109,7 @@ function resolveInitialRoute(launch: ReturnType<typeof readPairingLaunchContext>
 export function MobileApp(): JSX.Element {
   const launch = readPairingLaunchContext()
   const [pairLaunchRaw] = useState(() => launch.initialRaw)
-  const [route, setRoute] = useState<MobileRoute>(() => resolveInitialRoute(launch))
+  const nav = useMobileNavigation(resolveInitialRoute(launch))
   const [showA2hs, setShowA2hs] = useState(false)
 
   useEffect(() => {
@@ -66,70 +123,24 @@ export function MobileApp(): JSX.Element {
     setShowA2hs(true)
   }, [])
 
-  const body = useMemo(() => {
-    switch (route.page) {
-      case 'server-setup':
-        return (
-          <ServerSetupPage
-            allowBack={readStoredServerUrl() !== undefined}
-            {...(readStoredServerUrl() !== undefined
-              ? {
-                onBack: () => {
-                  setRoute(route.returnTo === 'connection' ? { page: 'connection' } : { page: 'home' })
-                },
-              }
-              : {})}
-            onConfigured={() => {
-              if (route.returnTo === 'connection') {
-                setRoute({ page: 'connection' })
-                return
-              }
-              setRoute(launch.startPairPage ? { page: 'pair' } : { page: 'home' })
-            }}
-          />
-        )
-      case 'home':
-      case 'connection':
-        return (
-          <HomePage
-            onPair={() => { setRoute({ page: 'pair' }) }}
-            onOpenChat={(sessionId) => { setRoute({ page: 'chat', sessionId }) }}
-            onOpenConnection={() => { setRoute({ page: 'connection' }) }}
-          />
-        )
-      case 'pair':
-        return (
-          <PairPage
-            {...(pairLaunchRaw !== undefined ? { initialPairingRaw: pairLaunchRaw } : {})}
-            autoStartCamera={pairLaunchRaw === undefined}
-            onBack={() => { setRoute({ page: 'home' }) }}
-            onPaired={() => {
-              if (!isStandaloneDisplayMode() && !isA2hsDismissed()) setShowA2hs(true)
-              setRoute({ page: 'home' })
-            }}
-          />
-        )
-      case 'chat':
-        return (
-          <ChatPage
-            sessionId={route.sessionId}
-            {...(route.draft !== undefined ? { initialDraft: route.draft } : {})}
-            onBack={() => { setRoute({ page: 'home' }) }}
-            onSessionChange={(nextSessionId, draft) => { setRoute({ page: 'chat', sessionId: nextSessionId, draft }) }}
-          />
-        )
-    }
-  }, [launch.startPairPage, pairLaunchRaw, route])
+  const { route, transition, previousRoute, push, replace, reset, goBack } = nav
 
-  const connectionOverlay = route.page === 'connection'
-    ? (
-      <ConnectionPage
-        onBack={() => { setRoute({ page: 'home' }) }}
-        onPair={() => { setRoute({ page: 'pair' }) }}
-        onEditServer={() => { setRoute({ page: 'server-setup', returnTo: 'connection' }) }}
-      />
-    )
-    : null
+  const onPaired = (): void => {
+    if (!isStandaloneDisplayMode() && !isA2hsDismissed()) setShowA2hs(true)
+    reset({ page: 'home' })
+  }
+
+  const activePage = useMemo(
+    () => renderRoute(route, { push, replace, reset, goBack }, launch, pairLaunchRaw, onPaired),
+    [goBack, launch, pairLaunchRaw, push, replace, reset, route],
+  )
+
+  const underlayPage = useMemo(
+    () => (previousRoute === undefined
+      ? undefined
+      : renderRoute(previousRoute, { push, replace, reset, goBack }, launch, pairLaunchRaw, onPaired)),
+    [goBack, launch, pairLaunchRaw, previousRoute, push, replace, reset],
+  )
 
   return (
     <MobileConnectionProvider>
@@ -151,8 +162,9 @@ export function MobileApp(): JSX.Element {
             </div>
           </div>
         )}
-        {body}
-        {connectionOverlay}
+        <MobilePageStack transition={transition} underlay={underlayPage}>
+          {activePage}
+        </MobilePageStack>
       </MobileViewportShell>
     </MobileConnectionProvider>
   )
