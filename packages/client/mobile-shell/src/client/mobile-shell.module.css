@@ -2366,10 +2366,7 @@ button.mSetRow:disabled,
   width: 100%;
   max-width: 100%;
   min-width: 0;
-  padding:
-    6px
-    0
-    env(safe-area-inset-bottom, 0px);
+  padding: 6px 0 4px;
   border-top: none;
 }
 
@@ -2383,11 +2380,16 @@ button.mSetRow:disabled,
   max-width: 100%;
   min-width: 0;
   margin-top: auto;
-  padding:
-    0
-    0
-    env(safe-area-inset-bottom, 0px);
+  padding: 0 0 4px;
   border-top: none;
+}
+
+.composerDock:focus-within,
+.composerDockBlank:focus-within,
+[data-mobile-keyboard-open] .composerDock,
+[data-mobile-keyboard-open] .composerDockBlank {
+  padding-top: 4px;
+  padding-bottom: 0;
 }
 
 .composerCard {
@@ -2770,6 +2772,12 @@ button.mSetRow:disabled,
   text-align: center;
   white-space: nowrap;
   text-overflow: ellipsis;
+}
+
+.composerDock:focus-within .statsLine,
+.composerDockBlank:focus-within .statsLine,
+[data-mobile-keyboard-open] .statsLine {
+  display: none;
 }
 
 @container (max-width: 360px) {
