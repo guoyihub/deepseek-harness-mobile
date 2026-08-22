@@ -158,6 +158,7 @@ export function MobileComposer({
               placeholder={hint}
               disabled={sending}
               rows={1}
+              enterKeyHint="send"
               onChange={(event) => {
                 onClaimChange({ ...claim, args: event.target.value })
               }}
@@ -173,6 +174,7 @@ export function MobileComposer({
             placeholder={hint}
             disabled={sending}
             rows={1}
+            enterKeyHint="send"
             onChange={(event) => { onDraftChange(event.target.value) }}
             onKeyDown={onKeyDown}
           />

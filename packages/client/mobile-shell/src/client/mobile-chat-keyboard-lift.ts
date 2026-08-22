@@ -17,10 +17,13 @@ export const MIN_KEYBOARD_INSET_PX = 40
 export const KEYBOARD_OPENING_SETTLE_MS = 100
 
 /** Delay after the keyboard is fully open before lifting the session stack. */
-export const KEYBOARD_OPENING_LIFT_DELAY_MS = 150
+export const KEYBOARD_OPENING_LIFT_DELAY_MS = 300
 
 /** Debounce after keyboard inset clears before returning to idle. */
 export const KEYBOARD_CLOSING_SETTLE_MS = 50
+
+/** Duration of the CSS padding-bottom transition when lift applies. */
+export const KEYBOARD_LIFT_TRANSITION_MS = 380
 
 /** data attribute enabling CSS transition on lift changes. */
 export const KEYBOARD_LIFT_ANIMATE_ATTR = 'data-keyboard-lift-animate'
@@ -62,7 +65,7 @@ function setLift(root: HTMLElement, liftPx: number, animate: boolean): void {
 
 /**
  * Staged keyboard lift for chat: session + composer stay still while the keyboard
- * animates, then lift after the viewport height settles and a post-open delay elapses.
+ * animates, then lift smoothly 300ms after the viewport height settles.
  * @param root - chat surface element receiving lift custom properties.
  * @param options - settle callback and timing overrides.
  * @returns disposer for viewport and focus listeners.

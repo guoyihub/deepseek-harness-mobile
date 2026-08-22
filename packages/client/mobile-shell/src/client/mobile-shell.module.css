@@ -2391,8 +2391,6 @@ button.mSetRow:disabled,
   border-top: none;
 }
 
-.composerDock:focus-within,
-.composerDockBlank:focus-within,
 [data-mobile-keyboard-open] .composerDock,
 [data-mobile-keyboard-open] .composerDockBlank {
   padding-top: 4px;
@@ -2781,8 +2779,6 @@ button.mSetRow:disabled,
   text-overflow: ellipsis;
 }
 
-.composerDock:focus-within .statsLine,
-.composerDockBlank:focus-within .statsLine,
 [data-mobile-keyboard-open] .statsLine {
   display: none;
 }
@@ -3312,10 +3308,11 @@ button.mSetRow:disabled,
   overflow: hidden;
   box-sizing: border-box;
   padding-bottom: var(--mobile-keyboard-lift, 0px);
+  contain: layout;
 }
 
 .chatSurface[data-keyboard-lift-animate] .chatKeyboardBody {
-  transition: padding-bottom 280ms cubic-bezier(0.32, 0.72, 0, 1);
+  transition: padding-bottom 380ms cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 @media (prefers-reduced-motion: reduce) {
