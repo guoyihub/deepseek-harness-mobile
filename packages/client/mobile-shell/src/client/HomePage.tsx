@@ -41,12 +41,15 @@ import {
 } from './mobile-task-groups.ts'
 import { mobileSessionIsActive } from './mobile-session-status.ts'
 import { mobileConversationT } from './mobile-locale.ts'
-import { sessionDisplayTitle } from './session-label.ts'
+import { mobileWorkspaceT } from './mobile-workspace-t.ts'
+import {
+  SearchResultItem,
+  SessionNodeItem,
+} from '@deepseek-ai/dsh-client-ui-workspace/src/client/rows/Rows.tsx'
 import { StatusPanel } from './StatusPanel.tsx'
 import { TaskHomeHeader, type TaskHomeFilter } from './TaskHomeHeader.tsx'
 import { TaskHomeGroupHeader } from './TaskHomeGroupHeader.tsx'
 import { TaskHomeRenameModal } from './TaskHomeRenameModal.tsx'
-import { TaskHomeRow } from './TaskHomeRow.tsx'
 import { TaskHomeSelectDock } from './TaskHomeSelectDock.tsx'
 import { TaskHomeWorkspaceDeleteModal } from './TaskHomeWorkspaceDeleteModal.tsx'
 import { TASK_HOME_MOTION_MS } from './task-home-motion.ts'
@@ -73,7 +76,6 @@ export function HomePage({
 }: HomePageProps): JSX.Element {
   const {
     paired,
-    hostDescription,
     connectionState,
     sessions,
     workspaces,
@@ -118,17 +120,7 @@ export function HomePage({
   const [expandedSessionGroups, setExpandedSessionGroups] = useState<readonly string[]>([])
 
   const normalizedQuery = searchQuery.trim()
-
-  const hostLabel = useMemo(() => {
-    if (hostDescription?.model !== undefined) return hostDescription.model
-    if (hostDescription?.provider !== undefined) return hostDescription.provider
-    return undefined
-  }, [hostDescription])
-
-  const sessionById = useMemo(
-    () => new Map(sessions.map(item => [item.sessionId, item])),
-    [sessions],
-  )
+  const listNow = useMemo(() => Date.now(), [sessions, pendingRevision])
 
   const pendingBySession = useMemo(() => {
     void pendingRevision
@@ -494,27 +486,17 @@ export function HomePage({
         {paired && searching && (
           <div className={css.taskHomeSearchBody} role="list" aria-label="搜索结果">
             <ul className={css.taskHomeSearchList}>
-              {searchResults.items.map((result) => {
-                const item = sessionById.get(result.id)
-                if (item === undefined) return null
-                return (
-                  <TaskHomeRow
-                    key={result.id}
-                    item={item}
-                    {...(result.pendingInteraction !== undefined
-                      ? { pendingInteraction: result.pendingInteraction }
-                      : {})}
-                    {...(result.completed ? { completed: true } : {})}
-                    {...(result.runningSubagentCount > 0
-                      ? { runningSubagentCount: result.runningSubagentCount }
-                      : {})}
-                    variant="search"
-                    workspaceLabel={result.workspace}
-                    {...(result.snippet !== undefined ? { snippet: result.snippet } : {})}
-                    onOpen={() => { openChat(result.id) }}
+              {searchResults.items.map(result => (
+                <li key={result.id}>
+                  <SearchResultItem
+                    result={result}
+                    currentId={undefined}
+                    surface="mobile"
+                    onOpen={(id) => { openChat(id) }}
+                    t={mobileWorkspaceT}
                   />
-                )
-              })}
+                </li>
+              ))}
             </ul>
             {searchPending && (
               <div className={css.taskHomeSearchStatus} role="status">正在搜索会话历史…</div>
@@ -574,39 +556,28 @@ export function HomePage({
                     {(expandedSessionGroups.includes(group.key)
                       ? group.sessions
                       : group.sessions.slice(0, MOBILE_COLLAPSED_SESSION_LIMIT)
-                    ).map((session) => {
-                      const item = sessionById.get(session.id)
-                      if (item === undefined) return null
-                      return (
-                        <TaskHomeRow
-                          key={session.id}
-                          item={item}
-                          variant="grouped"
-                          {...(session.pendingInteraction !== undefined
-                            ? { pendingInteraction: session.pendingInteraction }
-                            : {})}
-                          {...(session.completed ? { completed: true } : {})}
-                          {...(session.runningSubagentCount > 0
-                            ? { runningSubagentCount: session.runningSubagentCount }
-                            : {})}
-                          hostLabel={hostLabel}
+                    ).map(session => (
+                      <li key={session.id}>
+                        <SessionNodeItem
+                          node={session}
+                          currentId={undefined}
+                          now={listNow}
+                          surface="mobile"
                           selecting={selecting}
                           selected={selectedIds.has(session.id)}
-                          onOpen={() => { openChat(session.id) }}
                           onToggleSelect={() => { toggleSelect(session.id) }}
                           onEnterSelect={() => { enterSelect(session.id) }}
-                          onRename={() => {
-                            setRenameTarget({
-                              sessionId: session.id,
-                              title: sessionDisplayTitle(item),
-                            })
+                          onOpen={(id) => { openChat(id) }}
+                          onRename={(id, title) => {
+                            setRenameTarget({ sessionId: id, title })
                           }}
-                          onFork={() => { void onForkOne(session.id) }}
-                          onPin={() => { void onPinOne(session.id) }}
-                          onArchive={() => { void onArchiveOne(session.id) }}
+                          onFork={(id) => { void onForkOne(id) }}
+                          onPin={(id) => { void onPinOne(id) }}
+                          onArchive={(id) => { void onArchiveOne(id) }}
+                          t={mobileWorkspaceT}
                         />
-                      )
-                    })}
+                      </li>
+                    ))}
                   </ul>
                 )}
                 {group.expanded && group.sessions.length > MOBILE_COLLAPSED_SESSION_LIMIT && (

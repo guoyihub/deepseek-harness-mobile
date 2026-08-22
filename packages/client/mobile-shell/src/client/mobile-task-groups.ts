@@ -15,8 +15,8 @@ import {
 } from '@deepseek-ai/dsh-client-ui-workspace/src/client/tree.ts'
 import { sessionDisplayTitle } from './session-label.ts'
 
-/** Default visible session rows per expanded workspace group (matches desktop sidebar). */
-export const MOBILE_COLLAPSED_SESSION_LIMIT = 5
+/** Default visible session rows per expanded workspace group on mobile task home. */
+export const MOBILE_COLLAPSED_SESSION_LIMIT = 8
 
 /** Mobile label for sessions outside every workspace (desktop `group.ungrouped`). */
 export const MOBILE_UNGROUPED_LABEL = '未分组'

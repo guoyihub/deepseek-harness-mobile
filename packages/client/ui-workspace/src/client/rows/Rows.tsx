@@ -8,7 +8,8 @@
 import { useState } from 'react'
 import clsx from 'clsx'
 import {
-  HoverCard, IconArchiveOutline20, IconBranchOutline16, IconEditOutline16,
+  HoverCard, IconArchiveOutline20, IconBranchOutline16, IconChecklistOutline14,
+  IconCheckOutline14, IconChevronUpOutline14, IconEditOutline16,
   IconEllipsisOutline16, IconFolderClose16, IconFolderOpen16, IconPlusOutline16,
   IconTrashOutline16, IconTriangleRightFill14, Menu, StateDot,
 } from '@deepseek-ai/dsh-client-ui-primitives'
@@ -269,10 +270,13 @@ function sessionStatuses(
 }
 
 /** Primary status dot plus every status's screen-reader label, shared by the search and session rows. */
-function SessionStatusDots({ statuses }: { statuses: readonly [SessionStatus, ...SessionStatus[]] }) {
+function SessionStatusDots({ statuses, dotSize = 10 }: {
+  statuses: readonly [SessionStatus, ...SessionStatus[]]
+  dotSize?: number | undefined
+}) {
   return (
     <>
-      <StateDot state={statuses[0].state} />
+      <StateDot state={statuses[0].state} size={dotSize} />
       {statuses.map(status => (
         <span className={css.visuallyHidden} key={status.label}>{status.label}</span>
       ))}
@@ -309,19 +313,24 @@ function SessionHoverContent({ node, now, t }: { node: SessionNode; now: number;
  * @param props.t - Workspace-browser translation seat.
  * @returns the result button.
  */
-export function SearchResultItem({ result, currentId, onOpen, t }: {
+export function SearchResultItem({ result, currentId, onOpen, t, surface = 'desktop' }: {
   result: SearchResultNode
   currentId: string | undefined
   onOpen: (id: SearchResultNode['id']) => void
   t: RowTranslate
+  surface?: 'desktop' | 'mobile' | undefined
 }) {
   const selected = result.id === currentId
   const statuses = sessionStatuses(result, t)
   const primaryStatus = statuses[0]
+  const dotSize = surface === 'mobile' ? 12 : 10
   return (
     <button
       type="button"
-      className={clsx(css.searchResultRow, selected && css.selected)}
+      className={clsx(
+        css.searchResultRow, selected && css.selected,
+        surface === 'mobile' && css.searchResultRowMobile,
+      )}
       role="treeitem"
       aria-selected={selected}
       onClick={() => { onOpen(result.id) }}
@@ -329,7 +338,7 @@ export function SearchResultItem({ result, currentId, onOpen, t }: {
       <span className={css.searchResultHeading}>
         <span className={css.slot}>
           {(primaryStatus.state !== 'done' || result.completed) && (
-            <SessionStatusDots statuses={statuses} />
+            <SessionStatusDots statuses={statuses} dotSize={dotSize} />
           )}
         </span>
         <span className={css.searchResultTitle}>{result.title}</span>
@@ -359,7 +368,7 @@ export function SearchResultItem({ result, currentId, onOpen, t }: {
  * @param props.t - the browser root's locale seat.
  * @returns the session row.
  */
-export function SessionNodeItem({ node, currentId, now, onOpen, onRename, onFork, onArchive, drag, flat = false, t }: {
+export function SessionNodeItem({ node, currentId, now, onOpen, onRename, onFork, onArchive, drag, flat = false, t, surface = 'desktop', selecting = false, selected: rowChecked = false, onToggleSelect, onEnterSelect, onPin }: {
   node: SessionNode
   currentId: string | undefined
   now: number
@@ -374,35 +383,62 @@ export function SessionNodeItem({ node, currentId, now, onOpen, onRename, onFork
   drag?: RowDragProps | undefined
   /** The row is rendered without a parent Workspace header. */
   flat?: boolean | undefined
+  /** Touch surfaces keep trailing actions visible and skip hover cards. */
+  surface?: 'desktop' | 'mobile' | undefined
+  /** Multi-select mode: row tap toggles selection instead of opening. */
+  selecting?: boolean | undefined
+  /** Whether this row is selected while {@link selecting}. */
+  selected?: boolean | undefined
+  /** Toggle selection while {@link selecting}. */
+  onToggleSelect?: (() => void) | undefined
+  /** Enter multi-select with this row pre-selected (row menu action). */
+  onEnterSelect?: (() => void) | undefined
+  /** Pin this session to the top of its workspace (mobile row menu action). */
+  onPin?: ((id: SessionNode['id']) => void) | undefined
   t: RowTranslate
 }) {
   const row = node
   const title = displayTitle(node, t)
-  const selected = node.id === currentId
   const statuses = sessionStatuses(node, t)
   const primaryStatus = statuses[0]
   const showStatus = primaryStatus.state !== 'done' || row.completed
   const [menuOpen, setMenuOpen] = useState(false)
+  const dotSize = surface === 'mobile' ? 12 : 10
   // Archive hides the row through the registry-global archive set and never
   // touches the session log, so it is not styled as destructive and needs no
   // confirmation dialog.
   const sessionMenuItems = [
     { id: 'rename', label: t('rename'), icon: <IconEditOutline16 /> },
     { id: 'fork', label: t('menu.fork'), icon: <IconBranchOutline16 /> },
+    ...(onPin !== undefined
+      ? [{ id: 'pin', label: t('menu.pin'), icon: <IconChevronUpOutline14 size={14} /> }]
+      : []),
+    ...(onEnterSelect !== undefined
+      ? [{ id: 'select', label: t('menu.multiSelect'), icon: <IconChecklistOutline14 size={14} /> }]
+      : []),
     // 20-native glyph in the menu's 16px icon slot (Menu.module.css .itemIcon).
     { id: 'archive', label: t('menu.archiveSession'), icon: <IconArchiveOutline20 size={16} /> },
   ]
+  const rowSelected = selecting ? rowChecked : node.id === currentId
   // Figma session cell: pad 8, status slot 16, then a 4px title gap.
   const ownRow = (
     <div
       className={clsx(
-        css.sessionRow, selected && css.selected, menuOpen && css.menuOpen,
+        css.sessionRow, rowSelected && css.selected, menuOpen && css.menuOpen,
+        surface === 'mobile' && css.sessionRowMobile,
+        selecting && css.sessionRowSelecting,
         flat && !showStatus && css.flatSessionRowWithoutStatus,
         drag?.marker === 'before' && css.dropBefore, drag?.marker === 'after' && css.dropAfter,
       )}
       role="treeitem"
-      aria-selected={selected}
-      onClick={() => { onOpen(node.id) }}
+      aria-selected={rowSelected}
+      onClick={() => {
+        if (selecting) {
+          onToggleSelect?.()
+          return
+        }
+        onOpen(node.id)
+      }}
       draggable={drag !== undefined}
       onDragStart={drag === undefined
         ? undefined
@@ -431,18 +467,26 @@ export function SessionNodeItem({ node, currentId, now, onOpen, onRename, onFork
       {/* Pending interaction and own or descendant activity outrank the
           finished-but-unviewed reminder, which returns after activity stops
           and is cleared by opening the session. */}
-      {(!flat || showStatus) && (
-        <span className={css.slot}>
-          {showStatus && <SessionStatusDots statuses={statuses} />}
+      {selecting ? (
+        <span
+          className={css.selectCheck}
+          data-checked={rowChecked || undefined}
+          aria-hidden="true"
+        >
+          {rowChecked ? <IconCheckOutline14 size={14} /> : null}
         </span>
-      )}
+      ) : ((!flat || showStatus) && (
+        <span className={css.slot}>
+          {showStatus && <SessionStatusDots statuses={statuses} dotSize={dotSize} />}
+        </span>
+      ))}
       <span className={css.title}>{title}</span>
       {/* A blank New Session row is a provisional placeholder: nothing has
           happened in it yet, so a "now" timestamp and the row verbs
           (rename/fork/archive) would all act on content that does not
           exist — both trailing cells stay off until the first prompt. */}
-      {!row.blank && <span className={css.time}>{timeLabel(row.updatedAt, now, t)}</span>}
-      {!row.blank && (
+      {!row.blank && !selecting && <span className={css.time}>{timeLabel(row.updatedAt, now, t)}</span>}
+      {!row.blank && !selecting && (
         <span className={css.rowActions}>
           <Menu
             open={menuOpen}
@@ -452,10 +496,12 @@ export function SessionNodeItem({ node, currentId, now, onOpen, onRename, onFork
               setMenuOpen(false)
               if (id === 'rename') onRename(node.id, row.title)
               if (id === 'fork') onFork(node.id)
+              if (id === 'pin') onPin?.(node.id)
+              if (id === 'select') onEnterSelect?.()
               if (id === 'archive') onArchive(node.id)
             }}
             portal
-            closeOnPointerLeave
+            closeOnPointerLeave={surface !== 'mobile'}
             anchor={(
               <button
                 type="button"
@@ -471,6 +517,7 @@ export function SessionNodeItem({ node, currentId, now, onOpen, onRename, onFork
       )}
     </div>
   )
+  if (surface === 'mobile' || selecting) return ownRow
   return (
     <HoverCard
       anchor={ownRow}

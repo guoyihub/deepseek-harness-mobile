@@ -237,6 +237,88 @@
   display: none;
 }
 
+/* Touch task home: keep time and menu visible together (no hover swap). */
+.sessionRowMobile {
+  height: 48px;
+  min-height: 48px;
+  box-sizing: border-box;
+  padding: 0 4px 0 8px;
+}
+
+.sessionRowMobile .title {
+  font-size: 17px;
+  line-height: 24px;
+  font-weight: 500;
+}
+
+.sessionRowMobile .time {
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.sessionRowMobile .slot {
+  width: 20px;
+  height: 24px;
+}
+
+.sessionRowMobile .iconButton {
+  width: 24px;
+  height: 24px;
+}
+
+.sessionRowMobile .selectCheck {
+  width: 24px;
+  height: 24px;
+}
+
+.sessionRowMobile .rowActions {
+  display: inline-flex;
+}
+
+.sessionRowMobile:hover .time,
+.sessionRowMobile.menuOpen .time {
+  display: block;
+}
+
+.searchResultRowMobile {
+  min-height: 64px;
+  padding: 10px 8px;
+}
+
+.searchResultRowMobile .searchResultTitle {
+  font-size: 17px;
+  line-height: 24px;
+  font-weight: 500;
+}
+
+.searchResultRowMobile .searchResultWorkspace,
+.searchResultRowMobile .searchResultSnippet {
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.sessionRowSelecting {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.selectCheck {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: 1.5px solid var(--dsw-alias-border-l2);
+  border-radius: 50%;
+  color: var(--dsw-alias-label-primary-foreground);
+  background: transparent;
+}
+
+.selectCheck[data-checked] {
+  border-color: var(--dsw-alias-button-primary-fill);
+  background: var(--dsw-alias-button-primary-fill);
+}
+
 /* An open row menu pins the hover affordances (figma: the row keeps its
    hover fill while its dropdown is up). */
 .projectRow.menuOpen,

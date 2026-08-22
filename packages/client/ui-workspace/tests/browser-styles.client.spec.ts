@@ -106,6 +106,11 @@ describe('WorkspaceBrowser.module.css list', () => {
     expect(rowDeclarations('.searchResultRow')?.get('min-height')).toBe('48px')
     expect(rowDeclarations('.sessionRow.selected')?.get('background'))
       .toBe('var(--dsw-alias-interactive-bg-hover)')
+    expect(rowDeclarations('.sessionRowMobile')?.get('height')).toBe('48px')
+    expect(rowDeclarations('.sessionRowMobile .title')?.get('font-size')).toBe('17px')
+    expect(rowDeclarations('.sessionRowMobile .rowActions')?.get('display')).toBe('inline-flex')
+    expect(rowDeclarations('.sessionRowMobile:hover .time')?.get('display')).toBe('block')
+    expect(rowDeclarations('.searchResultRowMobile')?.get('min-height')).toBe('64px')
   })
 
   it('pins both rail controls to the shared left anchor during the column slide', () => {

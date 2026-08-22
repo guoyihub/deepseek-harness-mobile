@@ -568,4 +568,51 @@ describe('workspace browser rows', () => {
     )
     expect(screen.getByRole('treeitem').className).toMatch(/dropAfter/)
   })
+
+  it('mobile surface keeps trailing actions visible and skips the hover card', () => {
+    vi.useFakeTimers()
+    try {
+      const node: SessionNode = {
+        id: sid('mobile'), title: 'Mobile row', blank: false, running: false,
+        runningSubagentCount: 0, completed: false, updatedAt: 0,
+      }
+      render(<SessionNodeItem node={node} currentId={undefined} now={0} onOpen={vi.fn()}
+        onRename={vi.fn()} onFork={vi.fn()} onArchive={vi.fn()} surface="mobile" t={t} />)
+      const row = screen.getByRole('treeitem')
+      expect(row.className).toMatch(/sessionRowMobile/)
+      expect(row.parentElement?.getAttribute('role')).not.toBe('button')
+      expect(screen.getByRole('button', { name: /会话.*的操作/ })).toBeTruthy()
+      fireEvent.pointerEnter(row)
+      act(() => { vi.advanceTimersByTime(500) })
+      expect(screen.queryByText('Mobile row', { selector: '[role="button"]' })).toBeNull()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('mobile row menu can pin, enter multi-select, and toggle selection rows', () => {
+    const onPin = vi.fn()
+    const onEnterSelect = vi.fn()
+    const onToggleSelect = vi.fn()
+    const node: SessionNode = {
+      id: sid('pick'), title: 'Pick me', blank: false, running: false,
+      runningSubagentCount: 0, completed: false, updatedAt: 0,
+    }
+    const view = render(<SessionNodeItem node={node} currentId={undefined} now={0} onOpen={vi.fn()}
+      onRename={vi.fn()} onFork={vi.fn()} onArchive={vi.fn()} surface="mobile"
+      onPin={onPin} onEnterSelect={onEnterSelect} t={t} />)
+    fireEvent.click(screen.getByRole('button', { name: /会话.*的操作/ }))
+    fireEvent.click(screen.getByRole('menuitem', { name: '置顶' }))
+    expect(onPin).toHaveBeenCalledWith(node.id)
+    fireEvent.click(screen.getByRole('button', { name: /会话.*的操作/ }))
+    fireEvent.click(screen.getByRole('menuitem', { name: '多选' }))
+    expect(onEnterSelect).toHaveBeenCalledOnce()
+
+    view.rerender(<SessionNodeItem node={node} currentId={undefined} now={0} onOpen={vi.fn()}
+      onRename={vi.fn()} onFork={vi.fn()} onArchive={vi.fn()} surface="mobile"
+      selecting selected onToggleSelect={onToggleSelect} t={t} />)
+    fireEvent.click(screen.getByRole('treeitem'))
+    expect(onToggleSelect).toHaveBeenCalledOnce()
+    expect(screen.queryByRole('button', { name: /会话.*的操作/ })).toBeNull()
+  })
 })
