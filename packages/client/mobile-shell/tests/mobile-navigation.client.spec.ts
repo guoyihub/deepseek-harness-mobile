@@ -1,7 +1,10 @@
 // @vitest-environment jsdom
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import type { SessionId } from '@deepseek-ai/dsh-client-connection/client'
 import { useMobileNavigation } from '../src/client/useMobileNavigation.ts'
+
+const sid = (id: string): SessionId => id as SessionId
 
 describe('useMobileNavigation', () => {
   afterEach(() => {
@@ -16,10 +19,10 @@ describe('useMobileNavigation', () => {
     const { result } = renderHook(() => useMobileNavigation({ page: 'home' }))
 
     act(() => {
-      result.current.push({ page: 'chat', sessionId: 'sess-1' })
+      result.current.push({ page: 'chat', sessionId: sid('sess-1') })
     })
 
-    expect(result.current.route).toEqual({ page: 'chat', sessionId: 'sess-1' })
+    expect(result.current.route).toEqual({ page: 'chat', sessionId: sid('sess-1') })
     expect(result.current.transition).toBe('forward')
     expect(pushState).toHaveBeenCalled()
 

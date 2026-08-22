@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
+import type { SessionId } from '@deepseek-ai/dsh-client-connection/client'
 import { mobileRouteFromHash, mobileRouteToHash } from '../src/client/mobile-route.ts'
+
+const sid = (id: string): SessionId => id as SessionId
 
 describe('mobile-route', () => {
   it('round-trips known routes through the location hash', () => {
@@ -9,7 +12,7 @@ describe('mobile-route', () => {
       { page: 'connection' as const },
       { page: 'server-setup' as const },
       { page: 'server-setup' as const, returnTo: 'connection' as const },
-      { page: 'chat' as const, sessionId: 'sess-1' },
+      { page: 'chat' as const, sessionId: sid('sess-1') },
     ]
 
     for (const route of routes) {
