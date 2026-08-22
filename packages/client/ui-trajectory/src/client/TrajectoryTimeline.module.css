@@ -19,6 +19,20 @@
   background: var(--dsw-alias-bg-layer-2);
 }
 
+@media (max-width: 480px) {
+  .plot {
+    grid-template-columns: 56px minmax(0, 1fr);
+  }
+
+  .labels {
+    font-size: 11px;
+  }
+
+  .labels span {
+    right: 4px;
+  }
+}
+
 .labels {
   position: relative;
   border-right: 1px solid var(--dsw-alias-border-l1);

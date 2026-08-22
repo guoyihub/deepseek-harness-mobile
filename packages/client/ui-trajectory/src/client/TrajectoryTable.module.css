@@ -501,26 +501,26 @@
 
 @container trajectory-table (max-width: 620px) {
   .eventColumn {
-    width: 50px;
+    width: 76px;
   }
 
   .event {
-    padding-right: 3px !important;
-    padding-left: 28px !important;
+    padding-right: 4px !important;
+    padding-left: 34px !important;
   }
 
   .requestBoundaryControl {
-    --request-boundary-base-left: 6px;
+    --request-boundary-base-left: 8px;
   }
 
   .kindSlot {
-    width: 19px;
+    width: 24px;
   }
 
   .kindTag,
   .table .kindSlot .message {
     justify-content: center;
-    width: 19px;
+    width: 24px;
     padding-right: 0;
     padding-left: 0;
   }
@@ -542,7 +542,7 @@
   }
 
   .turnLabelCompact {
-    max-width: 64px;
+    max-width: 72px;
     opacity: 1;
   }
 }

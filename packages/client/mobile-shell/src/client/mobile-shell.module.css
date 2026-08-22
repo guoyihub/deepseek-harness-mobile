@@ -317,9 +317,16 @@ html.mobile-standalone .viewportShell:not([data-mobile-keyboard-open]) {
 .trajectoryPane [role='toolbar'] > div > div:last-child {
   flex: 1 1 72px;
   width: auto;
-  max-width: 128px;
-  min-width: 72px;
+  max-width: 120px;
+  min-width: 68px;
   margin-left: 4px;
+}
+
+/* Trajectory ledger: allow sideways scroll when the event column still overflows. */
+.trajectoryPane [data-trajectory-scroll] {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .chatHeaderTitle {
