@@ -16,7 +16,10 @@ import { formatRunDuration } from '@deepseek-ai/dsh-client-ui-conversation/src/c
 import { MobileChatNodeSeat } from './MobileChatNodeSeat.tsx'
 import { MobileChatHero } from './MobileChatHero.tsx'
 import { mobileChatT } from './mobile-conversation-t.ts'
-import { scrollMobileMessageListToBottom } from './mobile-message-list-scroll.ts'
+import {
+  isMobileMessageListAtBottom,
+  scrollMobileMessageListToBottom,
+} from './mobile-message-list-scroll.ts'
 import css from './mobile-shell.module.css'
 
 /** Props for {@link MobileChatFlow}. */
@@ -146,8 +149,7 @@ export function MobileChatFlow({
   const onListScroll = (): void => {
     const list = listRef.current
     if (list === null) return
-    const distance = list.scrollHeight - list.scrollTop - list.clientHeight
-    stickRef.current = distance <= 64
+    stickRef.current = isMobileMessageListAtBottom(list)
     onScroll()
   }
 

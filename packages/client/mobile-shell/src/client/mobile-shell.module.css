@@ -1946,6 +1946,7 @@ button.mSetRow:disabled,
 }
 
 .chatPage {
+  position: relative;
   display: flex;
   flex: 1;
   flex-direction: column;
@@ -1956,6 +1957,34 @@ button.mSetRow:disabled,
   min-width: 0;
   overflow: hidden;
   --dsh-composer-height: 128px;
+}
+
+.scrollToBottomSlot {
+  position: absolute;
+  bottom: calc(var(--dsh-composer-height, 128px) + 12px);
+  left: 50%;
+  z-index: 8;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.scrollToBottomFab {
+  composes: mobileBackButton;
+  cursor: pointer;
+  pointer-events: auto;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  line-height: 0;
+}
+
+.scrollToBottomFab:active {
+  background: var(--dsw-alias-bg-layer-2);
+}
+
+.scrollToBottomIcon {
+  display: block;
+  flex: none;
 }
 
 /* Assistant/user message footer: touch-sized icons; metrics wrap on narrow widths. */

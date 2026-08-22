@@ -27,7 +27,11 @@ import { MobileShellLayout } from './MobileShellLayout.tsx'
 import { mobileApi } from './mobile-api-client.ts'
 import { sessionChatHeaderMeta, sessionDisplayTitle, NEW_SESSION_TITLE } from './session-label.ts'
 import { mobileConversationT } from './mobile-locale.ts'
-import { scrollMobileMessageListToBottom } from './mobile-message-list-scroll.ts'
+import { MobileScrollToBottomButton } from './MobileScrollToBottomButton.tsx'
+import {
+  isMobileMessageListAtBottom,
+  scrollMobileMessageListToBottom,
+} from './mobile-message-list-scroll.ts'
 import { bindMobileChatKeyboardLift } from './mobile-chat-keyboard-lift.ts'
 import {
   burstSyncMobileViewportShellFrame,
@@ -91,6 +95,7 @@ export function ChatPage({
   const chatPageRef = useRef<HTMLDivElement>(null)
   const composerDockRef = useRef<HTMLDivElement>(null)
   const stickToBottomRef = useRef(true)
+  const [atBottom, setAtBottom] = useState(true)
   const keyboardLiftPxRef = useRef(0)
   const [activeSessionId, setActiveSessionId] = useState(sessionId)
 
@@ -103,6 +108,7 @@ export function ChatPage({
     setOptimisticText(undefined)
     setSessionView('chat')
     stickToBottomRef.current = true
+    setAtBottom(true)
   }
 
   useEffect(() => {
@@ -172,8 +178,17 @@ export function ChatPage({
   const onMessageListScroll = (): void => {
     const list = messageListRef.current
     if (list === null) return
-    const distance = list.scrollHeight - list.scrollTop - list.clientHeight
-    stickToBottomRef.current = distance <= 64
+    const nextAtBottom = isMobileMessageListAtBottom(list)
+    stickToBottomRef.current = nextAtBottom
+    setAtBottom(prev => (prev === nextAtBottom ? prev : nextAtBottom))
+  }
+
+  const onScrollToBottom = (): void => {
+    const list = messageListRef.current
+    if (list === null) return
+    stickToBottomRef.current = true
+    setAtBottom(true)
+    scrollMobileMessageListToBottom(list)
   }
 
   const followComposerLayout = useCallback((): void => {
@@ -230,9 +245,7 @@ export function ChatPage({
     return bindMobileChatKeyboardLift(surface, {
       onLiftChange: (liftPx) => {
         keyboardLiftPxRef.current = liftPx
-        if (liftPx > 0) {
-          followComposerLayout()
-        }
+        followComposerLayout()
       },
     })
   }, [followComposerLayout])
@@ -418,6 +431,10 @@ export function ChatPage({
                   onScroll={onMessageListScroll}
                 />
               )}
+            <MobileScrollToBottomButton
+              visible={sessionView === 'chat' && !showHero && !atBottom}
+              onClick={onScrollToBottom}
+            />
             <div ref={composerDockRef} className={showHero ? css.composerDockBlank : css.composerDock}>
               <StatusPanel error={error ?? connectionError} />
               {pending.length > 0

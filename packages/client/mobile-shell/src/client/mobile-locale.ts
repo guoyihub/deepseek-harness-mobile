@@ -59,6 +59,7 @@ const zh = {
   'view.tabs': '会话视图',
   'view.chat': '对话',
   'view.trajectory': '轨迹',
+  'chat.toBottom': '回到底部',
   'browser.title': '选择工作区目录',
   'browser.home': '主目录',
   'browser.newFolder': '新建文件夹',
