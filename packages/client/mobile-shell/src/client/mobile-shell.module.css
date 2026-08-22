@@ -15,17 +15,29 @@
 }
 
 .viewportShell {
+  /* Stable layout box; keyboard lift shrinks chat body, not this shell. */
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 0;
   display: flex;
   justify-content: center;
   width: 100%;
   min-width: 0;
   height: 100%;
-  min-height: 100dvh;
-  min-height: -webkit-fill-available;
+  height: 100svh;
+  height: -webkit-fill-available;
   overflow: hidden;
   border-radius: 0;
   background: var(--dsw-alias-bg-base);
   touch-action: manipulation;
+}
+
+html.mobile-standalone .viewportShell:not([data-mobile-keyboard-open]) {
+  right: auto;
+  width: var(--mobile-vv-width, 100%);
+  height: var(--mobile-vv-height, 100svh);
 }
 
 .viewportFrame {
@@ -143,6 +155,56 @@
 
 .shellHeaderChatWithTabs {
   composes: mobileChromeTop;
+  display: flex;
+  align-items: flex-start;
+  flex: none;
+  gap: 12px;
+  padding:
+    calc(12px + env(safe-area-inset-top, 0px))
+    calc(16px + env(safe-area-inset-right, 0px))
+    8px
+    calc(16px + env(safe-area-inset-left, 0px));
+}
+
+/* Chat session header: pinned chrome without sticky (sticky duplicates on iOS first focus). */
+.chatHeaderChrome {
+  position: relative;
+  z-index: 10;
+  isolation: isolate;
+  border-bottom: none;
+  background: var(--dsw-alias-bg-base);
+}
+
+.chatHeaderChrome::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: calc(-1 * var(--mobile-chrome-feather));
+  left: 0;
+  height: var(--mobile-chrome-feather);
+  background: linear-gradient(
+    to bottom,
+    var(--dsw-alias-bg-base),
+    transparent
+  );
+  pointer-events: none;
+}
+
+.shellHeaderChatPinned {
+  composes: chatHeaderChrome;
+  display: flex;
+  align-items: center;
+  flex: none;
+  gap: 12px;
+  padding:
+    calc(12px + env(safe-area-inset-top, 0px))
+    calc(16px + env(safe-area-inset-right, 0px))
+    16px
+    calc(16px + env(safe-area-inset-left, 0px));
+}
+
+.shellHeaderChatWithTabsPinned {
+  composes: chatHeaderChrome;
   display: flex;
   align-items: flex-start;
   flex: none;
@@ -2304,7 +2366,10 @@ button.mSetRow:disabled,
   width: 100%;
   max-width: 100%;
   min-width: 0;
-  padding-top: 6px;
+  padding:
+    6px
+    0
+    env(safe-area-inset-bottom, 0px);
   border-top: none;
 }
 
@@ -2318,7 +2383,10 @@ button.mSetRow:disabled,
   max-width: 100%;
   min-width: 0;
   margin-top: auto;
-  padding-top: 0;
+  padding:
+    0
+    0
+    env(safe-area-inset-bottom, 0px);
   border-top: none;
 }
 
@@ -2344,18 +2412,24 @@ button.mSetRow:disabled,
 }
 
 .composerTextarea {
+  --dsh-mobile-composer-line-height: 24px;
+  --dsh-mobile-composer-max-lines: 4;
+
   box-sizing: border-box;
   width: 100%;
   max-width: 100%;
   min-width: 0;
-  min-height: 40px;
+  min-height: var(--dsh-mobile-composer-line-height);
+  max-height: calc(var(--dsh-mobile-composer-line-height) * var(--dsh-mobile-composer-max-lines));
   padding: 0 14px;
   border: none;
   background: transparent;
   color: var(--dsw-alias-label-primary);
   font: inherit;
-  line-height: 24px;
+  line-height: var(--dsh-mobile-composer-line-height);
+  overflow-y: auto;
   resize: none;
+  -webkit-overflow-scrolling: touch;
 }
 
 .composerTextarea:focus {
@@ -2689,10 +2763,7 @@ button.mSetRow:disabled,
   width: 100%;
   max-width: 100%;
   overflow: hidden;
-  min-height: 20px;
-  padding:
-    4px 14px
-    calc(6px + env(safe-area-inset-bottom, 0px));
+  padding: 4px 14px;
   color: var(--dsw-alias-label-tertiary);
   font-size: 12px;
   line-height: 20px;
@@ -3210,6 +3281,7 @@ button.mSetRow:disabled,
 }
 
 .chatSurface {
+  position: relative;
   display: flex;
   flex: 1;
   flex-direction: column;
@@ -3221,7 +3293,35 @@ button.mSetRow:disabled,
   border-radius: 0;
 }
 
-.chatSurface:has(.shellHeaderChatWithTabs) {
+.chatSurfaceHeader {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  z-index: 20;
+  width: 100%;
+  max-width: 480px;
+  flex: none;
+  pointer-events: none;
+  transform: translateX(-50%);
+}
+
+.chatSurfaceHeader > * {
+  pointer-events: auto;
+}
+
+@property --mobile-keyboard-lift {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 0px;
+}
+
+/* Full-height page; keyboard never moves this box (header sits in chatSurfaceHeader). */
+.chatSurface .page {
+  position: relative;
+  height: 100%;
+}
+
+.chatSurface:has(.shellHeaderChatWithTabsPinned) {
   --mobile-chat-header-body: 86px;
 }
 
@@ -3229,23 +3329,48 @@ button.mSetRow:disabled,
   --mobile-chat-header-body: 54px;
 }
 
-.chatSurface:has(.shellHeaderChat):not(:has(.shellHeaderChatWithTabs)) {
+.chatSurface:has(.shellHeaderChatPinned):not(:has(.shellHeaderChatWithTabsPinned)) {
   --mobile-chat-header-body: 54px;
 }
 
+/* Session stack sits below the absolute header; keyboard lift does not move the title. */
 .chatSurface .chatContent {
-  margin-top: calc(-1 * (var(--mobile-chat-header-body, 80px) + env(safe-area-inset-top, 0px)));
+  box-sizing: border-box;
+  padding-top: calc(var(--mobile-chat-header-body, 80px) + env(safe-area-inset-top, 0px));
+}
+
+.chatSurface .chatKeyboardBody {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  width: 100%;
+  max-width: 100%;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+  box-sizing: border-box;
+  padding-bottom: var(--mobile-keyboard-lift, 0px);
+}
+
+.chatSurface[data-keyboard-lift-animate] .chatKeyboardBody {
+  transition: padding-bottom 280ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chatSurface[data-keyboard-lift-animate] .chatKeyboardBody {
+    transition: none;
+  }
 }
 
 .chatSurface .chatPage .messageList {
-  padding-top: calc(4px + var(--mobile-chat-header-body, 80px) + env(safe-area-inset-top, 0px));
-  scroll-padding-top: calc(var(--mobile-chat-header-body, 80px) + env(safe-area-inset-top, 0px));
+  padding-top: 4px;
+  scroll-padding-top: 0;
   padding-bottom: calc(24px + var(--mobile-chrome-feather));
 }
 
 .chatSurface .chatPageBlank .messageList {
-  padding-top: calc(4px + var(--mobile-chat-header-body, 80px) + env(safe-area-inset-top, 0px));
-  scroll-padding-top: calc(var(--mobile-chat-header-body, 80px) + env(safe-area-inset-top, 0px));
+  padding-top: 4px;
+  scroll-padding-top: 0;
 }
 
 .chatPageBlank .chatHero {
@@ -3253,7 +3378,7 @@ button.mSetRow:disabled,
 }
 
 .chatSurface .trajectoryPane {
-  padding-top: calc(4px + var(--mobile-chat-header-body, 80px) + env(safe-area-inset-top, 0px));
+  padding-top: 0;
 }
 
 .taskHomeGroups {

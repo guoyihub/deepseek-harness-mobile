@@ -20,6 +20,8 @@ html[data-ds-dark-theme] {
 html,
 body,
 #root {
+  position: fixed;
+  width: 100%;
   height: 100%;
   margin: 0;
   overflow: hidden;

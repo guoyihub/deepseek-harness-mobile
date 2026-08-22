@@ -24,6 +24,8 @@ export interface MobileShellLayoutProps {
   taskHomeNestedScroll?: boolean | undefined
   /** Blank chat hero layout: titleless header and bottom-anchored composer padding. */
   blankChat?: boolean | undefined
+  /** Chat session body padding without an in-layout header slot. */
+  chatContentLayout?: boolean | undefined
 }
 
 /**
@@ -41,6 +43,7 @@ export function MobileShellLayout({
   taskHomeContent = false,
   taskHomeNestedScroll = false,
   blankChat = false,
+  chatContentLayout = false,
 }: MobileShellLayoutProps): JSX.Element {
   const contentClass = taskHomeNestedScroll
     ? css.taskHomeContentHost
@@ -48,25 +51,26 @@ export function MobileShellLayout({
       ? css.taskHomeContent
       : blankChat
         ? css.chatBlankContent
-        : headerSlot !== undefined
+        : headerSlot !== undefined || chatContentLayout
           ? css.chatContent
           : css.content
 
   const showTitle = !blankChat && (title !== undefined || subtitle !== undefined)
+  const defaultHeader = (
+    <header className={blankChat ? css.shellHeaderMinimal : css.shellHeader}>
+      {onBack !== undefined && <MobileBackButton onClick={onBack} />}
+      {showTitle && (
+        <div className={css.headerTitle}>
+          {title !== undefined && <div>{title}</div>}
+          {subtitle !== undefined && <div className={css.headerSubtitle}>{subtitle}</div>}
+        </div>
+      )}
+    </header>
+  )
 
   return (
     <div className={css.page}>
-      {headerSlot ?? (
-        <header className={blankChat ? css.shellHeaderMinimal : css.shellHeader}>
-          {onBack !== undefined && <MobileBackButton onClick={onBack} />}
-          {showTitle && (
-            <div className={css.headerTitle}>
-              {title !== undefined && <div>{title}</div>}
-              {subtitle !== undefined && <div className={css.headerSubtitle}>{subtitle}</div>}
-            </div>
-          )}
-        </header>
-      )}
+      {headerSlot !== undefined ? headerSlot : chatContentLayout ? null : defaultHeader}
       <main className={contentClass} data-dock={dock !== undefined || undefined}>{children}</main>
       {dock !== undefined && <div className={css.dock}>{dock}</div>}
       {fab !== undefined && <div className={css.fab}>{fab}</div>}

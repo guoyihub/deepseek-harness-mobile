@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ContentBlock, SessionId } from '@deepseek-ai/dsh-client-connection/client'
 import type { ChatNode } from '@deepseek-ai/dsh-client-ui-conversation/client'
 import type {} from '@deepseek-ai/dsh-client-ui-conversation/src/client/conversation-nodes/message.ts'
@@ -27,6 +27,12 @@ import { MobileShellLayout } from './MobileShellLayout.tsx'
 import { mobileApi } from './mobile-api-client.ts'
 import { sessionChatHeaderMeta, sessionDisplayTitle, NEW_SESSION_TITLE } from './session-label.ts'
 import { mobileConversationT } from './mobile-locale.ts'
+import { scrollMobileMessageListToBottom } from './mobile-message-list-scroll.ts'
+import { bindMobileChatKeyboardLift } from './mobile-chat-keyboard-lift.ts'
+import {
+  burstSyncMobileViewportShellFrame,
+  pinMobileLayoutViewportBurst,
+} from './mobile-visual-viewport.ts'
 import { StatusPanel } from './StatusPanel.tsx'
 import { useMobileSession } from './useMobileSession.ts'
 import css from './mobile-shell.module.css'
@@ -81,7 +87,11 @@ export function ChatPage({
   const [projections, setProjections] = useState(createProjectionStore)
   const wasAgentWorkingRef = useRef(false)
   const messageListRef = useRef<HTMLDivElement>(null)
+  const chatSurfaceRef = useRef<HTMLDivElement>(null)
+  const chatPageRef = useRef<HTMLDivElement>(null)
+  const composerDockRef = useRef<HTMLDivElement>(null)
   const stickToBottomRef = useRef(true)
+  const keyboardLiftPxRef = useRef(0)
   const [activeSessionId, setActiveSessionId] = useState(sessionId)
 
   if (sessionId !== activeSessionId) {
@@ -98,6 +108,14 @@ export function ChatPage({
   useEffect(() => {
     markSessionViewed(sessionId)
   }, [markSessionViewed, sessionId])
+
+  useEffect(() => {
+    const shell = chatSurfaceRef.current?.closest('[data-mobile-viewport-shell]') as HTMLElement | null
+    pinMobileLayoutViewportBurst(shell)
+    if (shell !== null) {
+      burstSyncMobileViewportShellFrame(shell)
+    }
+  }, [])
 
   useEffect(() => () => { markSessionViewed(undefined) }, [markSessionViewed])
 
@@ -157,6 +175,67 @@ export function ChatPage({
     const distance = list.scrollHeight - list.scrollTop - list.clientHeight
     stickToBottomRef.current = distance <= 64
   }
+
+  const followComposerLayout = useCallback((): void => {
+    if (!stickToBottomRef.current) return
+    const list = messageListRef.current
+    if (list === null) return
+    scrollMobileMessageListToBottom(list)
+  }, [])
+
+  useEffect(() => {
+    const dock = composerDockRef.current
+    const page = chatPageRef.current
+    if (dock === null) return
+
+    const publishHeight = (): void => {
+      if (page !== null) {
+        page.style.setProperty('--dsh-composer-height', `${dock.offsetHeight}px`)
+      }
+    }
+
+    const observer = new ResizeObserver(() => {
+      publishHeight()
+      followComposerLayout()
+    })
+    observer.observe(dock)
+    publishHeight()
+    return () => { observer.disconnect() }
+  }, [followComposerLayout, pending.length, sessionId, sessionView, showHero])
+
+  useEffect(() => {
+    const shell = chatSurfaceRef.current?.closest('[data-mobile-viewport-shell]') as HTMLElement | null
+    pinMobileLayoutViewportBurst(shell)
+    if (shell !== null) {
+      burstSyncMobileViewportShellFrame(shell)
+    }
+  }, [sessionId])
+
+  useEffect(() => {
+    const onViewportChange = (): void => {
+      if (keyboardLiftPxRef.current === 0) return
+      followComposerLayout()
+    }
+    window.visualViewport?.addEventListener('resize', onViewportChange)
+    window.visualViewport?.addEventListener('scroll', onViewportChange)
+    return () => {
+      window.visualViewport?.removeEventListener('resize', onViewportChange)
+      window.visualViewport?.removeEventListener('scroll', onViewportChange)
+    }
+  }, [followComposerLayout])
+
+  useEffect(() => {
+    const surface = chatSurfaceRef.current
+    if (surface === null) return
+    return bindMobileChatKeyboardLift(surface, {
+      onLiftChange: (liftPx) => {
+        keyboardLiftPxRef.current = liftPx
+        if (liftPx > 0) {
+          followComposerLayout()
+        }
+      },
+    })
+  }, [followComposerLayout])
 
   const agentWorking = useMemo(
     () => deriveAgentWorkingFromSnapshot(
@@ -289,88 +368,90 @@ export function ChatPage({
   }
 
   return (
-    <div className={css.chatSurface}>
-      <MobileShellLayout
-        headerSlot={(
-          <MobileChatHeader
-            title={title}
-            meta={headerMeta}
-            metaSlot={newSessionHeader
-              ? (
-                <MobileWorkspaceSelect
-                  sessionId={sessionId}
-                  switchable={switchableWorkspace}
-                  locked={agentWorking || sending}
-                  draft={draft}
-                  variant="header"
-                  onSessionChange={onSessionChange}
-                  onError={setError}
-                />
-              )
-              : undefined}
-            onBack={onBack}
-            tabs={(
-              <MobileSessionTabs active={sessionView} onChange={setSessionView} />
-            )}
-          />
-        )}
-      >
-        <div className={showHero ? css.chatPageBlank : css.chatPage}>
-          {sessionView === 'trajectory' && !showHero
+    <div ref={chatSurfaceRef} className={css.chatSurface}>
+      <div className={css.chatSurfaceHeader}>
+        <MobileChatHeader
+          title={title}
+          meta={headerMeta}
+          metaSlot={newSessionHeader
             ? (
-              <MobileTrajectoryPane
+              <MobileWorkspaceSelect
                 sessionId={sessionId}
-                ready={ready}
-                error={sessionError}
-                useSession={useSession}
-                loadOlder={loadOlder}
+                switchable={switchableWorkspace}
+                locked={agentWorking || sending}
+                draft={draft}
+                variant="header"
+                onSessionChange={onSessionChange}
+                onError={setError}
               />
             )
-            : (
-              <MobileChatFlow
-                sessionId={sessionId}
-                useSession={useSession}
-                useProjection={useProjection}
-                ready={ready}
-                error={sessionError}
-                optimisticText={optimisticText}
-                showHero={showHero}
-                listRef={messageListRef}
-                onScroll={onMessageListScroll}
-              />
-            )}
-          <div className={showHero ? css.composerDockBlank : css.composerDock}>
-            <StatusPanel error={error ?? connectionError} />
-            {pending.length > 0
+            : undefined}
+          onBack={onBack}
+          tabs={(
+            <MobileSessionTabs active={sessionView} onChange={setSessionView} />
+          )}
+        />
+      </div>
+      <MobileShellLayout chatContentLayout>
+        <div className={css.chatKeyboardBody}>
+          <div ref={chatPageRef} className={showHero ? css.chatPageBlank : css.chatPage}>
+            {sessionView === 'trajectory' && !showHero
               ? (
-                <MobileComposerTakeover
+                <MobileTrajectoryPane
                   sessionId={sessionId}
-                  pending={pending}
+                  ready={ready}
+                  error={sessionError}
                   useSession={useSession}
-                  useProjection={useProjection}
+                  loadOlder={loadOlder}
                 />
               )
               : (
-                <MobileComposer
+                <MobileChatFlow
                   sessionId={sessionId}
-                  draft={draft}
-                  sending={sending}
-                  locked={agentWorking || sending}
-                  agentWorking={agentWorking}
-                  stopping={cancelling}
-                  permissions={permissions}
-                  claim={claim}
-                  planActive={planActive}
-                  goalActive={goalActive}
-                  onDraftChange={setDraft}
-                  onClaimChange={setClaim}
-                  onSend={() => { void onSend() }}
-                  onStop={() => { void onCancel() }}
-                  onCommandSubmit={() => { stickToBottomRef.current = true }}
-                  onCommandError={setError}
+                  useSession={useSession}
+                  useProjection={useProjection}
+                  ready={ready}
+                  error={sessionError}
+                  optimisticText={optimisticText}
+                  showHero={showHero}
+                  listRef={messageListRef}
+                  onScroll={onMessageListScroll}
                 />
               )}
-            {pending.length === 0 && <MobileStatsLine tokenUsage={tokenUsage} />}
+            <div ref={composerDockRef} className={showHero ? css.composerDockBlank : css.composerDock}>
+              <StatusPanel error={error ?? connectionError} />
+              {pending.length > 0
+                ? (
+                  <MobileComposerTakeover
+                    sessionId={sessionId}
+                    pending={pending}
+                    useSession={useSession}
+                    useProjection={useProjection}
+                  />
+                )
+                : (
+                  <MobileComposer
+                    sessionId={sessionId}
+                    draft={draft}
+                    sending={sending}
+                    locked={agentWorking || sending}
+                    agentWorking={agentWorking}
+                    stopping={cancelling}
+                    permissions={permissions}
+                    claim={claim}
+                    planActive={planActive}
+                    goalActive={goalActive}
+                    onDraftChange={setDraft}
+                    onClaimChange={setClaim}
+                    onSend={() => { void onSend() }}
+                    onStop={() => { void onCancel() }}
+                    onCommandSubmit={() => { stickToBottomRef.current = true }}
+                    onCommandError={setError}
+                    onLayoutChange={followComposerLayout}
+                  />
+                )}
+              {pending.length === 0 && <MobileStatsLine tokenUsage={tokenUsage} />}
+            </div>
           </div>
         </div>
       </MobileShellLayout>

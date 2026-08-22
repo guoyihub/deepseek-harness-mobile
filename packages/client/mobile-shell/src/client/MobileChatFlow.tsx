@@ -16,6 +16,7 @@ import { formatRunDuration } from '@deepseek-ai/dsh-client-ui-conversation/src/c
 import { MobileChatNodeSeat } from './MobileChatNodeSeat.tsx'
 import { MobileChatHero } from './MobileChatHero.tsx'
 import { mobileChatT } from './mobile-conversation-t.ts'
+import { scrollMobileMessageListToBottom } from './mobile-message-list-scroll.ts'
 import css from './mobile-shell.module.css'
 
 /** Props for {@link MobileChatFlow}. */
@@ -42,14 +43,7 @@ export interface MobileChatFlowProps {
 
 /** Pin the scrollport to the latest transcript row after layout settles. */
 function scrollListToBottom(list: HTMLDivElement): void {
-  const apply = (): void => {
-    list.scrollTop = list.scrollHeight
-  }
-  apply()
-  requestAnimationFrame(() => {
-    apply()
-    requestAnimationFrame(apply)
-  })
+  scrollMobileMessageListToBottom(list)
 }
 
 function runningTurnStartTime(timeline: ConversationTimelineSnapshot): number | null {

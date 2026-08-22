@@ -31,7 +31,7 @@ export function MobileChatHeader({ title, meta, metaSlot, onBack, tabs }: Mobile
 
   if (tabs === undefined) {
     return (
-      <header className={css.shellHeaderChat}>
+      <header className={css.shellHeaderChatPinned}>
         <MobileBackButton onClick={onBack} />
         <h1 className={css.chatHeaderTitle}>{title}</h1>
         {workspace}
@@ -40,7 +40,7 @@ export function MobileChatHeader({ title, meta, metaSlot, onBack, tabs }: Mobile
   }
 
   return (
-    <header className={css.shellHeaderChatWithTabs}>
+    <header className={css.shellHeaderChatWithTabsPinned}>
       <MobileBackButton onClick={onBack} />
       <div className={css.chatHeaderMain}>
         <h1 className={css.chatHeaderTitle}>{title}</h1>

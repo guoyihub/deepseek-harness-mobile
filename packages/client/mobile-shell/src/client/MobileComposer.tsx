@@ -1,11 +1,13 @@
 import type { KeyboardEvent } from 'react'
-import { useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { SessionId } from '@deepseek-ai/dsh-client-connection/client'
 import type { PermissionSelect as PermissionSelectValue } from '@deepseek-ai/dsh-permission-presets/client'
 import { IconCloseFill14 } from '@deepseek-ai/dsh-client-ui-primitives'
 import { MobileCommandMenu } from './MobileCommandMenu.tsx'
 import type { MobileCommandSurface } from './mobile-command-catalog.ts'
 import { beginMobileClaim, type MobileComposerClaim } from './mobile-composer-claim.ts'
+import { syncMobileComposerTextareaHeight } from './mobile-composer-textarea-height.ts'
+import { bindMobileEditableFocusWithoutScroll } from './mobile-editable-focus.ts'
 import { mobileConversationT } from './mobile-locale.ts'
 import { MobileModelSelect } from './MobileModelSelect.tsx'
 import { MobilePermissionSelect } from './MobilePermissionSelect.tsx'
@@ -35,6 +37,8 @@ export interface MobileComposerProps {
   onCommandSubmit?: (() => void) | undefined
   /** Surface a command admission/transport failure. */
   onCommandError?: ((message: string) => void) | undefined
+  /** Called after the draft field relayouts (multi-line grow/shrink). */
+  onLayoutChange?: (() => void) | undefined
 }
 
 /**
@@ -81,6 +85,7 @@ export function MobileComposer({
   onStop,
   onCommandSubmit,
   onCommandError,
+  onLayoutChange,
 }: MobileComposerProps): JSX.Element {
   const [modelOpen, setModelOpen] = useState(false)
   const [permissionOpen, setPermissionOpen] = useState(false)
@@ -98,8 +103,23 @@ export function MobileComposer({
     : mobileConversationT('input.send')
 
   const cardRef = useRef<HTMLDivElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
   const hint = composerHint(claim, planActive, goalActive)
   const claimed = claim !== undefined
+  const textareaValue = claimed ? claim.args : draft
+
+  useLayoutEffect(() => {
+    const textarea = textareaRef.current
+    if (textarea === null) return
+    syncMobileComposerTextareaHeight(textarea)
+    onLayoutChange?.()
+  }, [onLayoutChange, textareaValue])
+
+  useEffect(() => {
+    const textarea = textareaRef.current
+    if (textarea === null) return
+    return bindMobileEditableFocusWithoutScroll(textarea)
+  }, [claimed])
   const sendDisabled = primaryStops
     ? stopping
     : sending || (!claimed && draft.trim() === '')
@@ -132,6 +152,7 @@ export function MobileComposer({
               </button>
             </div>
             <textarea
+              ref={textareaRef}
               className={css.composerTextarea}
               value={claim.args}
               placeholder={hint}
@@ -146,6 +167,7 @@ export function MobileComposer({
         )
         : (
           <textarea
+            ref={textareaRef}
             className={css.composerTextarea}
             value={draft}
             placeholder={hint}

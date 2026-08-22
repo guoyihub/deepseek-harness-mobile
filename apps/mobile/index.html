@@ -2,7 +2,7 @@
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-visual" />
     <meta name="color-scheme" content="light dark" />
     <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#151517" media="(prefers-color-scheme: dark)" />
@@ -28,6 +28,9 @@
         var root = document.documentElement
         if (dark) root.setAttribute('data-ds-dark-theme', '')
         root.style.colorScheme = dark ? 'dark' : 'light'
+        if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
+          root.classList.add('mobile-standalone')
+        }
         var color = dark ? '#151517' : '#ffffff'
         var metas = document.querySelectorAll('meta[name="theme-color"]')
         for (var i = 0; i < metas.length; i += 1) metas[i].setAttribute('content', color)

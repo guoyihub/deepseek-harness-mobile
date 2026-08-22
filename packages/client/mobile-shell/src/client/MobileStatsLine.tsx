@@ -17,16 +17,14 @@ export interface MobileStatsLineProps {
  * Render cache hit and token totals on one line under the mobile composer.
  * @param props - token usage projection.
  */
-export function MobileStatsLine({ tokenUsage }: MobileStatsLineProps): JSX.Element {
+export function MobileStatsLine({ tokenUsage }: MobileStatsLineProps): JSX.Element | null {
   const groups = buildStatsGroups(tokenUsage, mobileConversationT)
-  const line = groups.length > 0 ? groups.join(' | ') : undefined
+  if (groups.length === 0) return null
+
+  const line = groups.join(' | ')
 
   return (
-    <div
-      className={css.statsLine}
-      aria-hidden={line === undefined ? true : undefined}
-      {...(line !== undefined ? { 'aria-label': line } : {})}
-    >
+    <div className={css.statsLine} aria-label={line}>
       {groups.map((group, groupIndex) => (
         <Fragment key={group}>
           {groupIndex > 0 && (
