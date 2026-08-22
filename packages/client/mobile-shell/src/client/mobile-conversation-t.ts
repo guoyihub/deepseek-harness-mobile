@@ -6,6 +6,8 @@ type Params = Record<string, unknown>
 
 /** Shorter message-footer copy for narrow mobile screens. */
 const MOBILE_CHAT_OVERRIDES: Record<string, string> = {
+  'copy': '复制',
+  'copied': '已复制',
   'message.ranFor': '{duration}',
   'message.ttft': '首{seconds}s',
   'message.tokensPerSecond': '{tps}/s',

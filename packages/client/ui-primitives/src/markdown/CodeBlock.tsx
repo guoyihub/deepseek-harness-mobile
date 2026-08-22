@@ -4,9 +4,10 @@
 // plain fallback for everything else. Chrome (language banner + copy) matches
 // deepsuite `@deepseek/md` code blocks; token colors stay on `--shiki-*`.
 
-import { useCallback, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import { useCallback, useMemo, useRef, useState, useSyncExternalStore, type MouseEvent, type TouchEvent } from 'react'
 import clsx from 'clsx'
 import { writeClipboard } from '../clipboard.ts'
+import { keepEditableFocus } from '../keep-editable-focus.ts'
 import { grammarLoadCount, highlightToHtml, subscribeGrammarLoaded } from './highlight.ts'
 import css from './CodeBlock.module.css'
 
@@ -45,6 +46,12 @@ export function CodeBlock({ code, lang, className, copyLabel = '复制', copiedL
     })
   }, [copied, trimmed])
 
+  const keepComposerFocus = useCallback((
+    event: MouseEvent<HTMLButtonElement> | TouchEvent<HTMLButtonElement>,
+  ): void => {
+    keepEditableFocus(event.nativeEvent)
+  }, [])
+
   const body = html === undefined
     ? (
       <pre className={css.plain}><code>{trimmed}</code></pre>
@@ -62,7 +69,13 @@ export function CodeBlock({ code, lang, className, copyLabel = '复制', copiedL
         <div className={css.banner}>
           <div className={css.infostring}>{lang ?? ''}</div>
           <div className={css.action}>
-            <button type="button" className={css.copyButton} onClick={onCopy}>
+            <button
+              type="button"
+              className={css.copyButton}
+              onTouchStart={keepComposerFocus}
+              onMouseDown={keepComposerFocus}
+              onClick={onCopy}
+            >
               {copied ? copiedLabel : copyLabel}
             </button>
           </div>

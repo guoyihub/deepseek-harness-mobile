@@ -1,9 +1,10 @@
 // Shared IconActions chrome for user and assistant messages: copy
 // live, optional branch wiring, and an optional date-aware clock.
 
-import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useId, useRef, useState, type MouseEvent, type ReactNode, type TouchEvent } from 'react'
 import {
   IconBranchOutline16, IconCheckOutline16, IconCopyOutline16, Tooltip, writeClipboard,
+  keepEditableFocus, prefersHoverTooltips,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { ChatViewSlotProps } from '../contract/slots.ts'
 import { formatLatencySeconds, formatMessageClock, formatRunDuration, formatTokensPerSecond } from './message-chrome.ts'
@@ -49,6 +50,12 @@ export function MessageIconActions({
 }: MessageIconActionsProps) {
   const day = useCalendarDay()
   const reasonId = useId()
+  const hoverTooltips = prefersHoverTooltips()
+  const keepComposerFocus = useCallback((
+    event: MouseEvent<HTMLButtonElement> | TouchEvent<HTMLButtonElement>,
+  ): void => {
+    keepEditableFocus(event.nativeEvent)
+  }, [])
   // Same success chrome as CodeBlock: a short check swap after the write,
   // gated so re-clicks during the window neither re-copy nor stack timers.
   const [copied, setCopied] = useState(false)
@@ -110,14 +117,21 @@ export function MessageIconActions({
       data-message-actions
     >
       {clock === 'start' ? clockEl : null}
-      <Tooltip label={copied ? t('copied') : t('copy')} side="bottom">
-        <button type="button" className={css.action} aria-label={copied ? t('copied') : t('copy')} onClick={onCopy}>
+      <Tooltip label={copied ? t('copied') : t('copy')} side="bottom" disabled={!hoverTooltips}>
+        <button
+          type="button"
+          className={css.action}
+          aria-label={copied ? t('copied') : t('copy')}
+          onTouchStart={keepComposerFocus}
+          onMouseDown={keepComposerFocus}
+          onClick={onCopy}
+        >
           {copied ? <IconCheckOutline16 /> : <IconCopyOutline16 />}
         </button>
       </Tooltip>
       {extraActions}
       {onBranch !== undefined && (
-        <Tooltip label={branchUnavailable ? t('message.branchUnavailable') : t('message.branch')} side="bottom">
+        <Tooltip label={branchUnavailable ? t('message.branchUnavailable') : t('message.branch')} side="bottom" disabled={!hoverTooltips}>
           {/* Native disabled buttons do not deliver the hover/focus events Tooltip needs. */}
           <button
             type="button"
@@ -126,6 +140,8 @@ export function MessageIconActions({
             aria-disabled={branchUnavailable || undefined}
             aria-describedby={branchUnavailable ? reasonId : undefined}
             data-unavailable={branchUnavailable || undefined}
+            onTouchStart={keepComposerFocus}
+            onMouseDown={keepComposerFocus}
             onClick={branchUnavailable ? undefined : onBranch}
           >
             <IconBranchOutline16 />

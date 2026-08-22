@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   bindMobileEditableFocusWithoutScroll,
   focusMobileEditableWithoutScroll,
+  keepMobileEditableFocus,
   needsMobileFocusWithoutScroll,
 } from '../src/client/mobile-editable-focus.ts'
 
@@ -50,12 +51,36 @@ describe('focusMobileEditableWithoutScroll', () => {
   })
 })
 
+describe('keepMobileEditableFocus', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('suppresses default and refocuses the active editable', () => {
+    const scrollTo = vi.fn()
+    vi.stubGlobal('scrollTo', scrollTo)
+
+    const textarea = document.createElement('textarea')
+    document.body.append(textarea)
+    textarea.focus()
+    const focusSpy = vi.spyOn(textarea, 'focus')
+
+    const preventDefault = vi.fn()
+    keepMobileEditableFocus({ preventDefault })
+
+    expect(preventDefault).toHaveBeenCalled()
+    expect(scrollTo).toHaveBeenCalledWith(0, 0)
+    expect(focusSpy).toHaveBeenCalledWith({ preventScroll: true })
+    textarea.remove()
+  })
+})
+
 describe('bindMobileEditableFocusWithoutScroll', () => {
   afterEach(() => {
     vi.unstubAllGlobals()
   })
 
-  it('focuses with preventScroll on iOS touchstart', () => {
+  it('focuses with preventScroll on iOS touchstart and toggles readonly', () => {
     vi.stubGlobal('navigator', {
       userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)',
       platform: 'iPhone',
@@ -72,11 +97,17 @@ describe('bindMobileEditableFocusWithoutScroll', () => {
     event.preventDefault = preventDefault
 
     bindMobileEditableFocusWithoutScroll(element)
+    expect(element.readOnly).toBe(true)
+
     element.dispatchEvent(event)
 
+    expect(element.readOnly).toBe(false)
     expect(preventDefault).toHaveBeenCalled()
     expect(scrollTo).toHaveBeenCalledWith(0, 0)
     expect(focus).toHaveBeenCalledWith({ preventScroll: true })
+
+    element.dispatchEvent(new Event('blur'))
+    expect(element.readOnly).toBe(true)
   })
 
   it('is a no-op off iOS', () => {
