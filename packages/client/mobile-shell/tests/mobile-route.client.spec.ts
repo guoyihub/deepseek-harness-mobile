@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { SessionId } from '@deepseek-ai/dsh-client-connection/client'
+import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import { mobileRouteFromHash, mobileRouteToHash } from '../src/client/mobile-route.ts'
 
 const sid = (id: string): SessionId => id as SessionId

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { SessionId } from '@deepseek-ai/dsh-client-runtime/client'
+import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import { SessionNodeItem } from '@deepseek-ai/dsh-client-ui-workspace/src/client/rows/Rows.tsx'
 import { mobileWorkspaceT } from '../src/client/mobile-workspace-t.ts'
 

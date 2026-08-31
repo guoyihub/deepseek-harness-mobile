@@ -1,6 +1,6 @@
 import type { KeyboardEvent } from 'react'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import type { SessionId } from '@deepseek-ai/dsh-client-connection/client'
+import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { PermissionSelect as PermissionSelectValue } from '@deepseek-ai/dsh-permission-presets/client'
 import { IconCloseFill14 } from '@deepseek-ai/dsh-client-ui-primitives'
 import { MobileCommandMenu } from './MobileCommandMenu.tsx'

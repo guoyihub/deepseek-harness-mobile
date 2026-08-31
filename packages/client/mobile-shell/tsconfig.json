@@ -12,7 +12,40 @@
       "path": "../connection/tsconfig.client.json"
     },
     {
-      "path": "../runtime"
+      "path": "../../api/gateway/tsconfig.client.json"
+    },
+    {
+      "path": "../../api/session-controller/tsconfig.client.json"
+    },
+    {
+      "path": "../../api/workspace-controller/tsconfig.client.json"
+    },
+    {
+      "path": "../../attachment/attachment"
+    },
+    {
+      "path": "../../interaction/commands"
+    },
+    {
+      "path": "../../core/session"
+    },
+    {
+      "path": "../../llm/llm"
+    },
+    {
+      "path": "../../workspace/workspace"
+    },
+    {
+      "path": "../../util/crypto"
+    },
+    {
+      "path": "../../util/values"
+    },
+    {
+      "path": "../locale"
+    },
+    {
+      "path": "../store"
     },
     {
       "path": "../ui-primitives"
@@ -22,6 +55,12 @@
     },
     {
       "path": "../ui-conversation"
+    },
+    {
+      "path": "../ui-chat"
+    },
+    {
+      "path": "../ui-session"
     },
     {
       "path": "../ui-trajectory"

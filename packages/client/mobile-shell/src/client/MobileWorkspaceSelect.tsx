@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { SessionId, WorkspaceId, WorkspaceView } from '@deepseek-ai/dsh-client-connection/client'
-import { DirectoryBrowseError } from '@deepseek-ai/dsh-client-runtime/client'
-import type { DirectoryListing } from '@deepseek-ai/dsh-client-runtime/client'
+import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import type { WorkspaceId, WorkspaceView } from '@deepseek-ai/dsh-api-workspace-controller/client'
+import { DirectoryBrowseError } from '@deepseek-ai/dsh-client-ui-workspace/src/client/navigation.ts'
+import type { DirectoryListing } from '@deepseek-ai/dsh-host-directory-picker/types'
 import { DirectoryBrowser } from '@deepseek-ai/dsh-client-ui-directory-picker-browse/src/client/DirectoryBrowser.tsx'
 import {
   IconChevronDownOutline14, IconFolderClose16, IconFolderOpen16, IconPlusOutline16, Menu,

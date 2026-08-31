@@ -24,6 +24,9 @@
       "path": "../../attachment/attachment"
     },
     {
+      "path": "../../fs/fs"
+    },
+    {
       "path": "../../util/atomic-write"
     },
     {
@@ -34,6 +37,9 @@
     },
     {
       "path": "../../credentials/credentials"
+    },
+    {
+      "path": "../deepseek-llm-api-extensions"
     },
     {
       "path": "../../util/launch-environment"

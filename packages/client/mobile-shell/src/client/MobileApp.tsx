@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 
-import type { SessionId } from '@deepseek-ai/dsh-client-connection/client'
+import type { SessionId } from '@deepseek-ai/dsh-session/types'
 
 import { Button } from '@deepseek-ai/dsh-client-ui-primitives'
 

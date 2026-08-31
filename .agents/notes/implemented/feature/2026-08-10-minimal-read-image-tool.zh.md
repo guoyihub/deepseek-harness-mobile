@@ -15,7 +15,7 @@ Status: implemented
 - **`read_image` 读取文件系统路径。** 扩展名选择声明的 PNG/JPEG/WebP/GIF 媒体类型，附件存储的魔数与像素校验保持权威。字节沿 `ctx.fs.stat` → 有界 `ctx.fs.readBytes` → `ctx.attachments.saveImage` → `fs/observed` 流动。工具结果包含元数据和一个 `ImageBlock`。
 - **`FileSystem.readBytes(target, signal, maxBytes)`** 是新的必备提供方原语：字节上限放在 seam 上，任何后端都无法无界缓冲文件；stat 大小先短路，随后的流最多多读一个字节以防 stat 之后的增长（`FS_TOO_LARGE`）。
 - **注册随组合条件挂载，执行按路由门禁。** 工具只在 `ctx.inject(['attachments'], …)` 作用域内注册。执行时在 I/O 之前通过 `ctx.llm.resolveModelInfo` 解析调用路由，并要求 `inputModalities` 包含 `image`；能力未知即拒绝。纯文本路由仍可使用此前的持久图片，因为共享 LLM 运行时会在请求组装时把图片投影为占位符。
-- **Code Mode 以带外方式转发图像**：嵌套分派返回规范值（仅限本次执行，不含图像块），并延迟提交一条携带信封和图像的 `user` 角色上下文消息，图片仍会到达下一次请求。
+- **PTC mode 以带外方式转发图像**：嵌套分派返回规范值（仅限本次执行，不含图像块），并延迟提交一条携带信封和图像的 `user` 角色上下文消息，图片仍会到达下一次请求。
 - **llm-replay 模型可以声明 `inputModalities`**，因此 keyless ACP 快照可以覆盖支持图片的结果和纯文本拒绝。
 
 ## 考虑过的替代方案

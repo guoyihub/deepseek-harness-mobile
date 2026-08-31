@@ -1,6 +1,6 @@
 /** Workspace (task-home group) verbs for the mobile shell. */
 
-import type { WorkspaceId } from '@deepseek-ai/dsh-client-connection/client'
+import type { WorkspaceId } from '@deepseek-ai/dsh-workspace/types'
 import { mobileApi } from './mobile-api-client.ts'
 
 /**

@@ -1,19 +1,18 @@
+import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import type { SessionSummary as WireSessionSummary } from '@deepseek-ai/dsh-api-session-controller/types'
 import type {
-  SessionId,
-  SessionSummary as WireSessionSummary,
-  WorkspaceView,
-} from '@deepseek-ai/dsh-client-connection/client'
-import type {
-  PendingInteractionStatus,
   SessionListState,
   SessionSummary as RuntimeSessionSummary,
-} from '@deepseek-ai/dsh-client-runtime/client'
+} from '@deepseek-ai/dsh-api-session-controller/client'
+import type { WorkspaceView } from '@deepseek-ai/dsh-api-workspace-controller/client'
+import type { SessionPendingInteractionBase } from '@deepseek-ai/dsh-client-ui-session/client'
 import {
   deriveGroups,
   UNGROUPED_KEY,
   type GroupNode,
 } from '@deepseek-ai/dsh-client-ui-workspace/src/client/tree.ts'
 import { sessionDisplayTitle } from './session-label.ts'
+import type { PendingInteractionStatus } from './mobile-session-pending-tracker.ts'
 
 /** Default visible session rows per expanded workspace group on mobile task home. */
 export const MOBILE_COLLAPSED_SESSION_LIMIT = 8
@@ -21,10 +20,24 @@ export const MOBILE_COLLAPSED_SESSION_LIMIT = 8
 /** Mobile label for sessions outside every workspace (desktop `group.ungrouped`). */
 export const MOBILE_UNGROUPED_LABEL = '未分组'
 
+/**
+ * Convert pending-status bits into the Workspace-tree interaction map.
+ * @param pendingBySession - live pending-interaction status by session id.
+ */
+export function pendingToInteractions(
+  pendingBySession?: ReadonlyMap<SessionId, PendingInteractionStatus>,
+): Map<SessionId, SessionPendingInteractionBase> {
+  const map = new Map<SessionId, SessionPendingInteractionBase>()
+  if (pendingBySession === undefined) return map
+  for (const [sessionId, kind] of pendingBySession) {
+    map.set(sessionId, { key: kind, kind, sessionId })
+  }
+  return map
+}
+
 /** Map one wire session.list row into the runtime list shape used by {@link deriveGroups}. */
 export function wireToRuntimeSummary(
   item: WireSessionSummary,
-  pendingInteraction?: PendingInteractionStatus,
   completed?: boolean,
 ): RuntimeSessionSummary {
   return {
@@ -33,29 +46,27 @@ export function wireToRuntimeSummary(
     blank: item.blank,
     running: item.running,
     updatedAt: item.updatedAt,
-    ...(pendingInteraction !== undefined ? { pendingInteraction } : {}),
     ...(completed === true ? { completed: true } : {}),
     ...(item.cwd !== undefined ? { cwd: item.cwd } : {}),
-    ...(item.agentPreset !== undefined ? { agentPreset: item.agentPreset } : {}),
     ...(item.origin !== undefined ? { origin: item.origin } : {}),
     ...(item.parentSessionId !== undefined ? { parentId: item.parentSessionId } : {}),
+    ...(item.projections?.values !== undefined
+      ? { projectionValues: item.projections.values }
+      : {}),
   }
 }
 
 /**
  * Build a runtime session list snapshot from mobile wire rows.
  * @param items - raw `session.list` rows.
- * @param pendingBySession - live pending-interaction status by session id.
  * @param completedBySession - local completion reminders by session id.
  */
 export function toSessionListState(
   items: readonly WireSessionSummary[],
-  pendingBySession?: ReadonlyMap<SessionId, PendingInteractionStatus>,
   completedBySession?: ReadonlyMap<SessionId, boolean>,
 ): SessionListState {
   const runtimeItems = items.map(item => wireToRuntimeSummary(
     item,
-    pendingBySession?.get(item.sessionId),
     completedBySession?.get(item.sessionId),
   ))
   return {
@@ -73,7 +84,7 @@ export function toSessionListState(
  * Derive workspace-grouped task rows using the desktop sidebar tree rules.
  * @param sessions - raw `session.list` rows.
  * @param workspaces - durable workspace registry order.
- * @param archivedSessionIds - registry-global archive set from `workspace.list`.
+ * @param archivedSessionIds - registry-global archive set from workspace follow.
  * @param pendingBySession - live pending-interaction status by session id.
  * @param expandedGroups - group keys that should render open; omit to expand every group.
  * @param completedBySession - local completion reminders by session id.
@@ -86,12 +97,18 @@ export function deriveMobileTaskGroups(
   expandedGroups?: readonly string[],
   completedBySession?: ReadonlyMap<SessionId, boolean>,
 ): GroupNode[] {
-  const list = toSessionListState(sessions, pendingBySession, completedBySession)
+  const list = toSessionListState(sessions, completedBySession)
   const expanded = expandedGroups ?? [
     ...workspaces.map(workspace => workspace.workspaceId as string),
     UNGROUPED_KEY,
   ]
-  return deriveGroups(list, workspaces, archivedSessionIds, { expandedGroups: expanded })
+  return deriveGroups(
+    list,
+    workspaces,
+    archivedSessionIds,
+    pendingToInteractions(pendingBySession),
+    { expandedGroups: expanded },
+  )
 }
 
 /**
@@ -107,7 +124,7 @@ export function groupDisplayLabel(group: GroupNode): string {
  * List wire sessions visible in the mobile task home (archived and subagent rows excluded).
  * @param sessions - raw `session.list` rows.
  * @param workspaces - durable workspace registry order.
- * @param archivedSessionIds - registry-global archive set from `workspace.list`.
+ * @param archivedSessionIds - registry-global archive set from workspace follow.
  * @param pendingBySession - live pending-interaction status by session id.
  * @param completedBySession - local completion reminders by session id.
  */

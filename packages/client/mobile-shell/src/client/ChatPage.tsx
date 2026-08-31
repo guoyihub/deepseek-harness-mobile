@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { ContentBlock, SessionId } from '@deepseek-ai/dsh-client-connection/client'
-import type { ChatNode } from '@deepseek-ai/dsh-client-ui-conversation/client'
-import type {} from '@deepseek-ai/dsh-client-ui-conversation/src/client/conversation-nodes/message.ts'
+import type { ContentBlock } from '@deepseek-ai/dsh-llm/types'
+import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import type { ChatNode } from '@deepseek-ai/dsh-client-ui-chat/client'
 import type { TokenUsageProjection } from '@deepseek-ai/dsh-token-meter/client'
 import type { PermissionSelect as PermissionSelectValue } from '@deepseek-ai/dsh-permission-presets/client'
 import type { GoalProjection } from '@deepseek-ai/dsh-goal/client'
@@ -17,10 +17,8 @@ import { MobileStatsLine } from './MobileStatsLine.tsx'
 import { MobileTrajectoryPane } from './MobileTrajectoryPane.tsx'
 import { MobileWorkspaceSelect } from './MobileWorkspaceSelect.tsx'
 import {
-  applyProjectionFrame,
   createProjectionStore,
   projectionValues,
-  seedProjectionStore,
 } from './mobile-session-projections.ts'
 import { useMobileConnection } from './MobileConnectionContext.tsx'
 import { MobileShellLayout } from './MobileShellLayout.tsx'
@@ -72,7 +70,6 @@ export function ChatPage({
   onSessionChange,
 }: ChatPageProps): JSX.Element {
   const {
-    subscribeMux,
     sessions,
     workspaces,
     refreshSessions,
@@ -137,14 +134,12 @@ export function ChatPage({
 
   const projectionMap = useMemo(() => projectionValues(projections), [projections])
 
-  const pending = useSession(snapshot => snapshot.pending)
+  const pending = useSession(() => [])
   const blank = useSession(snapshot => snapshot.blank)
   const chatOrder = useSession(snapshot => snapshot.chat.order)
   const chatNodes = useSession(snapshot => snapshot.chat.nodes)
   const agentSnapshot = useSession(snapshot => ({
     running: snapshot.running,
-    partial: snapshot.partial,
-    runningCalls: snapshot.runningCalls,
     chat: snapshot.chat,
   }))
 
@@ -263,26 +258,13 @@ export function ChatPage({
   const permissions = projectionMap.permissions as PermissionSelectValue | undefined
 
   useEffect(() => {
-    const summary = sessions.find(item => item.sessionId === sessionId)
-    const block = summary?.projections
-    if (block === undefined) return
-    setProjections(current => seedProjectionStore(current, block))
-  }, [sessionId, sessions])
-
-  useEffect(() => {
-    return subscribeMux((frame) => {
-      if (frame.type === 'session/projection' && frame.sessionId === sessionId) {
-        setProjections(current => applyProjectionFrame(current, frame.key, frame.value, frame.seq))
-      }
-    })
-  }, [sessionId, subscribeMux])
-
-  useEffect(() => {
     if (optimisticText === undefined) return
     for (const key of chatOrder) {
       const node = chatNodes.get(key) as ChatNode | undefined
       if (node?.kind !== 'user' && node?.kind !== 'steering') continue
-      if (textFromUserContent(node.data.content) === optimisticText) {
+      const content = 'content' in node.data ? node.data.content : undefined
+      if (!Array.isArray(content)) continue
+      if (textFromUserContent(content as readonly ContentBlock[]) === optimisticText) {
         setOptimisticText(undefined)
         break
       }
@@ -297,15 +279,6 @@ export function ChatPage({
     if (!wasAgentWorkingRef.current) return
     wasAgentWorkingRef.current = false
     void refreshSessions()
-    let cancelled = false
-    void (async () => {
-      const response = await mobileApi.sessions.history({ sessionId, maxMessages: 1 })
-      if (cancelled || !response.result.ok) return
-      const projections = response.result.value.projections
-      if (projections === undefined) return
-      setProjections(current => seedProjectionStore(current, projections))
-    })()
-    return () => { cancelled = true }
   }, [agentWorking, refreshSessions, sending, sessionId])
 
   const onSend = async (): Promise<void> => {

@@ -1,7 +1,7 @@
 import type {
   ModelProviderGroup,
   ModelSelection,
-} from '@deepseek-ai/dsh-client-connection/client'
+} from '@deepseek-ai/dsh-api-session-controller/types'
 
 /**
  * Resolve the user-visible label for one model selection against a provider catalog.
@@ -29,7 +29,7 @@ export function modelSelectionLabel(
 
 /**
  * Resolve a display label from a bare model id when the full catalog is unavailable.
- * @param modelId - model id from `host.describe`.
+ * @param modelId - model id from `session/modelCatalog`.
  * @param groups - optional advisory provider groups.
  * @returns catalog name when found, otherwise the raw model id.
  */

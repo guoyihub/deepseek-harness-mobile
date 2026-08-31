@@ -1,7 +1,7 @@
 /** Resolve Host API base URL for mobile PWA (dev proxy, LAN, tunnel, and native shell). */
 
 import { isLoopbackHostname } from '../loopback-hostname.ts'
-import { readStoredServerUrl } from './mobile-session.ts'
+import { readStoredHostBase, readStoredServerUrl } from './mobile-session.ts'
 
 /**
  * Whether the page runs inside a native Capacitor shell rather than a browser tab.
@@ -102,4 +102,19 @@ export function resolveMobileApiBase(configured: string | undefined): string {
     return normalized
   }
   return normalized
+}
+
+const INTERNAL_ORIGIN = 'http://dsh.internal'
+
+/**
+ * Origin the browser Connection client posts and streams against.
+ * Prefers a stored pairing Host, then a native-shell server URL, then the page origin.
+ */
+export function resolveBrowserConnectionOrigin(): string {
+  const stored = readStoredHostBase()
+  if (stored !== undefined) return resolveMobileApiBase(stored)
+  const server = resolveMobileServerBase()
+  if (server !== undefined) return server
+  const location = (globalThis as { location?: { origin?: string } }).location
+  return location?.origin !== undefined && location.origin !== 'null' ? location.origin : INTERNAL_ORIGIN
 }

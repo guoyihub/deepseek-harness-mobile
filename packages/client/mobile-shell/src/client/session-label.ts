@@ -1,6 +1,8 @@
 /** Display labels for session list rows. */
 
-import type { SessionId, SessionSummary, WorkspaceView } from '@deepseek-ai/dsh-client-connection/client'
+import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import type { SessionSummary } from '@deepseek-ai/dsh-api-session-controller/types'
+import type { WorkspaceView } from '@deepseek-ai/dsh-api-workspace-controller/client'
 
 /** Label when a session belongs to no registered workspace. */
 const UNGROUPED_WORKSPACE_LABEL = '未分组'
@@ -80,10 +82,10 @@ export function sessionChatHeaderMeta(
  * @param hostLabel - optional Host provider or model label.
  */
 function sessionPresetLabel(
-  summary: SessionSummary,
+  _summary: SessionSummary,
   hostLabel?: string,
 ): string | undefined {
-  const preset = summary.agentPreset ?? hostLabel ?? 'DSH'
+  const preset = hostLabel ?? 'DSH'
   if (preset === 'standard') return undefined
   return preset
 }

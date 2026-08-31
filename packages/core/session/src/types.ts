@@ -1,7 +1,7 @@
-import type { Branded } from '@deepseek-ai/dsh-brand'
+import { brandString, type Branded } from '@deepseek-ai/dsh-brand'
 import type {
   AssistantMessage,
-  CallId,
+  ToolCallId,
   LlmCallConfig,
   LlmCallConfigAdapterDefaults,
   LlmFailure,
@@ -11,12 +11,7 @@ import type {
   ToolSchema,
   UserMessage,
 } from '@deepseek-ai/dsh-llm'
-import type { JsonValue } from './json.ts'
-
-// The lossless-JSON payload type belongs to this client-safe face too: a wire
-// contract carrying JSON data must not import the root entry, which merges
-// `ctx.sessions` (a Host-only SessionStore) into every consumer's program.
-export type { JsonValue } from './json.ts'
+import type { JsonValue } from '@deepseek-ai/dsh-util-values'
 
 /** Identifies one session in the store (and its persistence artifacts). */
 export type SessionId = Branded<'SessionId'>
@@ -24,10 +19,10 @@ export type SessionId = Branded<'SessionId'>
 /**
  * Brand a string as a {@link SessionId}.
  * @param id - the raw session id string.
- * @returns the same string, branded (a compile-time cast — no runtime cost).
+ * @returns the same string with the session-id brand.
  */
 export function SessionId(id: string): SessionId {
-  return id as SessionId
+  return brandString<SessionId>(id)
 }
 
 /**
@@ -177,23 +172,6 @@ export interface TurnEndReasonMap {
 export type TurnEndReason = TurnEndReasonMap[keyof TurnEndReasonMap]
 
 /**
- * One entry in an agent's todo list — the unit of the `todo/write`
- * {@link SessionEventMap} event's whole-list snapshot.
- *
- * Deliberately minimal: a human-readable `content` line and a three-state
- * `status`. No id, priority, or `activeForm` — the list is replaced wholesale
- * on every write (last-write-wins), so entries need no stable identity. The
- * three statuses describe the complete portable lifecycle needed by model and
- * UI consumers.
- */
-export interface TodoItem {
-  /** What this task is — a short imperative line shown in the UI. */
-  content: string
-  /** Lifecycle state. `in_progress` marks a task being worked now; parallel work may mark several. */
-  status: 'pending' | 'in_progress' | 'completed'
-}
-
-/**
  * Logged request state outside derived history: call config, system prompt, and
  * tools. The latest full `request/header` snapshot reconstructs it; canonical
  * empty optional fields are absent.
@@ -223,9 +201,11 @@ export interface RequestContext {
  * Why a `request/header` snapshot was appended: `'initial'` — the log's first
  * header (a new conversation); `'resume'` — a loop instance's first request
  * over a log that already has header events (process restart, fork seed);
- * `'change'` — a later request used a different header.
+ * `'change'` — a later request used a different header, with `startsSeries`
+ * preserving a coincident series boundary; `'series'` — an unchanged header
+ * began an explicitly distinct message series or followed a surface replacement.
  */
-export type RequestHeaderReason = 'initial' | 'resume' | 'change'
+export type RequestHeaderReason = 'initial' | 'resume' | 'change' | 'series'
 
 /**
  * The merge-extensible, append-only source of truth for an agent interaction.
@@ -280,7 +260,7 @@ export interface SessionEventMap {
    * JSON string exactly as the model produced it (unparsed). `callId` pairs the
    * call with its `tool/result`.
    */
-  'tool/call': { turn: number; step: number; callId: CallId; name: string; arguments: string }
+  'tool/call': { turn: number; step: number; callId: ToolCallId; name: string; arguments: string }
   /**
    * A completed tool call's model-facing result, optional internal failure
    * identity, and optional tool-private `meta` presentation payload. `meta` is
@@ -299,13 +279,16 @@ export interface SessionEventMap {
     error?: { name: string; code: string }
     meta?: JsonValue
   }
-  /** Whole-list snapshot; latest write wins on replay. Log-only UI state; never derived history. */
-  'todo/write': { todos: TodoItem[] }
   /**
    * Full header for the next request, appended inside its step before dispatch.
    * It is log-only; the latest snapshot reconstructs the request header.
    */
-  'request/header': { header: EpochHeader; reason: RequestHeaderReason }
+  'request/header': {
+    header: EpochHeader
+    reason: RequestHeaderReason
+    /** A changed header also begins a distinct model-message series. */
+    startsSeries?: true
+  }
   /**
    * Route metadata for the next request, logged only when the route or capacity
    * changes. It does not participate in request reconstruction or header equality.
@@ -438,3 +421,10 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
     surfaceOp?: SurfaceOp
   } : object)
 }[T]
+
+declare module '@deepseek-ai/dsh-typert-protocol' {
+  interface RemoteErrorDetailsMap {
+    /** The named Session does not exist; produced by every layer that resolves a SessionId. */
+    'session/not-found': { readonly sessionId: SessionId }
+  }
+}

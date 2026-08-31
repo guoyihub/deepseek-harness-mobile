@@ -1,4 +1,4 @@
-import type { CommandNode } from '@deepseek-ai/dsh-client-runtime/client'
+import type { CommandNode } from '@deepseek-ai/dsh-client-ui-chat/client'
 import { mobileConversationT } from './mobile-locale.ts'
 
 const FEEDBACK_TEXT_REQUIRED = 'Feedback text is required. Usage: /feedback <text>'

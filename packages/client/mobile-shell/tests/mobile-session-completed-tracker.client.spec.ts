@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import type { SessionId, SessionSummary } from '@deepseek-ai/dsh-client-connection/client'
+import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import type { SessionSummary } from '@deepseek-ai/dsh-api-session-controller/types'
 import {
   clearMobileCompletedNotifications,
   mobileSessionCompleted,

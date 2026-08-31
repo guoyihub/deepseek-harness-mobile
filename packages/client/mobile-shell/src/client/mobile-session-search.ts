@@ -1,18 +1,15 @@
 /** Session search helpers aligned with desktop WorkspaceBrowser. */
 
-import type {
-  SessionId,
-  SessionSearchItem,
-  SessionSummary,
-  WorkspaceView,
-} from '@deepseek-ai/dsh-client-connection/client'
-import type { PendingInteractionStatus } from '@deepseek-ai/dsh-client-runtime/client'
+import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import type { SessionSearchItem, SessionSummary } from '@deepseek-ai/dsh-api-session-controller/types'
+import type { WorkspaceView } from '@deepseek-ai/dsh-api-workspace-controller/client'
 import {
   deriveSearchResults,
   type SearchResultNode,
   type SearchResultSet,
 } from '@deepseek-ai/dsh-client-ui-workspace/src/client/tree.ts'
-import { toSessionListState } from './mobile-task-groups.ts'
+import { pendingToInteractions, toSessionListState } from './mobile-task-groups.ts'
+import type { PendingInteractionStatus } from './mobile-session-pending-tracker.ts'
 
 /** Debounce for Host content search, matching desktop WorkspaceBrowser. */
 export const MOBILE_SEARCH_DEBOUNCE_MS = 250
@@ -20,10 +17,7 @@ export const MOBILE_SEARCH_DEBOUNCE_MS = 250
 /** `session.search` wire bound, measured in JavaScript UTF-16 code units. */
 const SEARCH_QUERY_MAX_CODE_UNITS = 500
 
-/**
- * Protocol-owned merged result page size (`SESSION_SEARCH_RESULT_LIMIT`).
- * Keep in sync with `@deepseek-ai/dsh-host-apiproxy/api`.
- */
+/** Protocol-owned merged result page size (`SESSION_SEARCH_RESULT_LIMIT`). */
 export const MOBILE_SEARCH_RESULT_LIMIT = 20
 
 /**
@@ -52,8 +46,8 @@ export interface MobileRemoteSearchState {
 /**
  * Merge local title/workspace matches with Host content hits (desktop rules).
  * @param sessions - wire session.list rows.
- * @param workspaces - workspace.list rows.
- * @param archivedSessionIds - archive set from workspace.list.
+ * @param workspaces - workspace follow rows.
+ * @param archivedSessionIds - archive set from workspace follow.
  * @param query - trimmed sanitized query.
  * @param remote - current remote page (must match query when ready).
  * @param pendingBySession - live pending status by session id.
@@ -69,16 +63,20 @@ export function deriveMobileSearchResults(
   pendingBySession?: ReadonlyMap<SessionId, PendingInteractionStatus>,
   completedBySession?: ReadonlyMap<SessionId, boolean>,
 ): SearchResultSet {
-  const list = toSessionListState(sessions, pendingBySession, completedBySession)
+  const list = toSessionListState(sessions, completedBySession)
   const currentRemote = remote.query === query
     ? remote
     : { query, status: 'loading' as const, items: [], hasMore: false }
+  const content = currentRemote.status === 'ready'
+    ? { items: currentRemote.items, hasMore: currentRemote.hasMore }
+    : { items: [], hasMore: false }
   return deriveSearchResults(
     list,
     workspaces,
     query,
     archivedSessionIds,
-    currentRemote,
+    pendingToInteractions(pendingBySession),
+    content,
     MOBILE_SEARCH_RESULT_LIMIT,
   )
 }

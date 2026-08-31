@@ -1,6 +1,7 @@
 /** Mobile pairing HTTP helpers (plain JSON, not RPC envelope). */
 
 import { normalizeHostBaseUrl, resolveMobileApiBase } from '@deepseek-ai/dsh-client-connection/client'
+import { randomUUID } from '@deepseek-ai/dsh-util-crypto'
 
 /** Parsed QR or manual pairing input. */
 export interface PairingInput {
@@ -309,18 +310,18 @@ export async function pairShortCodeWithPolling(
 }
 
 /**
- * Verify connectivity with host.describe after pairing.
+ * Verify connectivity with session/modelCatalog after pairing.
  * @param baseUrl - Host base URL.
  * @param sessionToken - issued opaque token.
  */
 export async function verifyHostDescribe(baseUrl: string, sessionToken: string): Promise<void> {
   const message = {
     type: 'client-request',
-    rpcId: crypto.randomUUID(),
-    method: 'host.describe',
-    payload: {},
+    rpcId: randomUUID(),
+    method: 'session/modelCatalog',
+    payload: { args: {} },
   }
-  const response = await globalThis.fetch(`${resolveMobileApiBase(baseUrl)}/api/host.describe`, {
+  const response = await globalThis.fetch(`${resolveMobileApiBase(baseUrl)}/api/session/modelCatalog`, {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
@@ -328,7 +329,7 @@ export async function verifyHostDescribe(baseUrl: string, sessionToken: string):
     },
     body: JSON.stringify(message),
   })
-  if (!response.ok) throw new Error(`host.describe 失败: HTTP ${String(response.status)}`)
+  if (!response.ok) throw new Error(`session/modelCatalog 失败: HTTP ${String(response.status)}`)
 }
 
 function sleep(ms: number): Promise<void> {

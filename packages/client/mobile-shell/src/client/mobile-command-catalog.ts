@@ -1,4 +1,4 @@
-import type { CommandEntry } from '@deepseek-ai/dsh-client-connection/client'
+import type { CommandDescriptor } from '@deepseek-ai/dsh-commands/types'
 
 /**
  * Composer surface opened instead of a bare slash execute — mirrors desktop
@@ -7,7 +7,7 @@ import type { CommandEntry } from '@deepseek-ai/dsh-client-connection/client'
 export type MobileCommandSurface = 'model' | 'permission'
 
 /** Slash-command catalog shown in the mobile composer menu. */
-export interface MobileCommandEntry extends CommandEntry {
+export interface MobileCommandEntry extends CommandDescriptor {
   /** When set, the + menu opens this composer surface instead of executing. */
   surface?: MobileCommandSurface
 }
@@ -55,7 +55,7 @@ export function findMobileCommand(name: string): MobileCommandEntry | undefined 
  * Whether the command stays in the composer for arguments (desktop leadingInput).
  * @param command - catalog entry.
  */
-export function isLeadingInputCommand(command: CommandEntry): boolean {
+export function isLeadingInputCommand(command: CommandDescriptor): boolean {
   return command.input !== undefined
 }
 

@@ -1,4 +1,4 @@
-import type { SessionId } from '@deepseek-ai/dsh-client-connection/client'
+import type { SessionId } from '@deepseek-ai/dsh-session/types'
 
 /** Mobile shell route discriminant. */
 export type MobileRoute =

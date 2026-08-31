@@ -1,26 +1,14 @@
 /**
- * Track session-list pending-interaction status from mux frames on mobile.
- * Mirrors {@link SessionManager}'s manager-owned sidebar state for sessions
- * that may never instantiate a runtime {@link Session}.
+ * Track session-list pending-interaction status. Live Host mux frames no longer
+ * exist; queue/approval waits arrive through Session control and chat assembly.
  */
-import type { MuxFrame, SessionId } from '@deepseek-ai/dsh-client-connection/client'
-import type { PendingInteractionStatus } from '@deepseek-ai/dsh-client-runtime/client'
+import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import type { SessionPendingInteractionStatus } from '@deepseek-ai/dsh-client-ui-workspace/src/client/tree.ts'
+
+/** Sidebar pending-interaction kinds shown on mobile task-home rows. */
+export type PendingInteractionStatus = SessionPendingInteractionStatus
 
 const bySession = new Map<SessionId, Map<string, PendingInteractionStatus>>()
-
-/** Match ui-user-questions plan-review routing at the wire boundary. */
-function questionInteractionStatus(
-  questions: Extract<MuxFrame, { type: 'question/requested' }>['questions'],
-): PendingInteractionStatus {
-  if (questions.length !== 1) return 'question'
-  const question = questions[0] as typeof questions[number]
-  const intent = question.intent
-  if (intent?.kind !== 'plan-review' || question.detail === undefined) return 'question'
-  if (question.multiSelect === true) return 'question'
-  const options = question.options ?? []
-  if (options.length > 2) return 'question'
-  return options.some(option => option.label === intent.approve) ? 'plan-review' : 'question'
-}
 
 function track(sessionId: SessionId, key: string, status: PendingInteractionStatus): void {
   let interactions = bySession.get(sessionId)
@@ -28,7 +16,6 @@ function track(sessionId: SessionId, key: string, status: PendingInteractionStat
     interactions = new Map()
     bySession.set(sessionId, interactions)
   }
-  if (interactions.get(key) === status) return
   interactions.set(key, status)
 }
 
@@ -39,38 +26,21 @@ function resolve(sessionId: SessionId, key: string): void {
 }
 
 /**
- * Apply one mux frame to the mobile pending-interaction tracker.
- * @param sessionId - owning session id.
- * @param frame - mux payload.
- * @param rpcId - envelope rpc id for question requests.
- * @returns whether the tracker mutated.
+ * Record or clear one pending interaction without a mux frame.
+ * @param sessionId - owning session.
+ * @param key - interaction identity.
+ * @param status - status to store; omit to clear.
  */
-export function applyMobilePendingMuxFrame(
+export function setMobilePendingInteraction(
   sessionId: SessionId,
-  frame: MuxFrame,
-  rpcId: string,
-): boolean {
-  const before = bySession.get(sessionId)?.size ?? 0
-  switch (frame.type) {
-    case 'approval/requested':
-      track(sessionId, `a:${frame.approvalId}`, 'approval')
-      break
-    case 'approval/resolved':
-      resolve(sessionId, `a:${frame.approvalId}`)
-      break
-    case 'question/requested':
-      track(sessionId, `q:${rpcId}`, questionInteractionStatus(frame.questions))
-      break
-    case 'question/resolved':
-      resolve(sessionId, `q:${frame.questionRpcId}`)
-      break
-    default:
-      return false
-  }
-  return (bySession.get(sessionId)?.size ?? 0) !== before
+  key: string,
+  status: PendingInteractionStatus | undefined,
+): void {
+  if (status === undefined) resolve(sessionId, key)
+  else track(sessionId, key, status)
 }
 
-/** Drop every tracked pending interaction (mux generation reset). */
+/** Drop every tracked pending interaction (connection generation reset). */
 export function clearMobilePendingInteractions(): void {
   bySession.clear()
 }

@@ -1,6 +1,8 @@
 /** Workspace connect helpers aligned with desktop WorkspacesService.connectWorkspace. */
 
-import type { SessionId, SessionSummary, WorkspaceId, WorkspaceView } from '@deepseek-ai/dsh-client-connection/client'
+import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import type { SessionSummary } from '@deepseek-ai/dsh-api-session-controller/types'
+import type { WorkspaceId, WorkspaceView } from '@deepseek-ai/dsh-api-workspace-controller/client'
 
 /**
  * Resolve the most recently active workspace (same tie-break as desktop).

@@ -67,22 +67,6 @@ export default defineConfig({
         replacement: src('../../packages/client/connection/src/client/index.ts'),
       },
       {
-        find: /^@deepseek-ai\/dsh-host-apiproxy\/client$/,
-        replacement: src('../../packages/host/apiproxy/src/fetch/client.ts'),
-      },
-      {
-        find: /^@deepseek-ai\/dsh-host-apiproxy\/api\/(.*)$/,
-        replacement: src('../../packages/host/apiproxy/src/api/$1'),
-      },
-      {
-        find: /^@deepseek-ai\/dsh-client-runtime\/client$/,
-        replacement: src('../../packages/client/runtime/src/client/index.ts'),
-      },
-      {
-        find: /^@deepseek-ai\/dsh-client-runtime\/src\/(.*)$/,
-        replacement: src('../../packages/client/runtime/src/$1'),
-      },
-      {
         find: /^@deepseek-ai\/dsh-client-ui-trajectory\/src\/(.*)$/,
         replacement: src('../../packages/client/ui-trajectory/src/$1'),
       },

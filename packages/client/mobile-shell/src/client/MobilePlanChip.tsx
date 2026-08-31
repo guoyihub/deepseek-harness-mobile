@@ -1,4 +1,4 @@
-import type { SessionId } from '@deepseek-ai/dsh-client-connection/client'
+import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import { IconCloseFill14 } from '@deepseek-ai/dsh-client-ui-primitives'
 import { mobileApi } from './mobile-api-client.ts'
 import { mobileConversationT } from './mobile-locale.ts'

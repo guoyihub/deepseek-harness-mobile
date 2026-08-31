@@ -1,6 +1,6 @@
 /** Locale seat for desktop Chat Node views mounted in the mobile shell. */
 
-import { zh } from '@deepseek-ai/dsh-client-ui-conversation/src/client/locales.ts'
+import { zh as chatZh } from '@deepseek-ai/dsh-client-ui-chat/src/client/locale.ts'
 
 type Params = Record<string, unknown>
 
@@ -21,7 +21,7 @@ const MOBILE_CHAT_OVERRIDES: Record<string, string> = {
  * @param params - optional `{name}` placeholders.
  */
 export function mobileChatT(key: string, params?: Params): string {
-  const template = MOBILE_CHAT_OVERRIDES[key] ?? (zh as Record<string, string>)[key] ?? key
+  const template = MOBILE_CHAT_OVERRIDES[key] ?? (chatZh as Record<string, string>)[key] ?? key
   if (params === undefined) return template
   return Object.entries(params).reduce(
     (text, [name, value]) => text.replace(`{${name}}`, String(value)),

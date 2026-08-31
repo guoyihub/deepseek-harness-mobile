@@ -4,28 +4,29 @@
  * tools, turn-error, …).
  */
 import { memo, useMemo, type ReactNode } from 'react'
-import type { HostDescription, SessionId } from '@deepseek-ai/dsh-client-connection/client'
-import type { ConversationSnapshot, UseProjection } from '@deepseek-ai/dsh-client-runtime/client'
+import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import type { UseProjection } from '@deepseek-ai/dsh-api-session-controller/client'
 import { bindSnapshotSelector } from '@deepseek-ai/dsh-client-ui-renderer/src/client/bind.ts'
 import type { SnapshotSelectorHook } from '@deepseek-ai/dsh-client-ui-slots'
 import { JsonBlock } from '@deepseek-ai/dsh-client-ui-primitives'
+import type { ChatNode } from '@deepseek-ai/dsh-client-ui-chat/client'
 import type {
-  ChatNode, ChatNodeOwnerProps, ChatNodeViewProps, UseChatNodeTurnData,
-} from '@deepseek-ai/dsh-client-ui-conversation/client'
+  ChatNodeOwnerProps, ChatNodeViewProps, UseChatNodeTurnData,
+} from '@deepseek-ai/dsh-client-ui-chat/src/client/contract/slots.ts'
 // Ensure ChatNodeDataMap augmentations from each Conversation Node package are in scope.
-import type {} from '@deepseek-ai/dsh-client-ui-conversation/src/client/conversation-nodes/assistant.ts'
-import type {} from '@deepseek-ai/dsh-client-ui-conversation/src/client/conversation-nodes/command.ts'
-import type {} from '@deepseek-ai/dsh-client-ui-conversation/src/client/conversation-nodes/compaction.ts'
-import type {} from '@deepseek-ai/dsh-client-ui-conversation/src/client/conversation-nodes/fallback.ts'
-import type {} from '@deepseek-ai/dsh-client-ui-conversation/src/client/conversation-nodes/message.ts'
-import type {} from '@deepseek-ai/dsh-client-ui-conversation/src/client/conversation-nodes/retry.ts'
-import type {} from '@deepseek-ai/dsh-client-ui-conversation/src/client/conversation-nodes/tool.ts'
-import type {} from '@deepseek-ai/dsh-client-ui-conversation/src/client/conversation-nodes/turn-error.ts'
-import type {} from '@deepseek-ai/dsh-client-ui-conversation/src/client/conversation-nodes/turn-max-tokens.ts'
-import type {} from '@deepseek-ai/dsh-client-ui-conversation/src/client/conversation-nodes/turn-tail.ts'
-import { AssistantNodeView } from '@deepseek-ai/dsh-client-ui-conversation/src/client/chat/AssistantNodeView.tsx'
-import { CompactionCommandCard } from '@deepseek-ai/dsh-client-ui-conversation/src/client/chat/CompactionCommandCard.tsx'
-import { GenericCommandCard } from '@deepseek-ai/dsh-client-ui-conversation/src/client/chat/GenericCommandCard.tsx'
+import type {} from '@deepseek-ai/dsh-client-ui-chat/src/client/conversation-nodes/assistant.ts'
+import type {} from '@deepseek-ai/dsh-client-ui-chat/src/client/conversation-nodes/command.ts'
+import type {} from '@deepseek-ai/dsh-client-ui-chat/src/client/conversation-nodes/compaction.ts'
+import type {} from '@deepseek-ai/dsh-client-ui-chat/src/client/conversation-nodes/fallback.ts'
+import type {} from '@deepseek-ai/dsh-client-ui-chat/src/client/conversation-nodes/message.ts'
+import type {} from '@deepseek-ai/dsh-client-ui-chat/src/client/conversation-nodes/retry.ts'
+import type {} from '@deepseek-ai/dsh-client-ui-chat/src/client/conversation-nodes/tool.ts'
+import type {} from '@deepseek-ai/dsh-client-ui-chat/src/client/conversation-nodes/turn-error.ts'
+import type {} from '@deepseek-ai/dsh-client-ui-chat/src/client/conversation-nodes/turn-max-tokens.ts'
+import type {} from '@deepseek-ai/dsh-client-ui-chat/src/client/conversation-nodes/turn-tail.ts'
+import { AssistantNodeView } from '@deepseek-ai/dsh-client-ui-chat/src/client/chat/AssistantNodeView.tsx'
+import { CompactionCommandCard } from '@deepseek-ai/dsh-client-ui-chat/src/client/chat/CompactionCommandCard.tsx'
+import { GenericCommandCard } from '@deepseek-ai/dsh-client-ui-chat/src/client/chat/GenericCommandCard.tsx'
 import {
   CompactionNodeView,
   ContextMessageNodeView,
@@ -34,9 +35,9 @@ import {
   TurnMaxTokensNodeView,
   UnknownNodeView,
   UserMessageNodeView,
-} from '@deepseek-ai/dsh-client-ui-conversation/src/client/chat/MessageItem.tsx'
-import { TurnTailNodeView } from '@deepseek-ai/dsh-client-ui-conversation/src/client/chat/TurnTailNodeView.tsx'
-import chatCss from '@deepseek-ai/dsh-client-ui-conversation/src/client/chat/ChatView.module.css'
+} from '@deepseek-ai/dsh-client-ui-chat/src/client/chat/MessageItem.tsx'
+import { TurnTailNodeView } from '@deepseek-ai/dsh-client-ui-chat/src/client/chat/TurnTailNodeView.tsx'
+import chatCss from '@deepseek-ai/dsh-client-ui-chat/src/client/chat/ChatView.module.css'
 import { ToolCallTree } from '@deepseek-ai/dsh-client-ui-tool/src/client/tool/ToolCallTree.tsx'
 import type { ToolCallOwnerProps } from '@deepseek-ai/dsh-client-ui-tool/src/client/contract/slots.ts'
 import { GenericToolCard } from '@deepseek-ai/dsh-client-ui-tool/src/client/tool/toolviews/GenericToolCard.tsx'
@@ -48,6 +49,8 @@ import {
 import { localizeCommandNode } from './mobile-command-outcome.ts'
 import { mobileChatT } from './mobile-conversation-t.ts'
 import { useMobileConnection } from './MobileConnectionContext.tsx'
+import type { HostDescription } from './mobile-host-description.ts'
+import type { MobileSessionView } from './useMobileSession.ts'
 
 type RoutedChatNodeOwner = ChatNodeOwnerProps & { readonly node: ChatNode }
 
@@ -58,7 +61,7 @@ export interface MobileChatNodeSeatProps {
   /** Active Host session id. */
   sessionId: SessionId
   /** uSES selector over the conversation snapshot. */
-  useSession: SnapshotSelectorHook<ConversationSnapshot>
+  useSession: SnapshotSelectorHook<MobileSessionView>
   /** Framework projection reader (absent on mobile). */
   useProjection: UseProjection
 }

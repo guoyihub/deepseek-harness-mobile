@@ -2,7 +2,8 @@
  * Track session-list completion reminders from wire running transitions.
  * Mirrors {@link SessionManager}'s manager-owned sidebar state on mobile.
  */
-import type { SessionId, SessionSummary } from '@deepseek-ai/dsh-client-connection/client'
+import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import type { SessionSummary } from '@deepseek-ai/dsh-api-session-controller/types'
 
 const completedNotifications = new Set<SessionId>()
 /** Last-observed running bits per session; the true→false edge arms reminders. */

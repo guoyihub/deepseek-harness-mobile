@@ -1,7 +1,8 @@
 /** Framework session-kit stubs for mounting desktop slot components on mobile. */
 
 import { useMemo, type ReactNode } from 'react'
-import { createSnapshotStore, type UseProjection } from '@deepseek-ai/dsh-client-runtime/client'
+import { createSnapshotStore } from '@deepseek-ai/dsh-client-store'
+import type { UseProjection } from '@deepseek-ai/dsh-api-session-controller/client'
 import { bindSnapshotSelector } from '@deepseek-ai/dsh-client-ui-renderer/src/client/bind.ts'
 import type { SessionAreaProps } from '@deepseek-ai/dsh-client-ui-slots'
 

@@ -71,7 +71,7 @@ export interface StoredImageAttachment {
 export interface ImageRequestPolicy {
   /** Maximum width multiplied by height after aspect-preserving projection. */
   maxPixels: number
-  /** Encoded-byte cap before base64 expansion or Files API upload. */
+  /** Encoded-byte target before base64 expansion or Files API upload; the smallest quality-ladder output is kept when no quality fits. */
   maxBytes: number
 }
 

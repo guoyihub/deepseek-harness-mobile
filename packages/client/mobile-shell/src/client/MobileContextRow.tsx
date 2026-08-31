@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import type { ContentBlock } from '@deepseek-ai/dsh-client-connection/client'
-import type { ContextProvenanceView, KnownContextForm } from '@deepseek-ai/dsh-client-runtime/src/client/sessions/context-provenance.ts'
+import type { ContentBlock } from '@deepseek-ai/dsh-llm/types'
+import type { ContextProvenanceView, KnownContextForm } from '@deepseek-ai/dsh-client-ui-conversation/client'
 import { DisclosureRow, IconBrowseOutline16 } from '@deepseek-ai/dsh-client-ui-primitives'
 import { mobileConversationT } from './mobile-locale.ts'
 import css from './mobile-shell.module.css'

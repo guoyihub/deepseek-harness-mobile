@@ -9,24 +9,19 @@ import {
   type ReactNode,
 } from 'react'
 import {
-  ConnectionController,
   clearPairingStorage,
   type ConnectionState,
-  type HostDescription,
-  type HostFrame,
-  type MuxFrame,
-  type RpcRequest,
-  type SessionId,
-  type SessionSummary,
-  type WorkspaceId,
-  type WorkspaceView,
 } from '@deepseek-ai/dsh-client-connection/client'
-import type { PendingInteractionStatus } from '@deepseek-ai/dsh-client-runtime/client'
+import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import type { SessionSummary } from '@deepseek-ai/dsh-api-session-controller/types'
+import type { WorkspaceId, WorkspaceView } from '@deepseek-ai/dsh-api-workspace-controller/client'
+import type { WorkspaceFollowFrame } from '@deepseek-ai/dsh-api-workspace-controller/types'
 import { mobileApi } from './mobile-api-client.ts'
+import type { HostDescription } from './mobile-host-description.ts'
 import {
-  applyMobilePendingMuxFrame,
   clearMobilePendingInteractions,
   mobilePendingInteraction,
+  type PendingInteractionStatus,
 } from './mobile-session-pending-tracker.ts'
 import {
   clearMobileCompletedNotifications,
@@ -46,31 +41,25 @@ import {
   rememberMobileConnection,
 } from '@deepseek-ai/dsh-client-connection/client'
 import {
-  isMobileSessionRoutedFrame,
-  routeMobileMuxEnvelope,
-} from './mobile-session-mux-buffer.ts'
-
-function frameSessionId(frame: MuxFrame): SessionId | undefined {
-  if ('sessionId' in frame && typeof frame.sessionId === 'string') {
-    return frame.sessionId as SessionId
-  }
-  return undefined
-}
+  openMobileWorkspaceFollow,
+  startMobileConnectionLoop,
+} from './mobile-stream-runtime.ts'
+import type { ConnectionController } from '@deepseek-ai/dsh-client-connection/client'
 
 interface MobileConnectionContextValue {
   /** Whether pairing storage contains a live session token. */
   paired: boolean
   /** Stored Host base URL for display. */
   hostBase: string | undefined
-  /** Latest host.describe snapshot after connect. */
+  /** Latest Host facts after connect. */
   hostDescription: HostDescription | undefined
   /** Coarse connection state from the pump loop. */
   connectionState: ConnectionState | null
   /** Cached session.list rows. */
   sessions: readonly SessionSummary[]
-  /** Cached workspace.list rows in Host registry order. */
+  /** Cached workspace follow rows in Host registry order. */
   workspaces: readonly WorkspaceView[]
-  /** Registry-global archived session ids from workspace.list. */
+  /** Registry-global archived session ids from workspace follow. */
   archivedSessionIds: readonly SessionId[]
   /** Whether session.list is in flight. */
   sessionsLoading: boolean
@@ -90,26 +79,49 @@ interface MobileConnectionContextValue {
   markSessionViewed: (sessionId: SessionId | undefined) => void
   /** Create a new session and refresh the list. */
   createSession: (workspaceId?: WorkspaceId) => Promise<SessionId | undefined>
-  /** Subscribe to mux frames for chat streaming. */
-  subscribeMux: (listener: (frame: MuxFrame) => void) => () => void
-  /** Subscribe to mux envelopes (rpcId + frame) for Session.handleMuxEnvelope. */
-  subscribeMuxEnvelope: (listener: (envelope: RpcRequest<MuxFrame>) => void) => () => void
   /** Clear pairing storage and stop the connection loop. */
   disconnect: () => void
   /** Re-read pairing storage after a successful pair flow. */
   reloadPairing: () => void
-  /** Refresh the cached host.describe snapshot. */
+  /** Refresh the cached Host model catalog snapshot. */
   refreshHostDescription: () => Promise<void>
 }
-
-/** Consecutive failed generations after which mobile pairing is dropped. */
-const MOBILE_RECONNECT_MAX_ATTEMPTS = 3
 
 const MobileConnectionContext = createContext<MobileConnectionContextValue | undefined>(undefined)
 
 function isUnauthorizedError(message: string): boolean {
   const lower = message.toLowerCase()
   return lower.includes('401') || lower.includes('unauthorized') || lower.includes('forbidden')
+}
+
+function applyWorkspaceFrame(
+  frame: WorkspaceFollowFrame,
+  workspaces: readonly WorkspaceView[],
+): { workspaces: readonly WorkspaceView[]; archivedSessionIds?: readonly SessionId[] } {
+  switch (frame.type) {
+    case 'baseline':
+      return {
+        workspaces: frame.value.items,
+        archivedSessionIds: frame.value.archivedSessionIds,
+      }
+    case 'upsert': {
+      const next = workspaces.filter(item => item.workspaceId !== frame.workspace.workspaceId)
+      return { workspaces: [...next, frame.workspace] }
+    }
+    case 'remove':
+      return { workspaces: workspaces.filter(item => item.workspaceId !== frame.workspaceId) }
+    case 'order': {
+      const byId = new Map(workspaces.map(item => [item.workspaceId, item]))
+      return {
+        workspaces: frame.workspaceIds.flatMap((id) => {
+          const row = byId.get(id)
+          return row === undefined ? [] : [row]
+        }),
+      }
+    }
+    case 'archived':
+      return { workspaces, archivedSessionIds: frame.archivedSessionIds }
+  }
 }
 
 /**
@@ -128,9 +140,8 @@ export function MobileConnectionProvider({ children }: { children: ReactNode }):
   const [error, setError] = useState<string | undefined>(undefined)
   const [revoked, setRevoked] = useState(false)
   const [pendingRevision, setPendingRevision] = useState(0)
-  const muxListeners = useRef(new Set<(frame: MuxFrame) => void>())
-  const muxEnvelopeListeners = useRef(new Set<(envelope: RpcRequest<MuxFrame>) => void>())
   const controllerRef = useRef<ConnectionController | undefined>(undefined)
+  const workspaceAbort = useRef<AbortController | undefined>(undefined)
 
   const handleAuthFailure = useCallback((message: string): void => {
     if (!isUnauthorizedError(message)) return
@@ -159,11 +170,15 @@ export function MobileConnectionProvider({ children }: { children: ReactNode }):
   }, [])
 
   const refreshHostDescription = useCallback(async (): Promise<void> => {
-    const response = await mobileApi.host.describe({})
-    if (response.result.ok) {
-      setHostDescription(response.result.value)
-    }
-  }, [])
+    const home = hostDescription?.home ?? ''
+    const response = await mobileApi.sessions.modelCatalog()
+    if (!response.result.ok) return
+    setHostDescription({
+      home,
+      provider: response.result.value.default.provider,
+      model: response.result.value.default.model,
+    })
+  }, [hostDescription?.home])
 
   const getPendingInteraction = useCallback((
     sessionId: SessionId,
@@ -188,17 +203,12 @@ export function MobileConnectionProvider({ children }: { children: ReactNode }):
   const refreshSessions = useCallback(async (): Promise<void> => {
     if (readSessionToken() === undefined) {
       setSessions([])
-      setWorkspaces([])
-      setArchivedSessionIds([])
       return
     }
     setSessionsLoading(true)
     setError(undefined)
     try {
-      const [sessionResponse, workspaceResponse] = await Promise.all([
-        mobileApi.sessions.list({}),
-        mobileApi.workspace.list({}),
-      ])
+      const sessionResponse = await mobileApi.sessions.list({})
       if (!sessionResponse.result.ok) {
         handleAuthFailure(sessionResponse.result.error.message)
         if (!isUnauthorizedError(sessionResponse.result.error.message)) {
@@ -206,16 +216,7 @@ export function MobileConnectionProvider({ children }: { children: ReactNode }):
         }
         return
       }
-      if (!workspaceResponse.result.ok) {
-        handleAuthFailure(workspaceResponse.result.error.message)
-        if (!isUnauthorizedError(workspaceResponse.result.error.message)) {
-          setError(workspaceResponse.result.error.message)
-        }
-        return
-      }
-      setSessions(sessionResponse.result.value.items)
-      setWorkspaces(workspaceResponse.result.value.items)
-      setArchivedSessionIds(workspaceResponse.result.value.archivedSessionIds)
+      setSessions(sessionResponse.result.value.items as readonly SessionSummary[])
     } catch (loadError) {
       const message = loadError instanceof Error ? loadError.message : String(loadError)
       handleAuthFailure(message)
@@ -272,19 +273,9 @@ export function MobileConnectionProvider({ children }: { children: ReactNode }):
     return sessionId
   }, [archivedSessionIds, handleAuthFailure, prependBlankSession, refreshSessions, sessions, workspaces])
 
-  const subscribeMux = useCallback((listener: (frame: MuxFrame) => void): (() => void) => {
-    muxListeners.current.add(listener)
-    return () => { muxListeners.current.delete(listener) }
-  }, [])
-
-  const subscribeMuxEnvelope = useCallback((
-    listener: (envelope: RpcRequest<MuxFrame>) => void,
-  ): (() => void) => {
-    muxEnvelopeListeners.current.add(listener)
-    return () => { muxEnvelopeListeners.current.delete(listener) }
-  }, [])
-
   const disconnect = useCallback((): void => {
+    workspaceAbort.current?.abort()
+    workspaceAbort.current = undefined
     controllerRef.current?.stop()
     controllerRef.current = undefined
     setPaired(false)
@@ -298,79 +289,81 @@ export function MobileConnectionProvider({ children }: { children: ReactNode }):
     setError(undefined)
   }, [])
 
-  const dropPairingAfterReconnect = useCallback((): void => {
-    clearPairingStorage()
-    disconnect()
-    setError('多次重连失败，请重新扫码连接')
-  }, [disconnect])
-
   useEffect(() => {
     if (!paired) {
+      workspaceAbort.current?.abort()
+      workspaceAbort.current = undefined
       controllerRef.current?.stop()
       controllerRef.current = undefined
       return
     }
-    const controller = new ConnectionController(mobileApi, {
-      onMuxEnvelope: (envelope: RpcRequest<MuxFrame>) => {
-        const frame = envelope.payload
-        const sid = frameSessionId(frame)
-        if (sid !== undefined && applyMobilePendingMuxFrame(sid, frame, envelope.rpcId)) {
-          setPendingRevision(revision => revision + 1)
-        }
-        if (sid !== undefined && isMobileSessionRoutedFrame(frame)) {
-          routeMobileMuxEnvelope(sid, envelope)
-        }
-        for (const listener of muxListeners.current) listener(envelope.payload)
-        for (const listener of muxEnvelopeListeners.current) listener(envelope)
-      },
-      onHostEnvelope: (envelope: RpcRequest<HostFrame>) => {
-        const frame = envelope.payload
-        if (frame.type === 'host/session-status') {
-          setSessions(current => current.map(item =>
-            item.sessionId === frame.sessionId ? { ...item, running: frame.running } : item,
-          ))
-          return
-        }
-        if (frame.type === 'host/archived-sessions-changed') {
-          setArchivedSessionIds(frame.archivedSessionIds)
-        }
-      },
-      onConnected: (description: HostDescription) => {
+    const controller = startMobileConnectionLoop({
+      onConnected: (host) => {
         clearMobilePendingInteractions()
         clearMobileCompletedNotifications()
         setPendingRevision(revision => revision + 1)
-        setHostDescription(description)
+        setHostDescription({ home: host.home })
         const sessionToken = readSessionToken()
-        const hostBase = readStoredHostBase()
+        const storedHost = readStoredHostBase()
         const fingerprint = readStoredFingerprint()
         const deviceId = readStoredDeviceId()
         if (
           sessionToken !== undefined
-          && hostBase !== undefined
+          && storedHost !== undefined
           && fingerprint !== undefined
           && deviceId !== undefined
         ) {
           rememberMobileConnection({
             fingerprint,
-            hostBase,
+            hostBase: storedHost,
             sessionToken,
             deviceId,
-            hostDisplayName: description.provider ?? 'DSH Host',
+            hostDisplayName: 'DSH Host',
           })
         }
         void refreshSessions()
+        void (async () => {
+          const catalog = await mobileApi.sessions.modelCatalog()
+          if (catalog.result.ok) {
+            setHostDescription({
+              home: host.home,
+              provider: catalog.result.value.default.provider,
+              model: catalog.result.value.default.model,
+            })
+          }
+        })()
         prefetchMobileConversationRuntime()
+        workspaceAbort.current?.abort()
+        const follow = new AbortController()
+        workspaceAbort.current = follow
+        void (async () => {
+          try {
+            for await (const raw of openMobileWorkspaceFollow(follow.signal)) {
+              const frame = raw as WorkspaceFollowFrame
+              if (typeof frame !== 'object' || frame === null || !('type' in frame)) continue
+              setWorkspaces((current) => {
+                const next = applyWorkspaceFrame(frame, current)
+                if (next.archivedSessionIds !== undefined) {
+                  setArchivedSessionIds(next.archivedSessionIds)
+                }
+                return next.workspaces
+              })
+            }
+          } catch {
+            // Generation abort or carrier loss; Connection reconnects the mux.
+          }
+        })()
       },
-      onStateChange: (state: ConnectionState) => { setConnectionState(state) },
-      onGiveUp: dropPairingAfterReconnect,
-    }, { maxAttempts: MOBILE_RECONNECT_MAX_ATTEMPTS })
+      onStateChange: (state) => { setConnectionState(state) },
+    })
     controllerRef.current = controller
-    controller.start()
     return () => {
+      workspaceAbort.current?.abort()
+      workspaceAbort.current = undefined
       controller.stop()
       if (controllerRef.current === controller) controllerRef.current = undefined
     }
-  }, [dropPairingAfterReconnect, paired, refreshSessions])
+  }, [paired, refreshSessions])
 
   const value = useMemo<MobileConnectionContextValue>(() => ({
     paired,
@@ -389,8 +382,6 @@ export function MobileConnectionProvider({ children }: { children: ReactNode }):
     getSessionCompleted,
     markSessionViewed,
     createSession,
-    subscribeMux,
-    subscribeMuxEnvelope,
     disconnect,
     reloadPairing,
     refreshHostDescription,
@@ -411,8 +402,6 @@ export function MobileConnectionProvider({ children }: { children: ReactNode }):
     getSessionCompleted,
     markSessionViewed,
     createSession,
-    subscribeMux,
-    subscribeMuxEnvelope,
     disconnect,
     reloadPairing,
     refreshHostDescription,

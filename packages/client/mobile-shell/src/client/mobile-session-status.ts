@@ -1,6 +1,6 @@
 /** Session row status presentation aligned with desktop Workspace browser rows. */
 
-import type { PendingInteractionStatus } from '@deepseek-ai/dsh-client-runtime/client'
+import type { PendingInteractionStatus } from './mobile-session-pending-tracker.ts'
 import type { StateDotState } from '@deepseek-ai/dsh-client-ui-primitives'
 import { relativeTime } from '@deepseek-ai/dsh-client-ui-workspace/src/client/tree.ts'
 import { zh as workspaceZh } from '@deepseek-ai/dsh-client-ui-workspace/src/client/locales.ts'

@@ -3,4 +3,4 @@
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write docs/harness-quickstart.md
 harness-quickstart.md: 0ce54c81ea7cae1a0141cc2a82fa4067994a7cac
-harness-quickstart.zh.md: 1bd90e0724ff1d68db74540116609edeedaf86cb
+harness-quickstart.zh.md: 7af57d666f2884bec7baaea83e9dc7f20b23348f

@@ -12,9 +12,6 @@
       "path": "../../../vendor/cordis"
     },
     {
-      "path": "../runtime"
-    },
-    {
       "path": "../ui-primitives"
     },
     {

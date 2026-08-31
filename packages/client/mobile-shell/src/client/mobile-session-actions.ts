@@ -1,6 +1,7 @@
 /** Session row verbs for the mobile task home (aligned with desktop Workspace rows). */
 
-import type { SessionId, WorkspaceId, WorkspaceView } from '@deepseek-ai/dsh-client-connection/client'
+import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import type { WorkspaceId, WorkspaceView } from '@deepseek-ai/dsh-api-workspace-controller/client'
 import { mobileApi } from './mobile-api-client.ts'
 
 /**

@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from 'react'
-import type { WorkspaceId } from '@deepseek-ai/dsh-client-connection/client'
+import type { WorkspaceId } from '@deepseek-ai/dsh-workspace/types'
 import type { GroupNode } from '@deepseek-ai/dsh-client-ui-workspace/src/client/tree.ts'
 import {
   IconChevronDownOutline14,

@@ -1,4 +1,4 @@
-import type { SessionProjectionsBlock } from '@deepseek-ai/dsh-client-connection/client'
+import type { SessionProjectionHints } from '@deepseek-ai/dsh-api-session-controller/types'
 import type { SessionProjectionMap } from '@deepseek-ai/dsh-session-projection/types'
 // SessionProjectionMap merges used by the mobile chat chrome.
 import type {} from '@deepseek-ai/dsh-goal/client'
@@ -52,7 +52,7 @@ function applyRow(store: MobileProjectionStore, key: string, value: unknown, seq
  */
 export function seedProjectionStore(
   store: MobileProjectionStore,
-  baseline: SessionProjectionsBlock,
+  baseline: SessionProjectionHints,
 ): MobileProjectionStore {
   const rows = new Map(store.rows)
   for (const [key, value] of Object.entries(baseline.values)) {

@@ -1,37 +1,21 @@
 /**
- * Per-session {@link Session} for mobile chat and trajectory: opens history,
- * accepts mux frames for this session id, and exposes a uSES selector hook.
+ * Per-session Session + Conversation fold for mobile chat and trajectory.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { ConnectionState, SessionId, MuxFrame, RpcRequest, SessionSummary } from '@deepseek-ai/dsh-client-connection/client'
-import {
-  EMPTY_CHAT_SNAPSHOT,
-  EMPTY_CONVERSATION_VIEWS,
-  type ConversationSnapshot,
-  type UseProjection,
-} from '@deepseek-ai/dsh-client-runtime/client'
-import { Session } from '@deepseek-ai/dsh-client-runtime/src/client/sessions/session.ts'
-import type { SessionRemotes } from '@deepseek-ai/dsh-client-runtime/src/client/sessions/remotes.ts'
+import type { ConnectionState } from '@deepseek-ai/dsh-client-connection/client'
+import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import type { SessionSummary } from '@deepseek-ai/dsh-api-session-controller/types'
+import type { SessionSnapshot, UseProjection } from '@deepseek-ai/dsh-api-session-controller/client'
+import { Session } from '@deepseek-ai/dsh-api-session-controller/src/client/sessions/session.ts'
+import type { ConversationSnapshot } from '@deepseek-ai/dsh-client-ui-conversation/client'
+import { EMPTY_CONVERSATION_SNAPSHOT } from '@deepseek-ai/dsh-client-ui-conversation/client'
+import { EMPTY_CHAT_SNAPSHOT, type ChatSnapshot } from '@deepseek-ai/dsh-client-ui-chat/src/client/contract/snapshot.ts'
 import type { HostObservable, SnapshotSelectorHook } from '@deepseek-ai/dsh-client-ui-slots'
 import { bindSnapshotSelector } from '@deepseek-ai/dsh-client-ui-renderer/src/client/bind.ts'
 import { getMobileConversationRuntime } from './mobile-conversation-runtime.ts'
-import { mobileApi } from './mobile-api-client.ts'
-import {
-  isMobileSessionRoutedFrame,
-  registerMobileSession,
-  unregisterMobileSession,
-} from './mobile-session-mux-buffer.ts'
+import { bindMobileConversation } from './mobile-conversation-binding.ts'
+import { mobileSessionRemotes } from './mobile-stream-runtime.ts'
 import { useMobileConnection } from './MobileConnectionContext.tsx'
-
-/** SessionRemotes stub: Trajectory viewing does not execute commands through Session. */
-function mobileSessionRemotes(): SessionRemotes {
-  return {
-    commands: {
-      list: () => Promise.resolve({ ok: true, value: [] }),
-      execute: () => Promise.resolve({ ok: true, value: undefined }),
-    },
-  }
-}
 
 const absentProjection: UseProjection = ((
   _key: string,
@@ -39,12 +23,17 @@ const absentProjection: UseProjection = ((
 ) => (selector === undefined ? undefined : selector(undefined))) as UseProjection
 
 const sessionCache = new Map<SessionId, Session>()
+const remotes = mobileSessionRemotes
 
-function frameSessionId(frame: MuxFrame): SessionId | undefined {
-  if ('sessionId' in frame && typeof frame.sessionId === 'string') {
-    return frame.sessionId as SessionId
-  }
-  return undefined
+/** Combined Session lifecycle and Chat target used by the mobile transcript. */
+export interface MobileSessionView {
+  readonly session: SessionSnapshot
+  readonly conversation: ConversationSnapshot
+  readonly chat: ChatSnapshot
+  readonly running: boolean
+  readonly blank: boolean
+  readonly openState: SessionSnapshot['openState']
+  readonly sessionId: SessionId
 }
 
 function sessionSummaryBlank(
@@ -63,21 +52,25 @@ function sessionReadyInstant(
   return sessionSummaryBlank(sessionId, sessions)
 }
 
-function coldSnapshot(sessionId: SessionId, summary: SessionSummary | undefined): ConversationSnapshot {
+function combineView(session: SessionSnapshot, conversation: ConversationSnapshot): MobileSessionView {
   return {
+    session,
+    conversation,
+    chat: conversation.views.get('chat') ?? EMPTY_CHAT_SNAPSHOT,
+    running: session.running,
+    blank: session.blank,
+    openState: session.openState,
+    sessionId: session.sessionId,
+  }
+}
+
+function coldView(sessionId: SessionId, summary: SessionSummary | undefined): MobileSessionView {
+  return combineView({
     sessionId,
-    views: EMPTY_CONVERSATION_VIEWS,
-    chat: EMPTY_CHAT_SNAPSHOT,
-    nodes: [],
-    turnTimings: new Map(),
-    turnEnds: new Map(),
-    partial: null,
-    runningCalls: [],
-    pending: [],
     queue: [],
-    running: false,
+    pendingSubmissions: [],
+    running: summary?.running ?? false,
     subagent: null,
-    composerPhase: 'active',
     removed: false,
     openState: 'loading',
     openError: null,
@@ -86,14 +79,15 @@ function coldSnapshot(sessionId: SessionId, summary: SessionSummary | undefined)
     promptError: null,
     blank: summary?.blank ?? false,
     lastAgentError: null,
-  }
+    awaitingFirstTurn: false,
+  }, EMPTY_CONVERSATION_SNAPSHOT)
 }
 
 function coldObservable(
   sessionId: SessionId,
   summary: SessionSummary | undefined,
-): HostObservable<ConversationSnapshot> {
-  const snapshot = coldSnapshot(sessionId, summary)
+): HostObservable<MobileSessionView> {
+  const snapshot = coldView(sessionId, summary)
   return {
     getSnapshot: () => snapshot,
     subscribe: () => () => {},
@@ -112,25 +106,26 @@ export interface MobileSessionHandle {
   ready: boolean
   /** Open / history error message. */
   error: string | undefined
-  /** uSES selector over the conversation snapshot. */
-  useSession: SnapshotSelectorHook<ConversationSnapshot>
-  /** Framework seat required by ConvViewProps (unused by TrajectoryView). */
+  /** uSES selector over the combined session + chat view. */
+  useSession: SnapshotSelectorHook<MobileSessionView>
+  /** Framework seat required by ConvViewProps. */
   useProjection: UseProjection
   /** Page older history into the Session window. */
   loadOlder: () => Promise<boolean>
 }
 
 /**
- * Open a runtime Session for Chat + Trajectory assembly.
+ * Open a Session for Chat + Trajectory assembly.
  * @param sessionId - active Host session.
  */
 export function useMobileSession(sessionId: SessionId): MobileSessionHandle {
-  const { subscribeMuxEnvelope, sessions, connectionState } = useMobileConnection()
+  const { sessions, connectionState } = useMobileConnection()
   const summary = useMemo(
     () => sessions.find(item => item.sessionId === sessionId),
     [sessionId, sessions],
   )
   const [session, setSession] = useState<Session | undefined>(() => sessionCache.get(sessionId))
+  const [conversation, setConversation] = useState<ConversationSnapshot>(EMPTY_CONVERSATION_SNAPSHOT)
   const [ready, setReady] = useState(() => sessionReadyInstant(sessionId, sessions))
   const [error, setError] = useState<string | undefined>(undefined)
   const sessionRef = useRef<Session | undefined>(undefined)
@@ -140,6 +135,7 @@ export function useMobileSession(sessionId: SessionId): MobileSessionHandle {
 
   useEffect(() => {
     let cancelled = false
+    let disposeConversation: (() => void) | undefined
     const currentSummary = sessions.find(item => item.sessionId === sessionId)
     const cached = sessionCache.get(sessionId)
     if (cached?.getSnapshot().openState === 'open') {
@@ -147,34 +143,36 @@ export function useMobileSession(sessionId: SessionId): MobileSessionHandle {
       setSession(cached)
       setReady(true)
       setError(undefined)
-      registerMobileSession(sessionId, cached)
-      return () => { unregisterMobileSession(sessionId) }
+      return () => {}
     }
 
     const optimisticBlank = currentSummary?.blank === true
-    if (!optimisticBlank) {
-      setReady(false)
-    }
+    if (!optimisticBlank) setReady(false)
     setError(undefined)
 
     void (async () => {
       try {
-        const conversation = await getMobileConversationRuntime()
+        const runtime = await getMobileConversationRuntime()
         if (cancelled) return
         let next = sessionCache.get(sessionId)
         if (next === undefined) {
-          next = new Session(sessionId, mobileApi, mobileSessionRemotes(), { conversation })
+          next = new Session(sessionId, remotes)
           sessionCache.set(sessionId, next)
         }
         applySummaryHints(next, currentSummary)
         setSession(next)
+        const binding = bindMobileConversation(next.eventSource, runtime.events, runtime.views)
+        disposeConversation = () => { binding.dispose() }
+        const publishConversation = (): void => {
+          if (!cancelled) setConversation(binding.snapshot.getSnapshot())
+        }
+        publishConversation()
+        binding.snapshot.subscribe(publishConversation)
 
         if (optimisticBlank) {
-          registerMobileSession(sessionId, next)
           if (!cancelled) setReady(true)
           try {
             await next.open()
-            if (!cancelled) registerMobileSession(sessionId, next)
           } catch (openError) {
             if (!cancelled) {
               setError(openError instanceof Error ? openError.message : String(openError))
@@ -185,7 +183,6 @@ export function useMobileSession(sessionId: SessionId): MobileSessionHandle {
 
         await next.open()
         if (cancelled) return
-        registerMobileSession(sessionId, next)
         setReady(true)
       } catch (openError) {
         if (!cancelled) {
@@ -196,9 +193,8 @@ export function useMobileSession(sessionId: SessionId): MobileSessionHandle {
     })()
     return () => {
       cancelled = true
-      unregisterMobileSession(sessionId)
+      disposeConversation?.()
     }
-    // sessions is read once at open time; summary hints sync in the effect below.
   }, [sessionId])
 
   useEffect(() => {
@@ -208,20 +204,9 @@ export function useMobileSession(sessionId: SessionId): MobileSessionHandle {
   }, [sessionId, sessions])
 
   useEffect(() => {
-    if (session === undefined) return
-    return subscribeMuxEnvelope((envelope: RpcRequest<MuxFrame>) => {
-      const frame = envelope.payload
-      if (frameSessionId(frame) !== sessionId) return
-      if (frame.type === 'session/projection') return
-      if (isMobileSessionRoutedFrame(frame)) return
-      session.handleMuxEnvelope(envelope.rpcId, frame)
-    })
-  }, [session, sessionId, subscribeMuxEnvelope])
-
-  useEffect(() => {
     const prev = prevConnectionState.current
     prevConnectionState.current = connectionState
-    if (connectionState !== 'connected' || prev !== 'reconnecting') return
+    if (connectionState !== 'connected' || prev !== 'connecting') return
     const active = sessionRef.current
     if (active === undefined || active.getSnapshot().openState !== 'open') return
     void active.resync()
@@ -232,16 +217,24 @@ export function useMobileSession(sessionId: SessionId): MobileSessionHandle {
     applySummaryHints(session, summary)
   }, [session, summary])
 
+  const liveObservable = useMemo((): HostObservable<MobileSessionView> => {
+    if (session === undefined) return coldObservable(sessionId, summary)
+    return {
+      getSnapshot: () => combineView(session.getSnapshot(), conversation),
+      subscribe: listener => session.subscribe(listener),
+    }
+  }, [conversation, session, sessionId, summary])
+
   const useSession = useMemo(
-    () => bindSnapshotSelector(session ?? coldObservable(sessionId, summary)),
-    [session, sessionId, summary],
+    () => bindSnapshotSelector(liveObservable),
+    [liveObservable],
   )
 
   const loadOlder = useCallback(async (): Promise<boolean> => {
     if (session === undefined) return false
-    const before = session.getSnapshot().views.get('trajectory')
+    const beforeHasMore = session.getSnapshot().hasMore
     await session.loadOlder()
-    return session.getSnapshot().views.get('trajectory') !== before
+    return session.getSnapshot().hasMore !== beforeHasMore
   }, [session])
 
   return {

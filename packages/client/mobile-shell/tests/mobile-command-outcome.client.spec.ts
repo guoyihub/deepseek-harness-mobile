@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { CommandNode } from '@deepseek-ai/dsh-client-runtime/client'
+import type { CommandNode } from '@deepseek-ai/dsh-client-ui-chat/client'
 import { localizeCommandNode, localizeCommandOutcome } from '../src/client/mobile-command-outcome.ts'
 
 function commandNode(over: Partial<CommandNode> & Pick<CommandNode, 'commandId'>): CommandNode {

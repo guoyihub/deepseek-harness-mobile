@@ -3,16 +3,13 @@
  * rendered with the desktop conversation node views.
  */
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react'
-import type { SessionId } from '@deepseek-ai/dsh-client-connection/client'
-import type {
-  ConversationSnapshot,
-  ConversationTimelineSnapshot,
-  UseProjection,
-} from '@deepseek-ai/dsh-client-runtime/client'
+import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import type { ConversationTimelineSnapshot } from '@deepseek-ai/dsh-client-ui-conversation/client'
+import type { UseProjection } from '@deepseek-ai/dsh-api-session-controller/client'
 import { MessageText } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { SnapshotSelectorHook } from '@deepseek-ai/dsh-client-ui-slots'
-import chatCss from '@deepseek-ai/dsh-client-ui-conversation/src/client/chat/ChatView.module.css'
-import { formatRunDuration } from '@deepseek-ai/dsh-client-ui-conversation/src/client/chat/message-chrome.ts'
+import chatCss from '@deepseek-ai/dsh-client-ui-chat/src/client/chat/ChatView.module.css'
+import { formatRunDuration } from '@deepseek-ai/dsh-client-ui-chat/src/client/chat/message-chrome.ts'
 import { MobileChatNodeSeat } from './MobileChatNodeSeat.tsx'
 import { MobileChatHero } from './MobileChatHero.tsx'
 import { mobileChatT } from './mobile-conversation-t.ts'
@@ -21,13 +18,14 @@ import {
   scrollMobileMessageListToBottom,
 } from './mobile-message-list-scroll.ts'
 import css from './mobile-shell.module.css'
+import type { MobileSessionView } from './useMobileSession.ts'
 
 /** Props for {@link MobileChatFlow}. */
 export interface MobileChatFlowProps {
   /** Active Host session. */
   sessionId: SessionId
   /** Shared Session face from {@link useMobileSession}. */
-  useSession: SnapshotSelectorHook<ConversationSnapshot>
+  useSession: SnapshotSelectorHook<MobileSessionView>
   /** Framework projection reader (absent on mobile). */
   useProjection: UseProjection
   /** Whether Session.open has finished. */

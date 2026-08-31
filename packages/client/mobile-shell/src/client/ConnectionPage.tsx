@@ -145,7 +145,8 @@ export function ConnectionPage({ onBack, onPair, onEditServer }: ConnectionPageP
         setDefaultPresetLabel(undefined)
         return
       }
-      const preset = response.result.value.presets.find(item => item.isDefault)
+      const preset = (response.result.value.presets as readonly { isDefault?: boolean }[])
+        .find(item => item.isDefault === true)
       setDefaultPresetLabel(preset === undefined ? undefined : agentPresetDisplayLabel(preset))
     })()
   }, [paired])

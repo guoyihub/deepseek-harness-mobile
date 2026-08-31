@@ -1,5 +1,5 @@
 import { memo, useMemo } from 'react'
-import type { AssistantBlock } from '@deepseek-ai/dsh-client-runtime/src/client/sessions/conversation.ts'
+import type { AssistantBlock } from '@deepseek-ai/dsh-client-ui-conversation/client'
 import { MarkdownText } from '@deepseek-ai/dsh-client-ui-primitives'
 import { mobileConversationT } from './mobile-locale.ts'
 import { MobileReasoningRow } from './MobileReasoningRow.tsx'

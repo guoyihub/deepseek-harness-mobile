@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type {
   ModelProviderGroup,
   ModelSelection,
-  SessionId,
-} from '@deepseek-ai/dsh-client-connection/client'
+} from '@deepseek-ai/dsh-api-session-controller/types'
 import { IconCheckOutline16, Modal } from '@deepseek-ai/dsh-client-ui-primitives'
 import { mobileApi } from './mobile-api-client.ts'
 import { modelSelectionLabel } from './mobile-model-label.ts'

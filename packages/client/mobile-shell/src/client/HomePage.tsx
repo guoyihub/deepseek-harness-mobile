@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
-import type { SessionId, SessionSearchItem, WorkspaceId } from '@deepseek-ai/dsh-client-connection/client'
-import type { PendingInteractionStatus } from '@deepseek-ai/dsh-client-runtime/client'
+import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import type { SessionSearchItem } from '@deepseek-ai/dsh-api-session-controller/types'
+import type { WorkspaceId } from '@deepseek-ai/dsh-workspace/types'
+import type { PendingInteractionStatus } from './mobile-session-pending-tracker.ts'
 
 import { Button } from '@deepseek-ai/dsh-client-ui-primitives'
 

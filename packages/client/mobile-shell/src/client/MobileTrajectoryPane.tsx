@@ -1,13 +1,14 @@
 import { useMemo } from 'react'
-import type { SessionId } from '@deepseek-ai/dsh-client-connection/client'
-import type { ConversationSnapshot, UseProjection } from '@deepseek-ai/dsh-client-runtime/client'
-import { createSnapshotStore } from '@deepseek-ai/dsh-client-runtime/client'
+import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import type { UseProjection } from '@deepseek-ai/dsh-api-session-controller/client'
+import { createSnapshotStore } from '@deepseek-ai/dsh-client-store'
 import { createTrajectoryDurationStore } from '@deepseek-ai/dsh-client-ui-trajectory/src/client/duration-store.ts'
 import { TrajectoryView } from '@deepseek-ai/dsh-client-ui-trajectory/src/client/TrajectoryView.tsx'
 import { zh as trajectoryZh } from '@deepseek-ai/dsh-client-ui-trajectory/src/client/locales.ts'
 import { bindSnapshotSelector } from '@deepseek-ai/dsh-client-ui-renderer/src/client/bind.ts'
 import type { SnapshotSelectorHook } from '@deepseek-ai/dsh-client-ui-slots'
 import css from './mobile-shell.module.css'
+import type { MobileSessionView } from './useMobileSession.ts'
 
 const durationStore = createTrajectoryDurationStore()
 const unusedInputStore = createSnapshotStore({
@@ -43,15 +44,10 @@ function trajectoryT(key: string, params?: Record<string, unknown>): string {
 
 /** Props for {@link MobileTrajectoryPane}. */
 export interface MobileTrajectoryPaneProps {
-  /** Active Host session. */
   sessionId: SessionId
-  /** Whether Session.open has finished. */
   ready: boolean
-  /** Open / history error message. */
   error: string | undefined
-  /** Shared Session selector from {@link useMobileSession}. */
-  useSession: SnapshotSelectorHook<ConversationSnapshot>
-  /** Page older history into the Session window. */
+  useSession: SnapshotSelectorHook<MobileSessionView>
   loadOlder: () => Promise<boolean>
 }
 
@@ -83,26 +79,22 @@ export function MobileTrajectoryPane({
     return <div className={css.trajectoryPaneStatus} role="alert">{error}</div>
   }
 
-  const view = (
-    <TrajectoryView
-      sessionId={sessionId}
-      useSession={useSession}
-      useProjection={absentProjection}
-      useInput={useInput as never}
-      inputActions={inputActions as never}
-      useSessions={(() => undefined) as never}
-      useWorkspaces={(() => undefined) as never}
-      useDuration={useDuration}
-      loadOlder={loadOlder}
-      setActualDuration={(value) => { durationStore.set(value) }}
-      inspect={null}
-      t={trajectoryT}
-    />
-  )
-
   return (
     <div className={css.trajectoryPane}>
-      {view}
+      <TrajectoryView
+        sessionId={sessionId}
+        useSession={useSession as never}
+        useProjection={absentProjection}
+        useInput={useInput as never}
+        inputActions={inputActions as never}
+        useSessions={(() => undefined) as never}
+        useWorkspaces={(() => undefined) as never}
+        useDuration={useDuration}
+        loadOlder={loadOlder}
+        setActualDuration={(value) => { durationStore.set(value) }}
+        inspect={null}
+        t={trajectoryT}
+      />
     </div>
   )
 }
