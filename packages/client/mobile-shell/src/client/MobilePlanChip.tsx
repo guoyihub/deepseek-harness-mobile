@@ -52,7 +52,7 @@ export function MobilePlanChip({
       disabled={locked}
       onClick={() => { void onExit() }}
     >
-      Plan
+      {mobileConversationT('plan.chip.label')}
       <span className={css.planChipClose} aria-hidden>
         <IconCloseFill14 size={12} />
       </span>

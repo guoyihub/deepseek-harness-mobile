@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Button, Modal } from '@deepseek-ai/dsh-client-ui-primitives'
+import { mobileConversationT } from './mobile-locale.ts'
 import css from './mobile-shell.module.css'
 
 /** Props for {@link DeviceLabelModal}. */
@@ -49,12 +50,12 @@ export function DeviceLabelModal({
     <Modal
       open={open}
       onClose={onClose}
-      title="设备名称"
-      closeLabel="关闭"
+      title={mobileConversationT('settings.deviceName')}
+      closeLabel={mobileConversationT('common.close')}
       footer={(
         <>
-          <Button variant="outline" onClick={onClose}>取消</Button>
-          <Button variant="primary" disabled={blocked} onClick={submit}>保存</Button>
+          <Button variant="outline" onClick={onClose}>{mobileConversationT('common.cancel')}</Button>
+          <Button variant="primary" disabled={blocked} onClick={submit}>{mobileConversationT('common.save')}</Button>
         </>
       )}
     >
@@ -64,7 +65,7 @@ export function DeviceLabelModal({
         type="text"
         value={draft}
         maxLength={64}
-        aria-label="设备名称"
+        aria-label={mobileConversationT('settings.deviceName')}
         onChange={(event) => { setDraft(event.target.value) }}
         onKeyDown={(event) => {
           if (event.key === 'Enter') {

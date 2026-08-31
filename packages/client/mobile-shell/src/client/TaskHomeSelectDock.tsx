@@ -1,6 +1,7 @@
 /** Fixed bottom action dock for task-home multi-select mode. */
 
 import { IconArchiveOutline20 } from '@deepseek-ai/dsh-client-ui-primitives'
+import { mobileConversationT } from './mobile-locale.ts'
 import css from './mobile-shell.module.css'
 
 /** Props for {@link TaskHomeSelectDock}. */
@@ -38,7 +39,7 @@ export function TaskHomeSelectDock({
   onArchive,
 }: TaskHomeSelectDockProps): JSX.Element {
   return (
-    <div className={css.taskHomeSelectBar} role="toolbar" aria-label="批量操作">
+    <div className={css.taskHomeSelectBar} role="toolbar" aria-label={mobileConversationT('taskHome.batchActions')}>
       <button
         type="button"
         className={css.taskHomeSelectAction}
@@ -46,7 +47,7 @@ export function TaskHomeSelectDock({
         onClick={onPin}
       >
         <PinIcon size={18} />
-        <span>置顶</span>
+        <span>{mobileConversationT('taskHome.pin')}</span>
       </button>
       <button
         type="button"
@@ -55,7 +56,7 @@ export function TaskHomeSelectDock({
         onClick={onArchive}
       >
         <IconArchiveOutline20 size={18} />
-        <span>归档</span>
+        <span>{mobileConversationT('taskHome.archive')}</span>
       </button>
     </div>
   )

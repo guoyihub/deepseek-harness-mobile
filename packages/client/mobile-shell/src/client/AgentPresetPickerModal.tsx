@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { IconCheckOutline16, Modal } from '@deepseek-ai/dsh-client-ui-primitives'
 import { mobileApi } from './mobile-api-client.ts'
 import { agentPresetDisplayLabel } from './mobile-host-preset-label.ts'
+import { mobileConversationT } from './mobile-locale.ts'
 import css from './mobile-shell.module.css'
 
 interface AgentPresetEntry {
@@ -100,11 +101,11 @@ export function AgentPresetPickerModal({
   )
 
   const body = state.status === 'loading' || state.status === 'selecting'
-    ? <p className={css.mSetPickerStatus}>{state.status === 'loading' ? '加载预设列表…' : '正在保存…'}</p>
+    ? <p className={css.mSetPickerStatus}>{state.status === 'loading' ? mobileConversationT('preset.loading') : mobileConversationT('preset.saving')}</p>
     : state.status === 'error'
-      ? <p className={css.mSetPickerError} role="alert">{state.errorMessage ?? '预设列表加载失败'}</p>
+      ? <p className={css.mSetPickerError} role="alert">{state.errorMessage ?? mobileConversationT('preset.loadFailed')}</p>
       : state.presets.length === 0
-        ? <p className={css.mSetPickerStatus}>当前 Host 没有可用 Agent 预设</p>
+        ? <p className={css.mSetPickerStatus}>{mobileConversationT('preset.empty')}</p>
         : (
           <div className={css.mSetPickerList}>
             {state.presets.map((preset) => {
@@ -122,19 +123,19 @@ export function AgentPresetPickerModal({
                   <span className={css.mSetPickerItemText}>
                     <span>{agentPresetDisplayLabel(preset)}</span>
                     {broken && (
-                      <span className={css.mSetPickerItemMeta}>加载失败</span>
+                      <span className={css.mSetPickerItemMeta}>{mobileConversationT('preset.itemLoadFailed')}</span>
                     )}
                   </span>
                   {selected && <IconCheckOutline16 size={16} aria-hidden />}
                 </button>
               )
             })}
-            <p className={css.mSetPickerHint}>对新创建的会话生效；运行中的会话保持原有预设。</p>
+            <p className={css.mSetPickerHint}>{mobileConversationT('preset.applyHint')}</p>
           </div>
         )
 
   return (
-    <Modal open={open} onClose={onClose} title="Agent 预设" closeLabel="关闭">
+    <Modal open={open} onClose={onClose} title={mobileConversationT('preset.title')} closeLabel={mobileConversationT('common.close')}>
       {body}
     </Modal>
   )

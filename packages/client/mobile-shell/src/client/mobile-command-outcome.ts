@@ -1,8 +1,9 @@
 import type { CommandNode } from '@deepseek-ai/dsh-client-ui-chat/client'
+import { MOBILE_PROTOCOL_STRINGS } from './locales.ts'
 import { mobileConversationT } from './mobile-locale.ts'
 
-const FEEDBACK_TEXT_REQUIRED = 'Feedback text is required. Usage: /feedback <text>'
-const COMPACT_EMPTY = 'No compactable history yet.'
+const FEEDBACK_TEXT_REQUIRED = MOBILE_PROTOCOL_STRINGS.feedbackRequired
+const COMPACT_EMPTY = MOBILE_PROTOCOL_STRINGS.compactEmpty
 const COMPACTED = /^Compacted (\d+) history items \(~(\d+) tokens\)\.$/u
 
 /**

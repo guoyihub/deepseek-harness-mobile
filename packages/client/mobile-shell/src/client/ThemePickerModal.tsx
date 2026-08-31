@@ -1,5 +1,6 @@
 import { IconCheckOutline16, Modal } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { MobileThemePreference } from './mobile-theme.ts'
+import { mobileConversationT } from './mobile-locale.ts'
 import css from './mobile-shell.module.css'
 
 /** One selectable appearance option. */
@@ -36,7 +37,7 @@ export function ThemePickerModal({
   options,
 }: ThemePickerModalProps): JSX.Element {
   return (
-    <Modal open={open} onClose={onClose} title="外观" closeLabel="关闭">
+    <Modal open={open} onClose={onClose} title={mobileConversationT('settings.appearance')} closeLabel={mobileConversationT('common.close')}>
       <div className={css.mSetPickerList}>
         {options.map((option) => {
           const selected = option.id === value

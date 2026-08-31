@@ -7,6 +7,7 @@ import type {
 import { IconCheckOutline16, Modal } from '@deepseek-ai/dsh-client-ui-primitives'
 import { mobileApi } from './mobile-api-client.ts'
 import { modelSelectionLabel } from './mobile-model-label.ts'
+import { mobileConversationT } from './mobile-locale.ts'
 import css from './mobile-shell.module.css'
 
 interface ModelDirectoryState {
@@ -55,7 +56,7 @@ export function DefaultModelPickerModal({
         current: null,
         groups: [],
         status: 'error',
-        errorMessage: '无法创建用于切换模型的会话',
+        errorMessage: mobileConversationT('model.sessionCreateFailed'),
       })
       return
     }
@@ -93,7 +94,7 @@ export function DefaultModelPickerModal({
       setState(current => ({
         ...current,
         status: 'error',
-        errorMessage: '无法创建用于切换模型的会话',
+        errorMessage: mobileConversationT('model.sessionCreateFailed'),
       }))
       return
     }
@@ -156,11 +157,11 @@ export function DefaultModelPickerModal({
     : `${state.current.provider}:${state.current.model}`
 
   const body = state.status === 'loading' || state.status === 'selecting'
-    ? <p className={css.mSetPickerStatus}>{state.status === 'loading' ? '加载模型列表…' : '正在切换…'}</p>
+    ? <p className={css.mSetPickerStatus}>{state.status === 'loading' ? mobileConversationT('model.loading') : mobileConversationT('model.switching')}</p>
     : state.status === 'error'
-      ? <p className={css.mSetPickerError} role="alert">{state.errorMessage ?? '模型列表加载失败'}</p>
+      ? <p className={css.mSetPickerError} role="alert">{state.errorMessage ?? mobileConversationT('model.loadFailed')}</p>
       : entries.length === 0
-        ? <p className={css.mSetPickerStatus}>当前 Host 没有可用模型</p>
+        ? <p className={css.mSetPickerStatus}>{mobileConversationT('model.empty')}</p>
         : (
           <div className={css.mSetPickerList}>
             {entries.map((entry) => {
@@ -186,14 +187,15 @@ export function DefaultModelPickerModal({
             })}
             {state.current !== null && (
               <p className={css.mSetPickerHint}>
-                当前默认：{modelSelectionLabel(state.current, state.groups)}
+                {mobileConversationT('model.currentDefaultPrefix')}
+                {modelSelectionLabel(state.current, state.groups)}
               </p>
             )}
           </div>
         )
 
   return (
-    <Modal open={open} onClose={onClose} title="默认模型" closeLabel="关闭">
+    <Modal open={open} onClose={onClose} title={mobileConversationT('model.defaultTitle')} closeLabel={mobileConversationT('common.close')}>
       {body}
     </Modal>
   )

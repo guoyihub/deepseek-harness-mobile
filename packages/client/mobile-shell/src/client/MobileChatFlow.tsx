@@ -13,6 +13,7 @@ import { formatRunDuration } from '@deepseek-ai/dsh-client-ui-chat/src/client/ch
 import { MobileChatNodeSeat } from './MobileChatNodeSeat.tsx'
 import { MobileChatHero } from './MobileChatHero.tsx'
 import { mobileChatT } from './mobile-conversation-t.ts'
+import { mobileConversationT } from './mobile-locale.ts'
 import {
   isMobileMessageListAtBottom,
   scrollMobileMessageListToBottom,
@@ -71,7 +72,7 @@ function TurnStatus({ startTime }: { startTime: number | null }): ReactNode {
   const showClock = elapsedMs >= 15_000
   return (
     <div className={chatCss.turnStatus} role="status" aria-live="polite">
-      Deep diving...
+      {mobileConversationT('chat.deepDiving')}
       {showClock && (
         <span className={chatCss.turnStatusClock} aria-hidden>
           {formatRunDuration(elapsedMs, mobileChatT)}
@@ -154,7 +155,7 @@ export function MobileChatFlow({
   if (!ready && !showHero) {
     return (
       <div ref={listRef} className={css.messageList} onScroll={onListScroll}>
-        <div className={css.loadingState}>正在加载历史消息…</div>
+        <div className={css.loadingState}>{mobileConversationT('chat.loadingHistory')}</div>
       </div>
     )
   }

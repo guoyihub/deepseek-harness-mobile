@@ -9,6 +9,7 @@ import { bindSnapshotSelector } from '@deepseek-ai/dsh-client-ui-renderer/src/cl
 import type { SnapshotSelectorHook } from '@deepseek-ai/dsh-client-ui-slots'
 import css from './mobile-shell.module.css'
 import type { MobileSessionView } from './useMobileSession.ts'
+import { mobileConversationT } from './mobile-locale.ts'
 
 const durationStore = createTrajectoryDurationStore()
 const unusedInputStore = createSnapshotStore({
@@ -73,7 +74,7 @@ export function MobileTrajectoryPane({
   }), [])
 
   if (!ready) {
-    return <div className={css.trajectoryPaneStatus} role="status">正在加载轨迹…</div>
+    return <div className={css.trajectoryPaneStatus} role="status">{mobileConversationT('trajectory.loading')}</div>
   }
   if (error !== undefined) {
     return <div className={css.trajectoryPaneStatus} role="alert">{error}</div>

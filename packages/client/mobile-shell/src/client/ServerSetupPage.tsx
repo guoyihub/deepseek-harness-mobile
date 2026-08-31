@@ -8,6 +8,7 @@ import {
   readStoredServerUrl,
   saveMobileServerUrl,
 } from './mobile-server-config.ts'
+import { mobileConversationT } from './mobile-locale.ts'
 import css from './mobile-shell.module.css'
 
 /** Props for {@link ServerSetupPage}. */
@@ -67,19 +68,19 @@ export function ServerSetupPage({
 
   return (
     <MobileShellLayout
-      title="服务器地址"
+      title={mobileConversationT('server.title')}
       {...(allowBack && onBack !== undefined ? { onBack } : {})}
     >
       <div className={css.settingsPage}>
         <section className={css.settingsCard}>
           <p className={css.statusText}>
-            输入已部署的 Mobile 服务外网地址。App 将通过该地址访问 Host API（例如
+            {mobileConversationT('server.descriptionBefore')}
             {' '}
-            <code>https://mobile.example.com</code>
-            ）。
+            <code>{mobileConversationT('server.exampleUrl')}</code>
+            {mobileConversationT('server.descriptionAfter')}
           </p>
           <label className={css.pairField}>
-            <span className={css.pairFieldLabel}>Mobile 服务器</span>
+            <span className={css.pairFieldLabel}>{mobileConversationT('settings.mobileServer')}</span>
             <input
               className={css.pairInput}
               type="url"
@@ -87,8 +88,8 @@ export function ServerSetupPage({
               autoCapitalize="none"
               autoCorrect="off"
               spellCheck={false}
-              placeholder="https://mobile.example.com"
-              aria-label="Mobile 服务器地址"
+              placeholder={mobileConversationT('server.exampleUrl')}
+              aria-label={mobileConversationT('server.addressLabel')}
               value={serverUrl}
               disabled={busy}
               onChange={(event) => {
@@ -105,10 +106,10 @@ export function ServerSetupPage({
 
         <div className={css.settingsActions}>
           <Button variant="outline" size="md" disabled={busy} onClick={() => { void onTest() }}>
-            测试连接
+            {mobileConversationT('server.testConnection')}
           </Button>
           <button type="button" className={css.settingsPrimaryBtn} disabled={busy} onClick={() => { void onSave() }}>
-            保存并继续
+            {mobileConversationT('server.saveContinue')}
           </button>
         </div>
       </div>

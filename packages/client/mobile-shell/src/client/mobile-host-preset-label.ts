@@ -1,9 +1,12 @@
+import type { MobileKey } from './locales.ts'
+import { mobileConversationT } from './mobile-locale.ts'
+
 /** Built-in agent preset ids shipped with the base bundle. */
-const BUILT_IN_PRESET_LABELS: Record<string, string> = {
-  standard: '标准模式',
-  code: 'PTC 模式',
-  minimal: '极简模式',
-  cordis: '创造模式',
+const BUILT_IN_PRESET_LABEL_KEYS: Record<string, MobileKey> = {
+  standard: 'preset.standard',
+  code: 'preset.code',
+  minimal: 'preset.minimal',
+  cordis: 'preset.cordis',
 }
 
 /** Minimal fields needed to render one preset label on mobile. */
@@ -19,8 +22,8 @@ export interface AgentPresetLabelSource {
  */
 export function agentPresetDisplayLabel(preset: AgentPresetLabelSource): string {
   if (preset.trust === 'system') {
-    const builtIn = BUILT_IN_PRESET_LABELS[preset.id]
-    if (builtIn !== undefined) return builtIn
+    const key = BUILT_IN_PRESET_LABEL_KEYS[preset.id]
+    if (key !== undefined) return mobileConversationT(key)
   }
   return preset.name ?? preset.id
 }

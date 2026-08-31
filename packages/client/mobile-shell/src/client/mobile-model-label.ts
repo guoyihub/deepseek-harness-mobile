@@ -2,6 +2,7 @@ import type {
   ModelProviderGroup,
   ModelSelection,
 } from '@deepseek-ai/dsh-api-session-controller/types'
+import { mobileConversationT } from './mobile-locale.ts'
 
 /**
  * Resolve the user-visible label for one model selection against a provider catalog.
@@ -13,7 +14,7 @@ export function modelSelectionLabel(
   selection: ModelSelection | null,
   groups: readonly ModelProviderGroup[],
 ): string {
-  if (selection === null) return '未设置'
+  if (selection === null) return mobileConversationT('model.unset')
   for (const group of groups) {
     if (group.id !== selection.provider) continue
     const model = group.models.find(item => item.id === selection.model)
@@ -37,7 +38,7 @@ export function modelIdLabel(
   modelId: string | undefined,
   groups: readonly ModelProviderGroup[] = [],
 ): string {
-  if (modelId === undefined || modelId === '') return '未设置'
+  if (modelId === undefined || modelId === '') return mobileConversationT('model.unset')
   for (const group of groups) {
     const model = group.models.find(item => item.id === modelId)
     if (model !== undefined) return model.name

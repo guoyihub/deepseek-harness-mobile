@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from 'react'
 import { IconCloseOutline16 } from '@deepseek-ai/dsh-client-ui-primitives'
+import { mobileConversationT } from './mobile-locale.ts'
 import css from './mobile-shell.module.css'
 
 /** Sheet motion duration (ms). */
@@ -175,7 +176,7 @@ export function MobileSettingsSheet({
             <button
               type="button"
               className={css.mSetClose}
-              aria-label="关闭"
+              aria-label={mobileConversationT('common.close')}
               onClick={() => { requestClose() }}
             >
               <IconCloseOutline16 size={16} aria-hidden />

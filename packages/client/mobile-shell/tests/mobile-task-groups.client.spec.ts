@@ -6,9 +6,10 @@ import { UNGROUPED_KEY } from '@deepseek-ai/dsh-client-ui-workspace/src/client/t
 import {
   deriveMobileTaskGroups,
   groupDisplayLabel,
-  MOBILE_UNGROUPED_LABEL,
+  mobileUngroupedLabel,
   visibleWireSessions,
 } from '../src/client/mobile-task-groups.ts'
+import { zh } from '../src/client/locales.ts'
 
 const sid = (id: string): SessionId => id as SessionId
 const wid = (id: string): WorkspaceId => id as WorkspaceId
@@ -53,7 +54,8 @@ describe('deriveMobileTaskGroups', () => {
       [],
       [],
     )
-    expect(groupDisplayLabel(groups[0]!)).toBe(MOBILE_UNGROUPED_LABEL)
+    expect(groupDisplayLabel(groups[0]!)).toBe(mobileUngroupedLabel())
+    expect(mobileUngroupedLabel()).toBe(zh['workspace.ungrouped'])
   })
 
   it('honors caller-supplied expanded group keys', () => {

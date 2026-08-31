@@ -94,13 +94,13 @@ export function MobileToolRow({ toolName, block }: MobileToolRowProps): JSX.Elem
       >
         {model.body !== null && (
           <div className={css.toolSection}>
-            <div className={css.toolSectionLabel}>IN</div>
+            <div className={css.toolSectionLabel}>{mobileConversationT('tool.in')}</div>
             <pre className={css.toolSectionBody}>{model.body}</pre>
           </div>
         )}
         {model.output !== null && (
           <div className={css.toolSection}>
-            <div className={css.toolSectionLabel}>OUT</div>
+            <div className={css.toolSectionLabel}>{mobileConversationT('tool.out')}</div>
             <pre className={css.toolSectionBody}>{model.output}</pre>
           </div>
         )}

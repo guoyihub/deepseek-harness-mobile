@@ -7,6 +7,7 @@ import {
   IconUserOutline16,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import { sanitizeSearchQuery } from './mobile-session-search.ts'
+import { mobileConversationT } from './mobile-locale.ts'
 import { TASK_HOME_MOTION_MS } from './task-home-motion.ts'
 import css from './mobile-shell.module.css'
 
@@ -43,14 +44,15 @@ export interface TaskHomeHeaderProps {
   onOpenConnection: () => void
 }
 
-const FILTER_LABELS: Record<TaskHomeFilter, string> = {
-  all: '全部任务',
-  running: '进行中',
+function filterLabel(filter: TaskHomeFilter): string {
+  return mobileConversationT(filter === 'all' ? 'taskHome.filter.all' : 'taskHome.filter.running')
 }
 
 function connectionAriaLabel(paired: boolean, connected: boolean): string {
-  if (!paired) return '连接管理'
-  return connected ? '连接管理，已连接' : '连接管理，未连接'
+  if (!paired) return mobileConversationT('connection.title')
+  return connected
+    ? mobileConversationT('connection.titleConnected')
+    : mobileConversationT('connection.titleDisconnected')
 }
 
 /**
@@ -136,12 +138,14 @@ export function TaskHomeHeader({
       <header className={css.taskHomeHeader}>
         <div className={css.taskHomeHeaderRow}>
           <h1 className={css.taskHomeSelectTitle}>
-            {selectedCount === 0 ? '选择会话' : `已选择 ${selectedCount} 个会话`}
+            {selectedCount === 0
+              ? mobileConversationT('taskHome.selectSession')
+              : mobileConversationT('taskHome.selectedCount', { n: selectedCount })}
           </h1>
           <button
             type="button"
             className={css.taskHomeSelectClose}
-            aria-label="退出多选"
+            aria-label={mobileConversationT('taskHome.exitSelect')}
             onClick={onExitSelect}
           >
             <IconCloseOutline16 size={14} />
@@ -167,12 +171,12 @@ export function TaskHomeHeader({
             tabIndex={searchExpanded ? -1 : 0}
             onClick={() => { setFilterOpen(open => !open) }}
           >
-            <span>{FILTER_LABELS[filter]}</span>
+            <span>{filterLabel(filter)}</span>
             <IconChevronDownOutline14 size={14} />
           </button>
           {filterOpen && paired && !searchExpanded && (
             <div className={css.taskHomeFilterMenu} role="listbox">
-              {(Object.keys(FILTER_LABELS) as TaskHomeFilter[]).map(option => (
+              {(['all', 'running'] as const).map(option => (
                 <button
                   key={option}
                   type="button"
@@ -185,7 +189,7 @@ export function TaskHomeHeader({
                     setFilterOpen(false)
                   }}
                 >
-                  {FILTER_LABELS[option]}
+                  {filterLabel(option)}
                 </button>
               ))}
             </div>
@@ -206,7 +210,7 @@ export function TaskHomeHeader({
             <button
               type="button"
               className={css.taskHomeSearchButton}
-              aria-label="搜索会话"
+              aria-label={mobileConversationT('taskHome.search')}
               aria-expanded={searchExpanded}
               disabled={!paired}
               onClick={(event) => {
@@ -222,10 +226,10 @@ export function TaskHomeHeader({
               ref={searchInput}
               className={css.taskHomeSearchInput}
               type="text"
-              placeholder="搜索会话…"
+              placeholder={mobileConversationT('taskHome.searchPlaceholder')}
               value={searchQuery}
               tabIndex={searchExpanded ? 0 : -1}
-              aria-label="搜索会话"
+              aria-label={mobileConversationT('taskHome.search')}
               autoCapitalize="none"
               autoComplete="off"
               autoCorrect="off"
@@ -241,7 +245,7 @@ export function TaskHomeHeader({
             <button
               type="button"
               className={css.taskHomeSearchClear}
-              aria-label="清除搜索"
+              aria-label={mobileConversationT('taskHome.clearSearch')}
               tabIndex={searchExpanded ? 0 : -1}
               onClick={(event) => {
                 event.stopPropagation()

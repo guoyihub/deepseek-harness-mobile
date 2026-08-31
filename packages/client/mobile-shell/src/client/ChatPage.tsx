@@ -23,7 +23,7 @@ import {
 import { useMobileConnection } from './MobileConnectionContext.tsx'
 import { MobileShellLayout } from './MobileShellLayout.tsx'
 import { mobileApi } from './mobile-api-client.ts'
-import { sessionChatHeaderMeta, sessionDisplayTitle, NEW_SESSION_TITLE } from './session-label.ts'
+import { sessionChatHeaderMeta, sessionDisplayTitle, newSessionTitle } from './session-label.ts'
 import { mobileConversationT } from './mobile-locale.ts'
 import { MobileScrollToBottomButton } from './MobileScrollToBottomButton.tsx'
 import {
@@ -146,7 +146,7 @@ export function ChatPage({
   const title = useMemo(() => {
     const fromProjection = projectionMap.title
     if (typeof fromProjection === 'string' && fromProjection.trim() !== '') return fromProjection
-    if (blank && optimisticText === undefined) return NEW_SESSION_TITLE
+    if (blank && optimisticText === undefined) return newSessionTitle()
     if (sessionSummary !== undefined) return sessionDisplayTitle(sessionSummary)
     return sessionId.slice(0, 8)
   }, [blank, optimisticText, projectionMap.title, sessionId, sessionSummary])

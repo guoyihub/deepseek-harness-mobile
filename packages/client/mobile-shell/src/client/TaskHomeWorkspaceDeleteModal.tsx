@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Button, Modal } from '@deepseek-ai/dsh-client-ui-primitives'
+import { mobileConversationT } from './mobile-locale.ts'
 import css from './mobile-shell.module.css'
 
 /** Props for {@link TaskHomeWorkspaceDeleteModal}. */
@@ -49,18 +50,18 @@ export function TaskHomeWorkspaceDeleteModal({
     <Modal
       open={open}
       onClose={() => { if (!busy) onClose() }}
-      title="删除分组"
-      description={`确定删除「${workspaceTitle}」？会话不会被删除，仅移除该工作区分组。`}
-      closeLabel="关闭"
+      title={mobileConversationT('workspace.deleteGroup')}
+      description={mobileConversationT('workspace.deleteConfirm', { name: workspaceTitle })}
+      closeLabel={mobileConversationT('common.close')}
       footer={(
         <>
-          <Button variant="outline" disabled={busy} onClick={onClose}>取消</Button>
-          <Button variant="primary" disabled={busy} onClick={submit}>删除分组</Button>
+          <Button variant="outline" disabled={busy} onClick={onClose}>{mobileConversationT('common.cancel')}</Button>
+          <Button variant="primary" disabled={busy} onClick={submit}>{mobileConversationT('workspace.deleteGroup')}</Button>
         </>
       )}
     >
       {busy && (
-        <div className={css.taskHomeRenameError} role="status">正在删除…</div>
+        <div className={css.taskHomeRenameError} role="status">{mobileConversationT('workspace.deleting')}</div>
       )}
       {error !== undefined && (
         <div className={css.taskHomeRenameError} role="alert">{error}</div>

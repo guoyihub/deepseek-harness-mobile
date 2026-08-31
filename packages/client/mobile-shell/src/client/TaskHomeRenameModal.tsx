@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Button, Modal } from '@deepseek-ai/dsh-client-ui-primitives'
+import { mobileConversationT } from './mobile-locale.ts'
 import css from './mobile-shell.module.css'
 
 /** Props for {@link TaskHomeRenameModal}. */
@@ -27,12 +28,15 @@ export interface TaskHomeRenameModalProps {
 export function TaskHomeRenameModal({
   open,
   initialTitle,
-  dialogTitle = '重命名会话',
-  confirmLabel = '重命名',
-  inputLabel = '会话标题',
+  dialogTitle,
+  confirmLabel,
+  inputLabel,
   onClose,
   onConfirm,
 }: TaskHomeRenameModalProps): JSX.Element {
+  const resolvedDialogTitle = dialogTitle ?? mobileConversationT('session.rename')
+  const resolvedConfirmLabel = confirmLabel ?? mobileConversationT('session.renameConfirm')
+  const resolvedInputLabel = inputLabel ?? mobileConversationT('session.titleLabel')
   const [draft, setDraft] = useState(initialTitle)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | undefined>(undefined)
@@ -68,12 +72,12 @@ export function TaskHomeRenameModal({
     <Modal
       open={open}
       onClose={() => { if (!busy) onClose() }}
-      title={dialogTitle}
-      closeLabel="关闭"
+      title={resolvedDialogTitle}
+      closeLabel={mobileConversationT('common.close')}
       footer={(
         <>
-          <Button variant="outline" disabled={busy} onClick={onClose}>取消</Button>
-          <Button variant="primary" disabled={blocked} onClick={submit}>{confirmLabel}</Button>
+          <Button variant="outline" disabled={busy} onClick={onClose}>{mobileConversationT('common.cancel')}</Button>
+          <Button variant="primary" disabled={blocked} onClick={submit}>{resolvedConfirmLabel}</Button>
         </>
       )}
     >
@@ -83,7 +87,7 @@ export function TaskHomeRenameModal({
         type="text"
         value={draft}
         disabled={busy}
-        aria-label={inputLabel}
+        aria-label={resolvedInputLabel}
         onChange={(event) => {
           setDraft(event.target.value)
           setError(undefined)

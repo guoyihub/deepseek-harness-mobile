@@ -41,6 +41,7 @@ import {
 import { readStoredServerUrl } from './mobile-server-config.ts'
 import { modelIdLabel } from './mobile-model-label.ts'
 import { agentPresetDisplayLabel } from './mobile-host-preset-label.ts'
+import { mobileConversationT } from './mobile-locale.ts'
 import { mobileApi } from './mobile-api-client.ts'
 import { isNativeShell } from '@deepseek-ai/dsh-client-connection/client'
 import css from './mobile-shell.module.css'
@@ -55,14 +56,22 @@ export interface ConnectionPageProps {
   onEditServer?: () => void
 }
 
-const THEME_OPTIONS = [
-  { id: 'light' as const, label: '浅色' },
-  { id: 'dark' as const, label: '深色' },
-  { id: 'system' as const, label: '跟随系统' },
-]
+const THEME_OPTION_IDS = ['light', 'dark', 'system'] as const satisfies readonly MobileThemePreference[]
 
 function themeLabel(theme: MobileThemePreference): string {
-  return THEME_OPTIONS.find(option => option.id === theme)?.label ?? '跟随系统'
+  const key = theme === 'light'
+    ? 'theme.light'
+    : theme === 'dark'
+      ? 'theme.dark'
+      : 'theme.system'
+  return mobileConversationT(key)
+}
+
+function themeOptions(): Array<{ id: MobileThemePreference; label: string }> {
+  return THEME_OPTION_IDS.map(id => ({
+    id,
+    label: themeLabel(id),
+  }))
 }
 
 function shortenUrl(url: string, max = 28): string {
@@ -192,26 +201,26 @@ export function ConnectionPage({ onBack, onPair, onEditServer }: ConnectionPageP
   }, [refreshSavedConnections, reloadPairing])
 
   const statusLabel = revoked
-    ? '已吊销'
+    ? mobileConversationT('connection.revoked')
     : connectionState === 'reconnecting'
-      ? '重连中'
+      ? mobileConversationT('connection.reconnecting')
       : connectionState === 'connected'
-        ? '已连接'
+        ? mobileConversationT('connection.connected')
         : paired
-          ? '连接异常'
-          : '未连接'
+          ? mobileConversationT('connection.error')
+          : mobileConversationT('connection.disconnected')
 
   const statusOnline = !revoked && connectionState === 'connected'
   const hostName = hostDescription?.provider ?? 'DSH Host'
   const profileSubtitle = paired
-    ? (hostBase ?? '未知地址')
-    : '尚未连接桌面 Host'
+    ? (hostBase ?? mobileConversationT('connection.unknownAddress'))
+    : mobileConversationT('connection.notPaired')
 
-  const panelError = reconnectError ?? (revoked ? '设备已被桌面吊销，请重新扫码连接' : error)
+  const panelError = reconnectError ?? (revoked ? mobileConversationT('connection.revokedMessage') : error)
 
   return (
     <MobileSettingsSheet
-      title="连接管理"
+      title={mobileConversationT('connection.title')}
       onClose={onBack}
       onCloseControl={(close) => { closeSheetRef.current = close }}
     >
@@ -220,7 +229,7 @@ export function ConnectionPage({ onBack, onPair, onEditServer }: ConnectionPageP
           <div className={css.mSetAlert} role="alert">{panelError}</div>
         )}
 
-        <section className={css.mSetProfile} aria-label="当前连接">
+        <section className={css.mSetProfile} aria-label={mobileConversationT('connection.current')}>
           <div className={css.mSetAvatar} data-online={statusOnline || undefined}>
             {activeFingerprint !== undefined ? (
               <HostFingerprintBadge fingerprint={activeFingerprint} active={statusOnline} />
@@ -229,7 +238,7 @@ export function ConnectionPage({ onBack, onPair, onEditServer }: ConnectionPageP
             )}
           </div>
           <div className={css.mSetProfileNameRow}>
-            <h2 className={css.mSetProfileName}>{paired ? hostName : '未连接'}</h2>
+            <h2 className={css.mSetProfileName}>{paired ? hostName : mobileConversationT('connection.disconnected')}</h2>
             {paired && (
               <span className={css.mSetProfileBadge} data-online={statusOnline || undefined}>
                 {statusLabel}
@@ -238,7 +247,7 @@ export function ConnectionPage({ onBack, onPair, onEditServer }: ConnectionPageP
           </div>
           <p className={css.mSetProfileSub}>{profileSubtitle}</p>
           {activeFingerprint !== undefined && (
-            <p className={css.mSetProfileSub}>指纹 {activeFingerprint.toUpperCase()}</p>
+            <p className={css.mSetProfileSub}>{mobileConversationT('connection.fingerprint')} {activeFingerprint.toUpperCase()}</p>
           )}
           <div className={css.mSetProfileActions}>
             <button
@@ -246,7 +255,7 @@ export function ConnectionPage({ onBack, onPair, onEditServer }: ConnectionPageP
               className={css.mSetProfileActionBtn}
               onClick={() => { closeThen(onPair) }}
             >
-              {paired ? '重新扫码连接' : '扫码连接电脑'}
+              {paired ? mobileConversationT('connection.rescan') : mobileConversationT('connection.scan')}
             </button>
             {paired && (
               <button
@@ -254,7 +263,7 @@ export function ConnectionPage({ onBack, onPair, onEditServer }: ConnectionPageP
                 className={`${css.mSetProfileActionBtn} ${css.mSetProfileActionBtnDestructive}`}
                 onClick={onDisconnect}
               >
-                断开连接
+                {mobileConversationT('connection.disconnect')}
               </button>
             )}
           </div>
@@ -264,7 +273,7 @@ export function ConnectionPage({ onBack, onPair, onEditServer }: ConnectionPageP
           ? <SavedConnectionEmptyHint />
           : (
             <section className={css.mSetSection}>
-              <h3 className={css.mSetSectionLabel}>已保存的连接</h3>
+              <h3 className={css.mSetSectionLabel}>{mobileConversationT('connection.saved')}</h3>
               <SavedConnectionList
                 entries={savedConnections}
                 activeId={activeSavedId}
@@ -281,25 +290,25 @@ export function ConnectionPage({ onBack, onPair, onEditServer }: ConnectionPageP
         <MobileSettingsCard>
           <MobileSettingsRow
             icon={<IconUserOutline16 size={22} />}
-            label="设备名称"
+            label={mobileConversationT('settings.deviceName')}
             value={deviceLabel}
             onClick={() => { setDeviceModalOpen(true) }}
           />
           <MobileSettingsRow
             icon={<IconPersonalizationOutline16 size={22} />}
-            label="外观"
+            label={mobileConversationT('settings.appearance')}
             value={themeLabel(theme)}
             onClick={() => { setThemeModalOpen(true) }}
           />
         </MobileSettingsCard>
 
         <section className={css.mSetSection}>
-          <h3 className={css.mSetSectionLabel}>Host 设置</h3>
+          <h3 className={css.mSetSectionLabel}>{mobileConversationT('settings.host')}</h3>
           <MobileSettingsCard>
             <MobileSettingsRow
               icon={<IconSettingsOutline16 size={22} />}
-              label="通用设置"
-              value={paired ? undefined : '请先连接电脑'}
+              label={mobileConversationT('settings.general')}
+              value={paired ? undefined : mobileConversationT('connection.connectFirst')}
               disabled={!paired}
               onClick={() => {
                 openHostSetting(() => { setHostSettingsHint('general') })
@@ -307,8 +316,8 @@ export function ConnectionPage({ onBack, onPair, onEditServer }: ConnectionPageP
             />
             <MobileSettingsRow
               icon={<IconDataOutline16 size={22} />}
-              label="模型"
-              value={paired ? modelDisplayLabel : '请先连接电脑'}
+              label={mobileConversationT('settings.model')}
+              value={paired ? modelDisplayLabel : mobileConversationT('connection.connectFirst')}
               disabled={!paired}
               onClick={() => {
                 openHostSetting(() => { setModelModalOpen(true) })
@@ -316,8 +325,8 @@ export function ConnectionPage({ onBack, onPair, onEditServer }: ConnectionPageP
             />
             <MobileSettingsRow
               icon={<IconPersonalizationOutline16 size={22} />}
-              label="插件"
-              value={paired ? undefined : '请先连接电脑'}
+              label={mobileConversationT('settings.plugins')}
+              value={paired ? undefined : mobileConversationT('connection.connectFirst')}
               disabled={!paired}
               onClick={() => {
                 openHostSetting(() => { setHostSettingsHint('plugins') })
@@ -325,8 +334,8 @@ export function ConnectionPage({ onBack, onPair, onEditServer }: ConnectionPageP
             />
             <MobileSettingsRow
               icon={<IconAgentPresetOutline16 size={22} />}
-              label="Agent 预设"
-              value={paired ? (defaultPresetLabel ?? '加载中…') : '请先连接电脑'}
+              label={mobileConversationT('settings.agentPreset')}
+              value={paired ? (defaultPresetLabel ?? mobileConversationT('common.loading')) : mobileConversationT('connection.connectFirst')}
               disabled={!paired}
               onClick={() => {
                 openHostSetting(() => { setPresetModalOpen(true) })
@@ -339,7 +348,7 @@ export function ConnectionPage({ onBack, onPair, onEditServer }: ConnectionPageP
           <MobileSettingsCard>
             <MobileSettingsRow
               icon={<IconGlobeOutline14 size={22} />}
-              label="Mobile 服务器"
+              label={mobileConversationT('settings.mobileServer')}
               value={shortenUrl(serverUrl)}
               onClick={() => { closeThen(onEditServer) }}
             />
@@ -361,7 +370,7 @@ export function ConnectionPage({ onBack, onPair, onEditServer }: ConnectionPageP
       <ThemePickerModal
         open={themeModalOpen}
         value={theme}
-        options={THEME_OPTIONS}
+        options={themeOptions()}
         onClose={() => { setThemeModalOpen(false) }}
         onSelect={onThemeChange}
       />
@@ -381,15 +390,15 @@ export function ConnectionPage({ onBack, onPair, onEditServer }: ConnectionPageP
 
       <HostSettingsDesktopHintModal
         open={hostSettingsHint === 'general'}
-        title="通用设置"
-        body="语言、主题、发送快捷键等通用选项请在电脑端 Web 的「设置 → 通用设置」中配置。"
+        title={mobileConversationT('settings.general')}
+        body={mobileConversationT('settings.generalHint')}
         onClose={() => { setHostSettingsHint(undefined) }}
       />
 
       <HostSettingsDesktopHintModal
         open={hostSettingsHint === 'plugins'}
-        title="插件"
-        body="插件启用与详细配置请在电脑端 Web 的「设置 → 插件」中管理。"
+        title={mobileConversationT('settings.plugins')}
+        body={mobileConversationT('settings.pluginsHint')}
         onClose={() => { setHostSettingsHint(undefined) }}
       />
     </MobileSettingsSheet>

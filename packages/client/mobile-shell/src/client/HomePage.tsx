@@ -430,10 +430,10 @@ export function HomePage({
   const reconnecting = connectionState === 'reconnecting'
   const reconnectFailed = !paired && !revoked && error !== undefined
   const unpairedCopy = revoked
-    ? '设备已被桌面吊销，请重新扫码连接'
+    ? mobileConversationT('connection.revokedMessage')
     : reconnectFailed
-      ? '多次重连失败，请扫描电脑上的二维码重新连接'
-      : '扫码连接同一局域网内的 DeepSeek Harness 电脑，即可查看并继续 Agent 任务。'
+      ? mobileConversationT('connection.reconnectFailed')
+      : mobileConversationT('connection.unpairedHint')
 
   return (
     <MobileShellLayout
@@ -457,7 +457,7 @@ export function HomePage({
       )}
       fab={selecting || searching ? undefined : (
         <MobileFab
-          label={paired ? '新建任务' : '扫码连接电脑'}
+          label={paired ? mobileConversationT('taskHome.newTask') : mobileConversationT('connection.scan')}
           onClick={onFabClick}
         />
       )}
@@ -474,19 +474,19 @@ export function HomePage({
         disabled={!paired || searching || selecting}
         dock={selecting}
         scrollClassName={css.taskHomePullScroll}
-        ariaLabel="任务列表"
+        ariaLabel={mobileConversationT('taskHome.list')}
       >
         <StatusPanel error={paired && !reconnecting ? (actionError ?? error) : undefined} />
 
         {!paired && (
           <div className={css.taskHomeEmpty}>
             <p className={css.taskHomeEmptyCopy}>{unpairedCopy}</p>
-            <Button variant="primary" onClick={onPair}>扫码连接电脑</Button>
+            <Button variant="primary" onClick={onPair}>{mobileConversationT('connection.scan')}</Button>
           </div>
         )}
 
         {paired && searching && (
-          <div className={css.taskHomeSearchBody} role="list" aria-label="搜索结果">
+          <div className={css.taskHomeSearchBody} role="list" aria-label={mobileConversationT('taskHome.searchResults')}>
             <ul className={css.taskHomeSearchList}>
               {searchResults.items.map(result => (
                 <li key={result.id}>
@@ -501,37 +501,37 @@ export function HomePage({
               ))}
             </ul>
             {searchPending && (
-              <div className={css.taskHomeSearchStatus} role="status">正在搜索会话历史…</div>
+              <div className={css.taskHomeSearchStatus} role="status">{mobileConversationT('taskHome.searching')}</div>
             )}
             {searchFailed && (
               <div className={css.taskHomeSearchWarning} role="status">
-                内容搜索暂不可用，仅显示名称匹配。
+                {mobileConversationT('taskHome.searchFallback')}
               </div>
             )}
             {!searchPending && searchResults.items.length === 0 && (
-              <div className={css.taskHomeEmpty}>无匹配会话</div>
+              <div className={css.taskHomeEmpty}>{mobileConversationT('taskHome.noSearchResults')}</div>
             )}
             {searchResults.hasMore && (
               <div className={css.taskHomeSearchStatus}>
-                {`仅显示前 ${MOBILE_SEARCH_RESULT_LIMIT} 条结果，请缩小搜索范围。`}
+                {mobileConversationT('taskHome.searchLimit', { n: MOBILE_SEARCH_RESULT_LIMIT })}
               </div>
             )}
           </div>
         )}
 
         {paired && !searching && reconnecting && visibleSessionCount === 0 && (
-          <div className={css.taskHomeEmpty} role="status">正在重连…</div>
+          <div className={css.taskHomeEmpty} role="status">{mobileConversationT('taskHome.reconnecting')}</div>
         )}
 
         {paired && !searching && !reconnecting && sessionsLoading && visibleSessionCount === 0 && (
-          <div className={css.taskHomeEmpty}>正在加载任务…</div>
+          <div className={css.taskHomeEmpty}>{mobileConversationT('taskHome.loading')}</div>
         )}
 
         {paired && !searching && !reconnecting && !sessionsLoading && visibleSessionCount === 0 && (
           <div className={css.taskHomeEmpty}>
             {filter === 'running'
-              ? '没有匹配的任务'
-              : '暂无任务，点击右下角按钮新建一个'}
+              ? mobileConversationT('taskHome.noRunningTasks')
+              : mobileConversationT('taskHome.empty')}
           </div>
         )}
 
@@ -617,9 +617,9 @@ export function HomePage({
       {workspaceRenameTarget !== null && (
         <TaskHomeRenameModal
           open
-          dialogTitle="重命名分组"
-          confirmLabel="保存"
-          inputLabel="分组名称"
+          dialogTitle={mobileConversationT('workspace.renameGroup')}
+          confirmLabel={mobileConversationT('common.save')}
+          inputLabel={mobileConversationT('workspace.groupName')}
           initialTitle={workspaceRenameTarget.title}
           onClose={() => { setWorkspaceRenameTarget(null) }}
           onConfirm={async (title) => {

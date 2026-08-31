@@ -12,6 +12,7 @@ import {
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { MenuEntry } from '@deepseek-ai/dsh-client-ui-primitives'
 import { groupDisplayLabel } from './mobile-task-groups.ts'
+import { mobileConversationT } from './mobile-locale.ts'
 import css from './mobile-shell.module.css'
 
 /** Props for {@link TaskHomeGroupHeader}. */
@@ -44,8 +45,8 @@ export function TaskHomeGroupHeader({
   const menuAnchorRef = useRef<HTMLButtonElement>(null)
 
   const menuItems: MenuEntry[] = [
-    { id: 'rename', label: '重命名分组', icon: <IconEditOutline16 size={16} /> },
-    { id: 'delete', label: '删除分组', icon: <IconTrashOutline16 size={16} />, danger: true },
+    { id: 'rename', label: mobileConversationT('workspace.renameGroup'), icon: <IconEditOutline16 size={16} /> },
+    { id: 'delete', label: mobileConversationT('workspace.deleteGroup'), icon: <IconTrashOutline16 size={16} />, danger: true },
   ]
 
   const getAnchorRect = useCallback(
@@ -79,7 +80,7 @@ export function TaskHomeGroupHeader({
             ref={menuAnchorRef}
             type="button"
             className={css.taskHomeGroupMenuButton}
-            aria-label={`分组操作：${label}`}
+            aria-label={mobileConversationT('workspace.groupActions', { name: label })}
             aria-haspopup="menu"
             aria-expanded={menuOpen}
             onClick={(event) => {

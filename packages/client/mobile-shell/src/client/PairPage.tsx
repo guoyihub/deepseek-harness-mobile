@@ -206,7 +206,7 @@ export function PairPage({
           >
             <IconChevronLeftOutline14 size={16} aria-hidden />
           </button>
-          <h1 className={css.scanTitle}>连接我的电脑</h1>
+          <h1 className={css.scanTitle}>{mobileConversationT('pair.title')}</h1>
         </header>
 
         {cameraActive && !busy && (
@@ -215,14 +215,14 @@ export function PairPage({
 
         <p className={css.scanStatus} role="status">
           {phase === 'pendingDesktop'
-            ? '请在电脑上点击「允许」，手机会自动继续…'
+            ? mobileConversationT('pair.waitingApproval')
             : status}
         </p>
 
         {phase === 'success' && successFingerprint !== undefined && (
           <div className={css.scanSuccessFingerprint}>
             <HostFingerprintBadge fingerprint={successFingerprint} active />
-            <p className={css.scanSuccessCopy}>主机指纹已保存，可在设置中一键重连</p>
+            <p className={css.scanSuccessCopy}>{mobileConversationT('pair.fingerprintSaved')}</p>
           </div>
         )}
 
@@ -230,7 +230,7 @@ export function PairPage({
           <button
             type="button"
             className={css.scanAlbumBtn}
-            aria-label="从相册选择 QR 图片"
+            aria-label={mobileConversationT('pair.pickFromAlbum')}
             onClick={() => { fileInputRef.current?.click() }}
           >
             <IconFolderOpenOutline16 size={22} aria-hidden />
@@ -260,18 +260,18 @@ export function PairPage({
                     setCameraActive(true)
                   }}
                 >
-                  重新打开摄像头
+                  {mobileConversationT('pair.reopenCamera')}
                 </button>
               </>
             )}
             {showPasswordSheet && (
               <>
-                <p className={css.scanSheetCopy}>电脑端已启用连接密码，请输入后继续</p>
+                <p className={css.scanSheetCopy}>{mobileConversationT('pair.passwordRequired')}</p>
                 <input
                   className={css.pairInput}
                   type="password"
                   value={pairPassword}
-                  placeholder="连接密码"
+                  placeholder={mobileConversationT('pair.passwordLabel')}
                   onChange={(event) => { setPairPassword(event.target.value) }}
                 />
                 <button
@@ -279,7 +279,7 @@ export function PairPage({
                   className={css.settingsPrimaryBtn}
                   onClick={onContinueWithPassword}
                 >
-                  继续连接
+                  {mobileConversationT('pair.continue')}
                 </button>
               </>
             )}
@@ -295,7 +295,7 @@ export function PairPage({
                 setCameraActive(true)
               }}
             >
-              清除本地信息
+              {mobileConversationT('pair.clearLocal')}
             </button>
           </div>
         )}

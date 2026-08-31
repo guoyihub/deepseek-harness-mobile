@@ -5,6 +5,7 @@ import {
 import type { SavedMobileConnection } from './mobile-session.ts'
 import { MobileSettingsCard } from './MobileSettingsCard.tsx'
 import { MobileSettingsRow } from './MobileSettingsRow.tsx'
+import { mobileConversationT } from './mobile-locale.ts'
 import css from './mobile-shell.module.css'
 
 /** Props for {@link SavedConnectionList}. */
@@ -54,7 +55,7 @@ export function SavedConnectionList({
             <MobileSettingsRow
               icon={<IconLinkOutline16 size={22} />}
               label={entry.hostDisplayName}
-              value={isActive ? '当前' : isReconnecting ? '重连中…' : formatSavedAt(entry.lastConnectedAt)}
+              value={isActive ? mobileConversationT('connection.currentBadge') : isReconnecting ? mobileConversationT('connection.reconnectingEllipsis') : formatSavedAt(entry.lastConnectedAt)}
               showChevron={!isActive}
               disabled={busy || isActive}
               onClick={isActive ? undefined : () => { onReconnect(entry) }}
@@ -63,7 +64,7 @@ export function SavedConnectionList({
               <button
                 type="button"
                 className={css.mSetSavedRemove}
-                aria-label={`移除 ${entry.hostDisplayName}`}
+                aria-label={mobileConversationT('connection.removeWithName', { name: entry.hostDisplayName })}
                 disabled={busy}
                 onClick={() => { onRemove(entry.id) }}
               >
@@ -81,7 +82,7 @@ export function SavedConnectionList({
 export function SavedConnectionEmptyHint(): JSX.Element {
   return (
     <p className={css.mSetEmptyHint}>
-      扫码连接成功后，会在这里保存主机记录，方便下次重连。
+      {mobileConversationT('connection.savedEmptyHint')}
     </p>
   )
 }

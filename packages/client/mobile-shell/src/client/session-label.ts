@@ -3,12 +3,12 @@
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { SessionSummary } from '@deepseek-ai/dsh-api-session-controller/types'
 import type { WorkspaceView } from '@deepseek-ai/dsh-api-workspace-controller/client'
-
-/** Label when a session belongs to no registered workspace. */
-const UNGROUPED_WORKSPACE_LABEL = '未分组'
+import { mobileConversationT } from './mobile-locale.ts'
 
 /** Default title for blank sessions before the Host assigns one. */
-export const NEW_SESSION_TITLE = '新建会话'
+export function newSessionTitle(): string {
+  return mobileConversationT('session.new')
+}
 
 /**
  * Resolve the Host workspace display title (registry `title`, then path leaf).
@@ -34,7 +34,7 @@ export function sessionWorkspaceTitle(
 ): string {
   const workspace = workspaces.find(item => item.sessionIds.includes(sessionId))
   if (workspace !== undefined) return workspaceDisplayLabel(workspace)
-  return UNGROUPED_WORKSPACE_LABEL
+  return mobileConversationT('workspace.ungrouped')
 }
 
 /**
@@ -47,7 +47,7 @@ export function sessionWorkspaceLabel(summary: SessionSummary): string {
     const leaf = parts[parts.length - 1]
     if (leaf !== undefined && leaf !== '') return leaf
   }
-  return 'Work'
+  return mobileConversationT('session.workspaceFallback')
 }
 
 /**
@@ -58,7 +58,7 @@ export function sessionDisplayTitle(summary: SessionSummary): string {
   const projections = summary.projections?.values as { title?: unknown } | undefined
   const title = projections?.title
   if (typeof title === 'string' && title.trim() !== '') return title
-  if (summary.blank) return NEW_SESSION_TITLE
+  if (summary.blank) return newSessionTitle()
   const workspace = sessionWorkspaceLabel(summary)
   if (summary.cwd !== undefined && summary.cwd !== '') return workspace
   return summary.sessionId.slice(0, 8)
@@ -114,8 +114,9 @@ export function sessionDisplayMeta(
  */
 export function sessionSearchMeta(summary: SessionSummary): string {
   const workspace = sessionWorkspaceLabel(summary)
-  if (summary.cwd === undefined || summary.cwd === '' || workspace === 'Work') return 'Work'
-  return `Work · ${workspace}`
+  const fallback = mobileConversationT('session.workspaceFallback')
+  if (summary.cwd === undefined || summary.cwd === '' || workspace === fallback) return fallback
+  return `${fallback} · ${workspace}`
 }
 
 /**

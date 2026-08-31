@@ -12,13 +12,16 @@ import {
   type GroupNode,
 } from '@deepseek-ai/dsh-client-ui-workspace/src/client/tree.ts'
 import { sessionDisplayTitle } from './session-label.ts'
+import { mobileConversationT } from './mobile-locale.ts'
 import type { PendingInteractionStatus } from './mobile-session-pending-tracker.ts'
 
 /** Default visible session rows per expanded workspace group on mobile task home. */
 export const MOBILE_COLLAPSED_SESSION_LIMIT = 8
 
 /** Mobile label for sessions outside every workspace (desktop `group.ungrouped`). */
-export const MOBILE_UNGROUPED_LABEL = '未分组'
+export function mobileUngroupedLabel(): string {
+  return mobileConversationT('workspace.ungrouped')
+}
 
 /**
  * Convert pending-status bits into the Workspace-tree interaction map.
@@ -116,7 +119,7 @@ export function deriveMobileTaskGroups(
  * @param group - one derived workspace section.
  */
 export function groupDisplayLabel(group: GroupNode): string {
-  if (group.workspaceId === undefined) return MOBILE_UNGROUPED_LABEL
+  if (group.workspaceId === undefined) return mobileUngroupedLabel()
   return group.label
 }
 

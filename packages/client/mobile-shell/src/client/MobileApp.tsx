@@ -34,6 +34,7 @@ import { isNativeShell, readStoredServerUrl } from '@deepseek-ai/dsh-client-conn
 import { MobileViewportShell } from './MobileViewportShell.tsx'
 import type { MobileRoute } from './mobile-route.ts'
 import { useMobileNavigation } from './useMobileNavigation.ts'
+import { mobileConversationT } from './mobile-locale.ts'
 import css from './mobile-shell.module.css'
 
 function resolveInitialRoute(launch: ReturnType<typeof readPairingLaunchContext>): MobileRoute {
@@ -147,7 +148,7 @@ export function MobileApp(): JSX.Element {
       <MobileViewportShell>
         {showA2hs && !isNativeShell() && (
           <div className={css.a2hsBanner}>
-            <p className={css.a2hsText}>添加到主屏幕，获得更接近 App 的体验。</p>
+            <p className={css.a2hsText}>{mobileConversationT('pwa.installHint')}</p>
             <div className={css.actionRow}>
               <Button
                 variant="primary"
@@ -157,7 +158,7 @@ export function MobileApp(): JSX.Element {
                   setShowA2hs(false)
                 }}
               >
-                知道了
+                {mobileConversationT('common.gotIt')}
               </Button>
             </div>
           </div>

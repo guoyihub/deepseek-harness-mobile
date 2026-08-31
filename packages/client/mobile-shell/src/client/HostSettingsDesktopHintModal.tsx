@@ -1,4 +1,5 @@
 import { Modal } from '@deepseek-ai/dsh-client-ui-primitives'
+import { mobileConversationT } from './mobile-locale.ts'
 import css from './mobile-shell.module.css'
 
 /** Props for {@link HostSettingsDesktopHintModal}. */
@@ -20,7 +21,7 @@ export function HostSettingsDesktopHintModal({
   onClose,
 }: HostSettingsDesktopHintModalProps): JSX.Element {
   return (
-    <Modal open={open} onClose={onClose} title={title} closeLabel="关闭">
+    <Modal open={open} onClose={onClose} title={title} closeLabel={mobileConversationT('common.close')}>
       <p className={css.mSetDesktopHintBody}>{body}</p>
     </Modal>
   )

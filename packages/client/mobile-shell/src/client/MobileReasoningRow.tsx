@@ -42,7 +42,7 @@ export function MobileReasoningRow({ text, running }: MobileReasoningRowProps): 
         rowClassName={css.reasoningRow}
         chevronClassName={css.contextChevron}
         icon={<IconThinkOutline14 size={14} />}
-        title="Think"
+        title={mobileConversationT('reasoning.label')}
         open={expanded}
         expandable
         expandOnRowClick
