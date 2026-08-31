@@ -11,9 +11,15 @@ import { RemoteStreamMuxClient } from '@deepseek-ai/dsh-api-gateway/client'
 import {
   REMOTE_EVENT_STREAM_ENDPOINT,
   REMOTE_EVENT_STREAM_PAYLOAD,
+  type RemoteEventClientId,
 } from '@deepseek-ai/dsh-api-gateway/src/stream-protocol.ts'
 import { createMobileSessionRemotes } from './mobile-session-remotes.ts'
 import { mobileConnectionRpc } from './mobile-api-client.ts'
+import { clearMobilePendingRegistry } from './mobile-pending-registry.ts'
+import {
+  drainMobileRemoteEvents,
+  handleMobileRemoteEventFrame,
+} from './mobile-remote-events.ts'
 
 const streams = new RemoteStreamMuxClient()
 let generation: ConnectionGeneration | undefined
@@ -35,17 +41,35 @@ function publishGeneration(next: ConnectionGeneration | undefined): void {
 
 const runGeneration: ConnectionGenerationSource = async (signal, ready) => {
   streams.start()
+  clearMobilePendingRegistry()
   const source = streams.open(REMOTE_EVENT_STREAM_ENDPOINT, REMOTE_EVENT_STREAM_PAYLOAD, signal)
-  let opened = false
-  for await (const value of source) {
-    if (!opened) {
-      const host = parseReadyHost(value)
-      ready(host)
-      opened = true
-      continue
+  let clientId: RemoteEventClientId | undefined
+  try {
+    for await (const value of source) {
+      if (clientId === undefined) {
+        const host = parseReadyHost(value)
+        clientId = parseReadyClientId(value)
+        ready(host)
+        continue
+      }
+      handleMobileRemoteEventFrame(value, clientId, signal)
     }
-    void value
+  } finally {
+    await drainMobileRemoteEvents()
+    clearMobilePendingRegistry()
   }
+}
+
+function parseReadyClientId(value: unknown): RemoteEventClientId {
+  if (
+    typeof value !== 'object'
+    || value === null
+    || !('clientId' in value)
+    || typeof value.clientId !== 'string'
+  ) {
+    throw new TypeError('mobile connection: forwarded event stream did not begin with ready')
+  }
+  return value.clientId as RemoteEventClientId
 }
 
 function parseReadyHost(value: unknown): ConnectionHostInfo {

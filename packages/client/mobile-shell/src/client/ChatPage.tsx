@@ -37,6 +37,7 @@ import {
 } from './mobile-visual-viewport.ts'
 import { StatusPanel } from './StatusPanel.tsx'
 import { useMobileSession } from './useMobileSession.ts'
+import { useMobilePendingInteraction } from './useMobilePendingInteraction.ts'
 import css from './mobile-shell.module.css'
 
 /** Props for {@link ChatPage}. */
@@ -134,7 +135,7 @@ export function ChatPage({
 
   const projectionMap = useMemo(() => projectionValues(projections), [projections])
 
-  const pending = useSession(() => [])
+  const pendingInteraction = useMobilePendingInteraction(sessionId)
   const blank = useSession(snapshot => snapshot.blank)
   const chatOrder = useSession(snapshot => snapshot.chat.order)
   const chatNodes = useSession(snapshot => snapshot.chat.nodes)
@@ -211,7 +212,7 @@ export function ChatPage({
     observer.observe(dock)
     publishHeight()
     return () => { observer.disconnect() }
-  }, [followComposerLayout, pending.length, sessionId, sessionView, showHero])
+  }, [followComposerLayout, pendingInteraction !== undefined, sessionId, sessionView, showHero])
 
   useEffect(() => {
     const shell = chatSurfaceRef.current?.closest('[data-mobile-viewport-shell]') as HTMLElement | null
@@ -410,11 +411,11 @@ export function ChatPage({
             />
             <div ref={composerDockRef} className={showHero ? css.composerDockBlank : css.composerDock}>
               <StatusPanel error={error ?? connectionError} />
-              {pending.length > 0
+              {pendingInteraction !== undefined
                 ? (
                   <MobileComposerTakeover
                     sessionId={sessionId}
-                    pending={pending}
+                    pendingInteraction={pendingInteraction}
                     useSession={useSession}
                     useProjection={useProjection}
                   />
@@ -440,7 +441,7 @@ export function ChatPage({
                     onLayoutChange={followComposerLayout}
                   />
                 )}
-              {pending.length === 0 && <MobileStatsLine tokenUsage={tokenUsage} />}
+              {pendingInteraction === undefined && <MobileStatsLine tokenUsage={tokenUsage} />}
             </div>
           </div>
         </div>

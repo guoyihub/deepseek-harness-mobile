@@ -23,6 +23,7 @@ import {
   mobilePendingInteraction,
   type PendingInteractionStatus,
 } from './mobile-session-pending-tracker.ts'
+import { clearMobilePendingRegistry } from './mobile-pending-registry.ts'
 import {
   clearMobileCompletedNotifications,
   mobileSessionCompleted,
@@ -300,6 +301,7 @@ export function MobileConnectionProvider({ children }: { children: ReactNode }):
     const controller = startMobileConnectionLoop({
       onConnected: (host) => {
         clearMobilePendingInteractions()
+        clearMobilePendingRegistry()
         clearMobileCompletedNotifications()
         setPendingRevision(revision => revision + 1)
         setHostDescription({ home: host.home })
