@@ -17,13 +17,23 @@ import { MobilePageStack } from './MobilePageStack.tsx'
 import { PairPage } from './PairPage.tsx'
 
 import {
+  applyMobileFontSize,
   applyMobileTheme,
   dismissA2hsHint,
   isA2hsDismissed,
   isStandaloneDisplayMode,
+  readMobileFontSize,
   readMobileThemePreference,
   subscribeMobileTheme,
 } from './mobile-theme.ts'
+import {
+  applyMobileLanguage,
+  readMobileLanguagePreference,
+  resolveMobileLanguage,
+  writeMobileLanguagePreference,
+  type MobileLanguagePreference,
+} from './mobile-language.ts'
+import { MobileLanguageContext, MobileLanguageSetContext, mobileConversationT } from './mobile-locale.ts'
 
 import { readPairingLaunchContext } from './pairing-launch.ts'
 
@@ -34,7 +44,6 @@ import { isNativeShell, readStoredServerUrl } from '@deepseek-ai/dsh-client-conn
 import { MobileViewportShell } from './MobileViewportShell.tsx'
 import type { MobileRoute } from './mobile-route.ts'
 import { useMobileNavigation } from './useMobileNavigation.ts'
-import { mobileConversationT } from './mobile-locale.ts'
 import css from './mobile-shell.module.css'
 
 function resolveInitialRoute(launch: ReturnType<typeof readPairingLaunchContext>): MobileRoute {
@@ -112,12 +121,25 @@ export function MobileApp(): JSX.Element {
   const [pairLaunchRaw] = useState(() => launch.initialRaw)
   const nav = useMobileNavigation(resolveInitialRoute(launch))
   const [showA2hs, setShowA2hs] = useState(false)
+  const [languagePreference, setLanguagePreference] = useState(() => readMobileLanguagePreference())
+  const language = resolveMobileLanguage(languagePreference)
 
   useEffect(() => {
     const preference = readMobileThemePreference()
     applyMobileTheme(preference)
+    applyMobileFontSize(readMobileFontSize())
     return subscribeMobileTheme(preference, () => { applyMobileTheme(readMobileThemePreference()) })
   }, [])
+
+  useEffect(() => {
+    applyMobileLanguage(language)
+  }, [language])
+
+  const setLanguage = (preference: MobileLanguagePreference): void => {
+    writeMobileLanguagePreference(preference)
+    setLanguagePreference(preference)
+    applyMobileLanguage(resolveMobileLanguage(preference))
+  }
 
   useEffect(() => {
     if (isNativeShell() || isStandaloneDisplayMode() || isA2hsDismissed()) return
@@ -133,40 +155,44 @@ export function MobileApp(): JSX.Element {
 
   const activePage = useMemo(
     () => renderRoute(route, { push, replace, reset, goBack }, launch, pairLaunchRaw, onPaired),
-    [goBack, launch, pairLaunchRaw, push, replace, reset, route],
+    [goBack, launch, pairLaunchRaw, push, replace, reset, route, language],
   )
 
   const underlayPage = useMemo(
     () => (previousRoute === undefined
       ? undefined
       : renderRoute(previousRoute, { push, replace, reset, goBack }, launch, pairLaunchRaw, onPaired)),
-    [goBack, launch, pairLaunchRaw, previousRoute, push, replace, reset],
+    [goBack, launch, pairLaunchRaw, previousRoute, push, replace, reset, language],
   )
 
   return (
-    <MobileConnectionProvider>
-      <MobileViewportShell>
-        {showA2hs && !isNativeShell() && (
-          <div className={css.a2hsBanner}>
-            <p className={css.a2hsText}>{mobileConversationT('pwa.installHint')}</p>
-            <div className={css.actionRow}>
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={() => {
-                  dismissA2hsHint()
-                  setShowA2hs(false)
-                }}
-              >
-                {mobileConversationT('common.gotIt')}
-              </Button>
-            </div>
-          </div>
-        )}
-        <MobilePageStack transition={transition} underlay={underlayPage}>
-          {activePage}
-        </MobilePageStack>
-      </MobileViewportShell>
-    </MobileConnectionProvider>
+    <MobileLanguageSetContext.Provider value={setLanguage}>
+      <MobileLanguageContext.Provider value={language}>
+        <MobileConnectionProvider>
+          <MobileViewportShell>
+            {showA2hs && !isNativeShell() && (
+              <div className={css.a2hsBanner}>
+                <p className={css.a2hsText}>{mobileConversationT('pwa.installHint')}</p>
+                <div className={css.actionRow}>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => {
+                      dismissA2hsHint()
+                      setShowA2hs(false)
+                    }}
+                  >
+                    {mobileConversationT('common.gotIt')}
+                  </Button>
+                </div>
+              </div>
+            )}
+            <MobilePageStack transition={transition} underlay={underlayPage}>
+              {activePage}
+            </MobilePageStack>
+          </MobileViewportShell>
+        </MobileConnectionProvider>
+      </MobileLanguageContext.Provider>
+    </MobileLanguageSetContext.Provider>
   )
 }

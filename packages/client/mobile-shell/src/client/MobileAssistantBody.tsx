@@ -21,8 +21,11 @@ export const MobileAssistantBody = memo(function MobileAssistantBody({
   blocks,
   streaming,
 }: MobileAssistantBodyProps) {
-  const codeLabels = useMemo(
-    () => ({ copyLabel: mobileConversationT('copy'), copiedLabel: mobileConversationT('copied') }),
+  const labels = useMemo(
+    () => ({
+      code: { copyLabel: mobileConversationT('copy'), copiedLabel: mobileConversationT('copied') },
+      footnotes: '',
+    }),
     [],
   )
   const last = blocks.length - 1
@@ -42,7 +45,7 @@ export const MobileAssistantBody = memo(function MobileAssistantBody({
                 key={index}
                 text={block.text}
                 streaming={streaming}
-                codeLabels={codeLabels}
+                labels={labels}
               />
             )
           case 'reasoning':

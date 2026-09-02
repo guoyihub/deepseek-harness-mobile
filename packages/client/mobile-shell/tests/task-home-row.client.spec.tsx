@@ -13,6 +13,7 @@ const node = {
   runningSubagentCount: 0,
   completed: false,
   updatedAt: Date.now(),
+  hasActiveSchedule: false,
 }
 
 afterEach(cleanup)

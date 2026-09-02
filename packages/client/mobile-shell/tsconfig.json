@@ -15,6 +15,9 @@
       "path": "../../api/gateway/tsconfig.client.json"
     },
     {
+      "path": "../../api/remotes/tsconfig.client.json"
+    },
+    {
       "path": "../../api/session-controller/tsconfig.client.json"
     },
     {
@@ -51,6 +54,9 @@
       "path": "../ui-primitives"
     },
     {
+      "path": "../ui-schedule"
+    },
+    {
       "path": "../ui-directory-picker-browse"
     },
     {
@@ -61,9 +67,6 @@
     },
     {
       "path": "../ui-session"
-    },
-    {
-      "path": "../ui-trajectory"
     },
     {
       "path": "../ui-slots"
@@ -82,6 +85,9 @@
     },
     {
       "path": "../../plan/plan-mode"
+    },
+    {
+      "path": "../../schedule/schedule"
     },
     {
       "path": "../../goal/goal"

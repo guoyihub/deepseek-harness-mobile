@@ -11,10 +11,10 @@ import { mobileConversationT } from './mobile-locale.ts'
  * @returns display label, or a provider/model fallback when the catalog misses the pair.
  */
 export function modelSelectionLabel(
-  selection: ModelSelection | null,
+  selection: ModelSelection | null | undefined,
   groups: readonly ModelProviderGroup[],
 ): string {
-  if (selection === null) return mobileConversationT('model.unset')
+  if (selection == null) return mobileConversationT('model.unset')
   for (const group of groups) {
     if (group.id !== selection.provider) continue
     const model = group.models.find(item => item.id === selection.model)

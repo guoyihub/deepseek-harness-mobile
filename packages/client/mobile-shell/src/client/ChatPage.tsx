@@ -6,26 +6,28 @@ import type { TokenUsageProjection } from '@deepseek-ai/dsh-token-meter/client'
 import type { PermissionSelect as PermissionSelectValue } from '@deepseek-ai/dsh-permission-presets/client'
 import type { GoalProjection } from '@deepseek-ai/dsh-goal/client'
 import type { PlanProjection } from '@deepseek-ai/dsh-plan-mode/client'
+import type { EncodedImageAttachment } from '@deepseek-ai/dsh-attachment/types'
+import type {} from '@deepseek-ai/dsh-session-stats/client'
+import type {} from '@deepseek-ai/dsh-schedule/client'
 import { deriveAgentWorkingFromSnapshot } from './chat-projection.ts'
 import { MobileChatFlow } from './MobileChatFlow.tsx'
 import { MobileChatHeader } from './MobileChatHeader.tsx'
 import { MobileComposer } from './MobileComposer.tsx'
 import { MobileComposerTakeover } from './MobileComposerTakeover.tsx'
 import { claimExecuteLine, type MobileComposerClaim } from './mobile-composer-claim.ts'
-import { MobileSessionTabs, type MobileSessionViewId } from './MobileSessionTabs.tsx'
 import { MobileStatsLine } from './MobileStatsLine.tsx'
-import { MobileTrajectoryPane } from './MobileTrajectoryPane.tsx'
 import { MobileWorkspaceSelect } from './MobileWorkspaceSelect.tsx'
-import {
-  createProjectionStore,
-  projectionValues,
-} from './mobile-session-projections.ts'
+import { encodeMobileImageFile } from './mobile-attachment.ts'
+import { MobileReconnectBanner } from './MobileReconnectBanner.tsx'
+import { MobileScheduleSheet } from './MobileScheduleSheet.tsx'
 import { useMobileConnection } from './MobileConnectionContext.tsx'
 import { MobileShellLayout } from './MobileShellLayout.tsx'
 import { mobileApi } from './mobile-api-client.ts'
 import { sessionChatHeaderMeta, sessionDisplayTitle, newSessionTitle } from './session-label.ts'
-import { mobileConversationT } from './mobile-locale.ts'
+import { mobileConversationT, useMobileLanguage } from './mobile-locale.ts'
 import { MobileScrollToBottomButton } from './MobileScrollToBottomButton.tsx'
+import { MobileTurnNavigator } from './MobileTurnNavigator.tsx'
+import { useMobileActiveTurn } from './useMobileActiveTurn.ts'
 import {
   isMobileMessageListAtBottom,
   scrollMobileMessageListToBottom,
@@ -70,6 +72,7 @@ export function ChatPage({
   onBack,
   onSessionChange,
 }: ChatPageProps): JSX.Element {
+  useMobileLanguage()
   const {
     sessions,
     workspaces,
@@ -78,15 +81,15 @@ export function ChatPage({
     markSessionViewed,
   } = useMobileConnection()
   const mobileSession = useMobileSession(sessionId)
-  const { ready, error: sessionError, useSession, useProjection, loadOlder } = mobileSession
+  const { ready, error: sessionError, useSession, useProjection, loadImage } = mobileSession
   const [draft, setDraft] = useState(initialDraft)
   const [claim, setClaim] = useState<MobileComposerClaim | undefined>(undefined)
   const [optimisticText, setOptimisticText] = useState<string | undefined>(undefined)
   const [sending, setSending] = useState(false)
   const [cancelling, setCancelling] = useState(false)
   const [error, setError] = useState<string | undefined>(undefined)
-  const [sessionView, setSessionView] = useState<MobileSessionViewId>('chat')
-  const [projections, setProjections] = useState(createProjectionStore)
+  const [pendingImages, setPendingImages] = useState<readonly EncodedImageAttachment[]>([])
+  const [pendingImageUrls, setPendingImageUrls] = useState<readonly string[]>([])
   const wasAgentWorkingRef = useRef(false)
   const messageListRef = useRef<HTMLDivElement>(null)
   const chatSurfaceRef = useRef<HTMLDivElement>(null)
@@ -99,12 +102,17 @@ export function ChatPage({
 
   if (sessionId !== activeSessionId) {
     setActiveSessionId(sessionId)
-    setProjections(createProjectionStore())
     setError(undefined)
     setDraft(initialDraft)
     setClaim(undefined)
     setOptimisticText(undefined)
-    setSessionView('chat')
+    setPendingImages([])
+    setPendingImageUrls((urls) => {
+      for (const url of urls) {
+        if (url.startsWith('blob:')) URL.revokeObjectURL(url)
+      }
+      return []
+    })
     stickToBottomRef.current = true
     setAtBottom(true)
   }
@@ -133,7 +141,23 @@ export function ChatPage({
     [sessionId, sessions],
   )
 
-  const projectionMap = useMemo(() => projectionValues(projections), [projections])
+  const projectionTitle = useProjection('title')
+  const planProjection = useProjection('plan') as PlanProjection | undefined
+  const goalProjection = useProjection('goal') as GoalProjection | null | undefined
+  const tokenUsage = useProjection('tokenUsage') as TokenUsageProjection | undefined
+  const sessionStats = useProjection('sessionStats')
+  const permissions = useProjection('permissions') as PermissionSelectValue | undefined
+  const scheduleRecords = useProjection('schedule')
+  const turnItems = useSession(snapshot => snapshot.chat.navigation.items())
+  const chatOrderLength = useSession(snapshot => snapshot.chat.order.length)
+  const chatRunning = useSession(snapshot => snapshot.running)
+  const turnContentRevision = `${sessionId}:${chatOrderLength}:${chatRunning ? 1 : 0}:${optimisticText ?? ''}`
+  const { activeTurn, setActiveTurn, scheduleActiveTurn } = useMobileActiveTurn(
+    messageListRef,
+    turnItems,
+    sessionId,
+    turnContentRevision,
+  )
 
   const pendingInteraction = useMobilePendingInteraction(sessionId)
   const blank = useSession(snapshot => snapshot.blank)
@@ -145,12 +169,11 @@ export function ChatPage({
   }))
 
   const title = useMemo(() => {
-    const fromProjection = projectionMap.title
-    if (typeof fromProjection === 'string' && fromProjection.trim() !== '') return fromProjection
+    if (typeof projectionTitle === 'string' && projectionTitle.trim() !== '') return projectionTitle
     if (blank && optimisticText === undefined) return newSessionTitle()
     if (sessionSummary !== undefined) return sessionDisplayTitle(sessionSummary)
     return sessionId.slice(0, 8)
-  }, [blank, optimisticText, projectionMap.title, sessionId, sessionSummary])
+  }, [blank, optimisticText, projectionTitle, sessionId, sessionSummary])
 
   const headerMeta = useMemo(
     () => sessionChatHeaderMeta(sessionId, workspaces),
@@ -165,10 +188,8 @@ export function ChatPage({
   const switchableWorkspace = blank && optimisticText === undefined
   const newSessionHeader = switchableWorkspace
 
-  const planProjection = projectionMap.plan as PlanProjection | undefined
   const planActive = planProjection !== undefined
     && (planProjection.pending ? !planProjection.active : planProjection.active)
-  const goalProjection = projectionMap.goal as GoalProjection | null | undefined
   const goalActive = goalProjection !== undefined && goalProjection !== null
 
   const onMessageListScroll = (): void => {
@@ -177,6 +198,7 @@ export function ChatPage({
     const nextAtBottom = isMobileMessageListAtBottom(list)
     stickToBottomRef.current = nextAtBottom
     setAtBottom(prev => (prev === nextAtBottom ? prev : nextAtBottom))
+    scheduleActiveTurn()
   }
 
   const onScrollToBottom = (): void => {
@@ -212,7 +234,7 @@ export function ChatPage({
     observer.observe(dock)
     publishHeight()
     return () => { observer.disconnect() }
-  }, [followComposerLayout, pendingInteraction !== undefined, sessionId, sessionView, showHero])
+  }, [followComposerLayout, pendingInteraction !== undefined, sessionId, showHero])
 
   useEffect(() => {
     const shell = chatSurfaceRef.current?.closest('[data-mobile-viewport-shell]') as HTMLElement | null
@@ -254,9 +276,6 @@ export function ChatPage({
     ),
     [agentSnapshot, sending, sessionSummary?.running],
   )
-
-  const tokenUsage = projectionMap.tokenUsage as TokenUsageProjection | undefined
-  const permissions = projectionMap.permissions as PermissionSelectValue | undefined
 
   useEffect(() => {
     if (optimisticText === undefined) return
@@ -312,17 +331,29 @@ export function ChatPage({
     }
 
     const text = draft.trim()
-    if (text === '') return
+    if (text === '' && pendingImages.length === 0) return
+    const images = pendingImages
     setSending(true)
     setError(undefined)
     setDraft('')
+    setPendingImages([])
+    setPendingImageUrls((urls) => {
+      for (const url of urls) {
+        if (url.startsWith('blob:')) URL.revokeObjectURL(url)
+      }
+      return []
+    })
     stickToBottomRef.current = true
-    setOptimisticText(text)
+    if (text !== '') setOptimisticText(text)
     try {
+      const content = [
+        ...images.map(image => ({ type: 'image' as const, ...image })),
+        ...text === '' ? [] : [{ type: 'text' as const, text }],
+      ]
       const response = await mobileApi.sessions.prompt({
         sessionId,
         mode: 'queue',
-        content: [{ type: 'text', text }],
+        content,
       })
       if (!response.result.ok) {
         setError(response.result.error.message)
@@ -356,6 +387,7 @@ export function ChatPage({
 
   return (
     <div ref={chatSurfaceRef} className={css.chatSurface}>
+      <MobileReconnectBanner />
       <div className={css.chatSurfaceHeader}>
         <MobileChatHeader
           title={title}
@@ -374,39 +406,38 @@ export function ChatPage({
             )
             : undefined}
           onBack={onBack}
-          tabs={(
-            <MobileSessionTabs active={sessionView} onChange={setSessionView} />
+          actions={(
+            <div className={css.chatHeaderActions}>
+              <MobileScheduleSheet records={scheduleRecords} />
+            </div>
           )}
         />
       </div>
       <MobileShellLayout chatContentLayout>
         <div className={css.chatKeyboardBody}>
           <div ref={chatPageRef} className={showHero ? css.chatPageBlank : css.chatPage}>
-            {sessionView === 'trajectory' && !showHero
-              ? (
-                <MobileTrajectoryPane
-                  sessionId={sessionId}
-                  ready={ready}
-                  error={sessionError}
-                  useSession={useSession}
-                  loadOlder={loadOlder}
-                />
-              )
-              : (
-                <MobileChatFlow
-                  sessionId={sessionId}
-                  useSession={useSession}
-                  useProjection={useProjection}
-                  ready={ready}
-                  error={sessionError}
-                  optimisticText={optimisticText}
-                  showHero={showHero}
-                  listRef={messageListRef}
-                  onScroll={onMessageListScroll}
-                />
-              )}
+            <MobileChatFlow
+              sessionId={sessionId}
+              useSession={useSession}
+              useProjection={useProjection}
+              ready={ready}
+              error={sessionError}
+              optimisticText={optimisticText}
+              showHero={showHero}
+              listRef={messageListRef}
+              onScroll={onMessageListScroll}
+              loadImage={loadImage}
+            />
+            {!showHero && (
+              <MobileTurnNavigator
+                items={turnItems}
+                activeTurn={activeTurn}
+                listRef={messageListRef}
+                onActiveTurnChange={setActiveTurn}
+              />
+            )}
             <MobileScrollToBottomButton
-              visible={sessionView === 'chat' && !showHero && !atBottom}
+              visible={!showHero && !atBottom}
               onClick={onScrollToBottom}
             />
             <div ref={composerDockRef} className={showHero ? css.composerDockBlank : css.composerDock}>
@@ -439,9 +470,31 @@ export function ChatPage({
                     onCommandSubmit={() => { stickToBottomRef.current = true }}
                     onCommandError={setError}
                     onLayoutChange={followComposerLayout}
+                    pendingImageUrls={pendingImageUrls}
+                    onRemoveImage={(index) => {
+                      setPendingImages(current => current.filter((_, i) => i !== index))
+                      setPendingImageUrls((urls) => {
+                        const next = urls.filter((_, i) => i !== index)
+                        const removed = urls[index]
+                        if (removed?.startsWith('blob:')) URL.revokeObjectURL(removed)
+                        return next
+                      })
+                    }}
+                    onAttachImage={(file) => {
+                      void encodeMobileImageFile(file).then((encoded) => {
+                        if (encoded === undefined) {
+                          setError(mobileConversationT('input.unsupportedImage'))
+                          return
+                        }
+                        setPendingImages(current => [...current, encoded])
+                        setPendingImageUrls(current => [...current, URL.createObjectURL(file)])
+                      })
+                    }}
                   />
                 )}
-              {pendingInteraction === undefined && <MobileStatsLine tokenUsage={tokenUsage} />}
+              {pendingInteraction === undefined && (
+                <MobileStatsLine tokenUsage={tokenUsage} sessionStats={sessionStats} />
+              )}
             </div>
           </div>
         </div>

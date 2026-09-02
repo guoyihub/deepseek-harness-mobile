@@ -629,7 +629,7 @@ describe('workspace browser rows', () => {
     try {
       const node: SessionNode = {
         id: sid('mobile'), title: 'Mobile row', blank: false, running: false,
-        runningSubagentCount: 0, completed: false, updatedAt: 0,
+        runningSubagentCount: 0, completed: false, hasActiveSchedule: false, updatedAt: 0,
       }
       render(<SessionNodeItem node={node} currentId={undefined} now={0} onOpen={vi.fn()}
         onRename={vi.fn()} onFork={vi.fn()} onArchive={vi.fn()} surface="mobile" t={t} />)
@@ -651,7 +651,7 @@ describe('workspace browser rows', () => {
     const onToggleSelect = vi.fn()
     const node: SessionNode = {
       id: sid('pick'), title: 'Pick me', blank: false, running: false,
-      runningSubagentCount: 0, completed: false, updatedAt: 0,
+      runningSubagentCount: 0, completed: false, hasActiveSchedule: false, updatedAt: 0,
     }
     const view = render(<SessionNodeItem node={node} currentId={undefined} now={0} onOpen={vi.fn()}
       onRename={vi.fn()} onFork={vi.fn()} onArchive={vi.fn()} surface="mobile"

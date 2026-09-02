@@ -68,6 +68,41 @@ export function applyMobileTheme(preference: MobileThemePreference): void {
   syncMobileBrowserChrome(dark)
 }
 
+/** Persisted mobile content font-size preference in pixels. */
+export type MobileFontSize = 13 | 14 | 16
+
+const FONT_STORAGE_KEY = 'dsh.mobile.fontSize'
+
+/**
+ * Read the stored mobile content font size.
+ */
+export function readMobileFontSize(): MobileFontSize {
+  try {
+    const value = Number(globalThis.localStorage?.getItem(FONT_STORAGE_KEY))
+    if (value === 13 || value === 14 || value === 16) return value
+  } catch {
+    return 14
+  }
+  return 14
+}
+
+/**
+ * Persist one mobile content font size.
+ * @param size - selected pixel size.
+ */
+export function writeMobileFontSize(size: MobileFontSize): void {
+  globalThis.localStorage?.setItem(FONT_STORAGE_KEY, String(size))
+}
+
+/**
+ * Apply `--dsh-content-font-size` so Markdown and tables follow the setting.
+ * @param size - selected pixel size.
+ */
+export function applyMobileFontSize(size: MobileFontSize): void {
+  if (typeof document === 'undefined') return
+  document.body.style.setProperty('--dsh-content-font-size', `${String(size)}px`)
+}
+
 /**
  * Subscribe to system theme changes when preference is `system`.
  * @param preference - selected appearance mode.

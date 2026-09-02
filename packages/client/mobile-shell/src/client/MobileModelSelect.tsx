@@ -7,6 +7,7 @@ import type {
 import { IconChevronDownOutline14, Menu } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { MenuEntry } from '@deepseek-ai/dsh-client-ui-primitives'
 import { mobileApi } from './mobile-api-client.ts'
+import { directoryFromModelCatalog, modelSelectionKey } from './mobile-model-catalog.ts'
 import { modelSelectionLabel } from './mobile-model-label.ts'
 import css from './mobile-shell.module.css'
 
@@ -47,10 +48,17 @@ export function MobileModelSelect({
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false)
   const open = openProp ?? uncontrolledOpen
   const setOpen = useCallback((next: boolean | ((current: boolean) => boolean)): void => {
-    const resolved = typeof next === 'function' ? next(openProp ?? uncontrolledOpen) : next
-    if (openProp === undefined) setUncontrolledOpen(resolved)
-    onOpenChange?.(resolved)
-  }, [onOpenChange, openProp, uncontrolledOpen])
+    if (openProp !== undefined) {
+      const resolved = typeof next === 'function' ? next(openProp) : next
+      onOpenChange?.(resolved)
+      return
+    }
+    setUncontrolledOpen((current) => {
+      const resolved = typeof next === 'function' ? next(current) : next
+      onOpenChange?.(resolved)
+      return resolved
+    })
+  }, [onOpenChange, openProp])
   const anchorRef = useRef<HTMLButtonElement>(null)
   const generationRef = useRef(0)
 
@@ -63,8 +71,7 @@ export function MobileModelSelect({
       setState(current => ({ ...current, status: 'error' }))
       return
     }
-    const { current, groups } = response.result.value
-    setState({ current, groups, status: 'ready' })
+    setState({ ...directoryFromModelCatalog(response.result.value), status: 'ready' })
   }, [sessionId])
 
   const select = useCallback(async (selection: ModelSelection): Promise<void> => {
@@ -87,7 +94,7 @@ export function MobileModelSelect({
     const selected = response.result.value.selected
     setState(current => ({
       ...current,
-      current: selected,
+      current: selected ?? current.current,
       status: 'ready',
     }))
   }, [locked, sessionId])
@@ -132,9 +139,7 @@ export function MobileModelSelect({
     return { items: entries, choiceById: choices }
   }, [state.groups])
 
-  const selectedId = state.current === null
-    ? undefined
-    : `${state.current.provider}:${state.current.model}`
+  const selectedId = modelSelectionKey(state.current)
 
   const buttonClass = variant === 'toolbar'
     ? `${css.composerTrigger} ${css.composerTriggerToolbar}`

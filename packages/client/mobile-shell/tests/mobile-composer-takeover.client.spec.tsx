@@ -31,6 +31,7 @@ function sessionView(): MobileSessionView {
       blank: false,
       lastAgentError: null,
       awaitingFirstTurn: false,
+      promptAttempted: false,
     },
     conversation: EMPTY_CONVERSATION_SNAPSHOT,
     chat: EMPTY_CHAT_SNAPSHOT,

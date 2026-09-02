@@ -13,15 +13,15 @@ export interface MobileChatHeaderProps {
   metaSlot?: ReactNode
   /** Navigate back to the task list. */
   onBack: () => void
-  /** Optional Conversation / Trajectory tablist under the title row. */
-  tabs?: ReactNode
+  /** Optional title-row actions (turn jump, schedules). */
+  actions?: ReactNode
 }
 
 /**
  * Chat header: back control, title, then tabs with the workspace chip on the right.
  * @param props - title copy and navigation.
  */
-export function MobileChatHeader({ title, meta, metaSlot, onBack, tabs }: MobileChatHeaderProps): JSX.Element {
+export function MobileChatHeader({ title, meta, metaSlot, onBack, actions }: MobileChatHeaderProps): JSX.Element {
   const workspace = metaSlot ?? (
     <div className={css.chatHeaderMeta} title={meta}>
       <IconFolderOpen16 size={14} aria-hidden />
@@ -29,26 +29,12 @@ export function MobileChatHeader({ title, meta, metaSlot, onBack, tabs }: Mobile
     </div>
   )
 
-  if (tabs === undefined) {
-    return (
-      <header className={css.shellHeaderChatPinned}>
-        <MobileBackButton onClick={onBack} />
-        <h1 className={css.chatHeaderTitle}>{title}</h1>
-        {workspace}
-      </header>
-    )
-  }
-
   return (
-    <header className={css.shellHeaderChatWithTabsPinned}>
+    <header className={css.shellHeaderChatPinned}>
       <MobileBackButton onClick={onBack} />
-      <div className={css.chatHeaderMain}>
-        <h1 className={css.chatHeaderTitle}>{title}</h1>
-        <div className={css.chatHeaderTabRow}>
-          {tabs}
-          {workspace}
-        </div>
-      </div>
+      <h1 className={css.chatHeaderTitle}>{title}</h1>
+      {actions}
+      {workspace}
     </header>
   )
 }

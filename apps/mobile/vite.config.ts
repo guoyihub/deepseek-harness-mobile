@@ -1,4 +1,4 @@
-import type { ClientRequest } from 'node:http'
+import type { ClientRequest, IncomingMessage } from 'node:http'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
@@ -36,13 +36,19 @@ export default defineConfig({
         changeOrigin: true,
         ws: true,
         configure: (proxy) => {
-          proxy.on('proxyReq', (proxyReq: ClientRequest) => {
+          const forwardAuth = (proxyReq: ClientRequest, req: IncomingMessage): void => {
             proxyReq.removeHeader('origin')
             proxyReq.removeHeader('referer')
+            const authorization = req.headers.authorization
+            if (typeof authorization === 'string' && authorization !== '') {
+              proxyReq.setHeader('authorization', authorization)
+            }
+          }
+          proxy.on('proxyReq', (proxyReq: ClientRequest, req: IncomingMessage) => {
+            forwardAuth(proxyReq, req)
           })
-          proxy.on('proxyReqWs', (proxyReq: ClientRequest) => {
-            proxyReq.removeHeader('origin')
-            proxyReq.removeHeader('referer')
+          proxy.on('proxyReqWs', (proxyReq: ClientRequest, req: IncomingMessage) => {
+            forwardAuth(proxyReq, req)
           })
         },
       },
@@ -67,8 +73,12 @@ export default defineConfig({
         replacement: src('../../packages/client/connection/src/client/index.ts'),
       },
       {
-        find: /^@deepseek-ai\/dsh-client-ui-trajectory\/src\/(.*)$/,
-        replacement: src('../../packages/client/ui-trajectory/src/$1'),
+        find: /^@deepseek-ai\/dsh-api-gateway\/client$/,
+        replacement: src('../../packages/api/gateway/src/client/index.ts'),
+      },
+      {
+        find: /^@deepseek-ai\/dsh-api-gateway\/src\/(.*)$/,
+        replacement: src('../../packages/api/gateway/src/$1'),
       },
       {
         find: /^@deepseek-ai\/dsh-client-ui-conversation\/src\/(.*)$/,

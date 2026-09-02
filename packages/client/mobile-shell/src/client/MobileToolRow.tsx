@@ -80,7 +80,7 @@ export function MobileToolRow({ toolName, block }: MobileToolRowProps): JSX.Elem
         rowClassName={css.toolRow}
         chevronClassName={css.contextChevron}
         icon={leadingFor(model.state, model.variant)}
-        title={model.title}
+        title={mobileConversationT(model.titleKey)}
         open={expanded}
         expandable={expandable}
         expandOnRowClick={expandable}

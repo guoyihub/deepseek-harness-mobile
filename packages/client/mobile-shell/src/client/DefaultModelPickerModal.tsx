@@ -6,6 +6,7 @@ import type {
 } from '@deepseek-ai/dsh-api-session-controller/types'
 import { IconCheckOutline16, Modal } from '@deepseek-ai/dsh-client-ui-primitives'
 import { mobileApi } from './mobile-api-client.ts'
+import { directoryFromModelCatalog, modelSelectionKey } from './mobile-model-catalog.ts'
 import { modelSelectionLabel } from './mobile-model-label.ts'
 import { mobileConversationT } from './mobile-locale.ts'
 import css from './mobile-shell.module.css'
@@ -72,8 +73,7 @@ export function DefaultModelPickerModal({
       })
       return
     }
-    const { current, groups } = modelsResult.value
-    setState({ current, groups, status: 'ready' })
+    setState({ ...directoryFromModelCatalog(modelsResult.value), status: 'ready' })
   }, [resolveSessionId])
 
   useEffect(() => {
@@ -119,7 +119,7 @@ export function DefaultModelPickerModal({
     const selected = selectResult.value.selected
     setState(current => ({
       ...current,
-      current: selected,
+      current: selected ?? current.current,
       status: 'ready',
     }))
     onSelected(selected)
@@ -152,9 +152,7 @@ export function DefaultModelPickerModal({
     return rows
   }, [state.groups])
 
-  const selectedKey = state.current === null
-    ? undefined
-    : `${state.current.provider}:${state.current.model}`
+  const selectedKey = modelSelectionKey(state.current)
 
   const body = state.status === 'loading' || state.status === 'selecting'
     ? <p className={css.mSetPickerStatus}>{state.status === 'loading' ? mobileConversationT('model.loading') : mobileConversationT('model.switching')}</p>

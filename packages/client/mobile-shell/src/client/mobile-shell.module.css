@@ -319,104 +319,6 @@ html.mobile-standalone .viewportShell:not([data-mobile-keyboard-open]) {
   min-width: 0;
 }
 
-.sessionTabs {
-  display: flex;
-  flex: none;
-  gap: 28px;
-  padding-left: 0;
-}
-
-.sessionTab {
-  position: relative;
-  padding: 0 0 10px;
-  border: none;
-  background: transparent;
-  font-size: 13px;
-  line-height: 16px;
-  font-weight: 500;
-  color: var(--dsw-alias-label-tertiary);
-  cursor: pointer;
-}
-
-.sessionTab::after {
-  content: '';
-  position: absolute;
-  right: 0;
-  bottom: 1px;
-  left: 0;
-  height: 2px;
-  border-radius: 2px;
-  background: transparent;
-}
-
-.sessionTabActive {
-  color: var(--dsw-alias-state-business-primary);
-}
-
-.sessionTabActive::after {
-  background: var(--dsw-alias-state-business-primary);
-}
-
-.trajectoryPane {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  margin-left: calc(-16px - env(safe-area-inset-left, 0px));
-  margin-right: calc(-16px - env(safe-area-inset-right, 0px));
-  --dsh-composer-height: 128px;
-}
-
-.trajectoryPaneStatus {
-  flex: 1;
-  display: grid;
-  place-items: center;
-  padding: 24px 16px;
-  color: var(--dsw-alias-label-tertiary);
-  font-size: 13px;
-  line-height: 18px;
-}
-
-/* Trajectory toolbar: keep the search field fully visible on narrow screens. */
-.trajectoryPane [role='toolbar'] > div {
-  gap: 4px;
-  padding:
-    0
-    calc(12px + env(safe-area-inset-right, 0px))
-    0
-    calc(8px + env(safe-area-inset-left, 0px));
-  min-width: 0;
-}
-
-.trajectoryPane [role='toolbar'] > div > div:first-child {
-  flex: 0 1 auto;
-  min-width: 0;
-  gap: 0;
-}
-
-.trajectoryPane [role='toolbar'] .toggle,
-.trajectoryPane [role='toolbar'] .action {
-  padding: 0 4px;
-  gap: 2px;
-  min-width: 0;
-}
-
-.trajectoryPane [role='toolbar'] > div > div:last-child {
-  flex: 1 1 72px;
-  width: auto;
-  max-width: 120px;
-  min-width: 68px;
-  margin-left: 4px;
-}
-
-/* Trajectory ledger: allow sideways scroll when the event column still overflows. */
-.trajectoryPane [data-trajectory-scroll] {
-  overflow-x: auto;
-  overscroll-behavior-x: contain;
-  -webkit-overflow-scrolling: touch;
-}
-
 .chatHeaderTitle {
   flex: 1 1 auto;
   min-width: 0;
@@ -2112,12 +2014,35 @@ button.mSetRow:disabled,
   margin: 0 4px;
 }
 
-.chatPage [data-message-actions] button {
+.chatPage [data-message-actions] > button {
   box-sizing: border-box;
   width: 32px;
   height: 32px;
   padding: 6px;
   flex: none;
+}
+
+.chatPage [data-message-actions] button[aria-haspopup='dialog'] {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  width: auto;
+  max-width: min(100%, 160px);
+  height: calc(28px + var(--dsh-content-font-delta, 0px));
+  padding: 6px 8px;
+  border: none;
+  border-radius: 28px;
+  font-size: var(--dsh-content-font-size-secondary, 13px);
+  font-variant-numeric: tabular-nums;
+  line-height: calc(24px + var(--dsh-content-font-delta, 0px));
+  white-space: nowrap;
+}
+
+.chatPage [data-message-actions] button[aria-haspopup='dialog'] > span {
+  display: inline;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .chatPage [data-turn-tail] {
@@ -2182,6 +2107,7 @@ button.mSetRow:disabled,
 }
 
 .messageList {
+  position: relative;
   flex: 1;
   min-height: 0;
   min-width: 0;
@@ -2195,6 +2121,11 @@ button.mSetRow:disabled,
   padding-bottom: 24px;
   scroll-padding-bottom: 12px;
   -webkit-overflow-scrolling: touch;
+}
+
+.chatPage .messageList {
+  box-sizing: border-box;
+  padding-right: 24px;
 }
 
 .chatPage .messageList :where(p, pre, code, table, img, svg, video, iframe) {
@@ -2891,13 +2822,393 @@ button.mSetRow:disabled,
   width: 100%;
   max-width: 100%;
   overflow: hidden;
+  margin: 0;
   padding: 4px 14px;
+  border: none;
+  background: transparent;
   color: var(--dsw-alias-label-tertiary);
+  font: inherit;
   font-size: 12px;
   line-height: 20px;
   text-align: center;
   white-space: nowrap;
   text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.statsLine:disabled {
+  cursor: default;
+}
+
+.statsBlock {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.statsDetails {
+  padding: 0 14px 8px;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+  line-height: 18px;
+  text-align: center;
+}
+
+.reconnectBanner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--dsw-alias-border-l1);
+  background: var(--dsw-alias-bg-layer-2);
+  color: var(--dsw-alias-label-secondary);
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.reconnectBannerAction {
+  flex: none;
+  padding: 6px 10px;
+  border: none;
+  border-radius: 8px;
+  background: var(--dsw-alias-button-secondary-fill, var(--dsw-alias-bg-layer-1));
+  color: var(--dsw-alias-label-primary);
+  font: inherit;
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.composerAttach {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 20px;
+  line-height: 20px;
+}
+
+.composerImageRail {
+  display: flex;
+  gap: 8px;
+  padding: 10px 12px 0;
+  overflow-x: auto;
+}
+
+.composerImageThumb {
+  position: relative;
+  flex: none;
+  width: 56px;
+  height: 56px;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--dsw-alias-bg-layer-2);
+}
+
+.composerImageThumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.messageImages {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.messageImages[data-align='end'] {
+  justify-content: flex-end;
+}
+
+.messageImage,
+.messageImagePending {
+  width: 120px;
+  height: 120px;
+  border-radius: 10px;
+  object-fit: cover;
+  background: var(--dsw-alias-bg-layer-2);
+}
+
+.chatHeaderActions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+}
+
+.mobileTurnNav {
+  position: absolute;
+  inset: 0 calc(env(safe-area-inset-right, 0px)) var(--dsh-composer-height, 128px) 0;
+  z-index: 6;
+  pointer-events: none;
+}
+
+.mobileTurnRail {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-end;
+  box-sizing: border-box;
+  width: 20px;
+  height: 56px;
+  margin: 0;
+  padding: 6px 0;
+  border: 0;
+  transform: translateY(-50%);
+  pointer-events: auto;
+}
+
+.mobileTurnRail[data-turn-count='2'] {
+  height: 40px;
+}
+
+.mobileTurnMark {
+  position: relative;
+  flex: none;
+  width: 20px;
+  height: 10px;
+  margin-left: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.mobileTurnMark::before {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  width: 12px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--dsw-alias-border-l4);
+  content: '';
+  transform: translateY(-50%);
+  transition: width 140ms ease, background-color 140ms ease;
+}
+
+.mobileTurnMarkActive::before {
+  width: 20px;
+  background: var(--dsw-alias-label-primary);
+}
+
+.mobileTurnMark:focus-visible {
+  outline: 1px solid var(--dsw-alias-state-business-primary);
+  outline-offset: 2px;
+}
+
+.mobileTurnMark:focus-visible::before {
+  width: 20px;
+  background: var(--dsw-alias-state-business-primary);
+}
+
+.turnJump {
+  position: relative;
+}
+
+.turnJumpTrigger,
+.scheduleTrigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 28px;
+  padding: 4px 8px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  font: inherit;
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.turnJumpSheet {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  min-width: 140px;
+  max-height: 240px;
+  overflow: auto;
+  padding: 4px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 10px;
+  background: var(--dsw-specific-menu, var(--dsw-alias-bg-layer-1));
+}
+
+.turnJumpItem {
+  padding: 8px 10px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--dsw-alias-label-primary);
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+}
+
+.scheduleBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: color-mix(in srgb, var(--dsw-alias-bg-base) 40%, transparent);
+}
+
+.scheduleSheet {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  max-height: 70%;
+  padding: 16px;
+  border-radius: 16px 16px 0 0;
+  background: var(--dsw-alias-bg-layer-1);
+}
+
+.scheduleSheetHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.scheduleSheetHead h2 {
+  margin: 0;
+  font-size: 16px;
+  line-height: 22px;
+}
+
+.scheduleSheetHead button {
+  border: none;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  font: inherit;
+}
+
+.scheduleList {
+  margin: 0;
+  padding: 0;
+  overflow: auto;
+  list-style: none;
+}
+
+.scheduleRow,
+.scheduleRowOverdue {
+  padding: 10px 0;
+  border-top: 1px solid var(--dsw-alias-border-l2);
+}
+
+.scheduleRowOverdue {
+  color: var(--dsw-alias-status-error);
+}
+
+.schedulePrompt {
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.scheduleMeta {
+  margin-top: 4px;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.pluginSearch {
+  box-sizing: border-box;
+  width: 100%;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 10px;
+  background: var(--dsw-alias-bg-layer-2);
+  color: var(--dsw-alias-label-primary);
+  font: inherit;
+  font-size: 16px;
+}
+
+.pluginGroup {
+  margin-bottom: 16px;
+}
+
+.pluginGroup h3 {
+  margin: 0 0 8px;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 16px;
+}
+
+.pluginPresetSwitch {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.pluginPresetSwitch button {
+  padding: 6px 10px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  font: inherit;
+  font-size: 13px;
+}
+
+.pluginPresetSwitch button[data-selected] {
+  background: var(--dsw-alias-bg-layer-2);
+  color: var(--dsw-alias-label-primary);
+}
+
+.pluginList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pluginList li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  border-top: 1px solid var(--dsw-alias-border-l2);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.subagentCard {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.subagentToggle,
+.subagentModel {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.subagentRoute {
+  display: block;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
 }
 
 [data-mobile-keyboard-open] .statsLine {
@@ -3455,10 +3766,6 @@ button.mSetRow:disabled,
 
 .chatPageBlank .chatHero {
   padding-top: 16px;
-}
-
-.chatSurface .trajectoryPane {
-  padding-top: 0;
 }
 
 .taskHomeGroups {

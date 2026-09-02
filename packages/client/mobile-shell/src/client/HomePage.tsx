@@ -42,13 +42,14 @@ import {
   MOBILE_COLLAPSED_SESSION_LIMIT,
 } from './mobile-task-groups.ts'
 import { mobileSessionIsActive } from './mobile-session-status.ts'
-import { mobileConversationT } from './mobile-locale.ts'
+import { mobileConversationT, useMobileLanguage } from './mobile-locale.ts'
 import { mobileWorkspaceT } from './mobile-workspace-t.ts'
 import {
   SearchResultItem,
   SessionNodeItem,
 } from '@deepseek-ai/dsh-client-ui-workspace/src/client/rows/Rows.tsx'
 import { StatusPanel } from './StatusPanel.tsx'
+import { MobileReconnectBanner } from './MobileReconnectBanner.tsx'
 import { TaskHomeHeader, type TaskHomeFilter } from './TaskHomeHeader.tsx'
 import { TaskHomeGroupHeader } from './TaskHomeGroupHeader.tsx'
 import { TaskHomeRenameModal } from './TaskHomeRenameModal.tsx'
@@ -76,6 +77,7 @@ export function HomePage({
   onOpenChat,
   onOpenConnection,
 }: HomePageProps): JSX.Element {
+  useMobileLanguage()
   const {
     paired,
     connectionState,
@@ -179,7 +181,7 @@ export function HomePage({
             })
             return
           }
-          const items: readonly SessionSearchItem[] = response.result.value.items
+          const items = response.result.value.items as readonly SessionSearchItem[]
           setRemoteSearch({
             query: normalizedQuery,
             status: 'ready',
@@ -427,7 +429,7 @@ export function HomePage({
     await refreshSessions()
   }, [refreshSessions])
 
-  const reconnecting = connectionState === 'reconnecting'
+  const reconnecting = connectionState === 'connecting'
   const reconnectFailed = !paired && !revoked && error !== undefined
   const unpairedCopy = revoked
     ? mobileConversationT('connection.revokedMessage')
@@ -476,6 +478,7 @@ export function HomePage({
         scrollClassName={css.taskHomePullScroll}
         ariaLabel={mobileConversationT('taskHome.list')}
       >
+        <MobileReconnectBanner />
         <StatusPanel error={paired && !reconnecting ? (actionError ?? error) : undefined} />
 
         {!paired && (

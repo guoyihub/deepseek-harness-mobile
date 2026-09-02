@@ -89,7 +89,7 @@ export function MobilePermissionSelect({
 
   const runCommand = useCallback(async (line: string): Promise<boolean> => {
     const response = await mobileApi.commands.execute({ sessionId, line })
-    return response.result.ok && response.result.value.matched
+    return response.result.ok && response.result.value.matched === true
   }, [sessionId])
 
   const getAnchorRect = useCallback(
@@ -179,6 +179,7 @@ export function MobilePermissionSelect({
         acknowledgeLabel={mobileConversationT('access.confirm.acknowledge')}
         cancelLabel={mobileConversationT('access.confirm.cancel')}
         confirmLabel={mobileConversationT('access.confirm.enable')}
+        closeLabel={mobileConversationT('common.close')}
         acknowledged={acknowledged}
         disabled={locked}
         onAcknowledgedChange={setAcknowledged}

@@ -41,6 +41,7 @@ export function AgentPresetPickerModal({
     presets: [],
     status: 'idle',
   })
+  const [query, setQuery] = useState('')
   const generationRef = useRef(0)
 
   const load = useCallback(async (): Promise<void> => {
@@ -57,13 +58,14 @@ export function AgentPresetPickerModal({
       })
       return
     }
-    setState({ presets: listResult.value.presets, status: 'ready' })
+    setState({ presets: listResult.value.presets as readonly AgentPresetEntry[], status: 'ready' })
   }, [])
 
   useEffect(() => {
     if (!open) {
       generationRef.current += 1
       setState({ presets: [], status: 'idle' })
+      setQuery('')
       return
     }
     void load()
@@ -99,6 +101,16 @@ export function AgentPresetPickerModal({
     () => state.presets.find(preset => preset.isDefault)?.id,
     [state.presets],
   )
+  const filtered = useMemo(() => {
+    const normalized = query.trim().toLocaleLowerCase()
+    if (normalized.length === 0) return state.presets
+    return state.presets.filter((preset) => {
+      const haystack = [preset.id, preset.name ?? '', preset.description ?? '']
+        .join(' ')
+        .toLocaleLowerCase()
+      return haystack.includes(normalized)
+    })
+  }, [query, state.presets])
 
   const body = state.status === 'loading' || state.status === 'selecting'
     ? <p className={css.mSetPickerStatus}>{state.status === 'loading' ? mobileConversationT('preset.loading') : mobileConversationT('preset.saving')}</p>
@@ -108,7 +120,13 @@ export function AgentPresetPickerModal({
         ? <p className={css.mSetPickerStatus}>{mobileConversationT('preset.empty')}</p>
         : (
           <div className={css.mSetPickerList}>
-            {state.presets.map((preset) => {
+            <input
+              className={css.pluginSearch}
+              value={query}
+              placeholder={mobileConversationT('preset.search')}
+              onChange={(event) => { setQuery(event.target.value) }}
+            />
+            {filtered.map((preset) => {
               const selected = preset.id === defaultId
               const broken = preset.broken !== undefined
               return (

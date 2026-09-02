@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { WorkspaceId, WorkspaceView } from '@deepseek-ai/dsh-api-workspace-controller/client'
-import { DirectoryBrowseError } from '@deepseek-ai/dsh-client-ui-workspace/src/client/navigation.ts'
-import type { DirectoryListing } from '@deepseek-ai/dsh-host-directory-picker/types'
+import type { DirectoryListing } from '@deepseek-ai/dsh-api-remotes/client'
 import { DirectoryBrowser } from '@deepseek-ai/dsh-client-ui-directory-picker-browse/src/client/DirectoryBrowser.tsx'
 import {
   IconChevronDownOutline14, IconFolderClose16, IconFolderOpen16, IconPlusOutline16, Menu,
@@ -189,13 +188,13 @@ export function MobileWorkspaceSelect({
       path === undefined ? {} : { path },
       signal,
     )
-    if (!response.result.ok) throw new DirectoryBrowseError(response.result.error)
+    if (!response.result.ok) throw new Error(response.result.error.message)
     return response.result.value
   }, [])
 
   const createDirectory = useCallback(async (path: string, name: string): Promise<string> => {
     const response = await mobileApi.host.createDirectory({ path, name })
-    if (!response.result.ok) throw new DirectoryBrowseError(response.result.error)
+    if (!response.result.ok) throw new Error(response.result.error.message)
     return response.result.value.path
   }, [])
 

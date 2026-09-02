@@ -4,12 +4,14 @@
  */
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
-import type { ConversationTimelineSnapshot } from '@deepseek-ai/dsh-client-ui-conversation/client'
+import type { ConversationTimelineSnapshot, MessageImageLoader } from '@deepseek-ai/dsh-client-ui-conversation/client'
 import type { UseProjection } from '@deepseek-ai/dsh-api-session-controller/client'
 import { MessageText } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { SnapshotSelectorHook } from '@deepseek-ai/dsh-client-ui-slots'
+import { bindSnapshotSelector } from '@deepseek-ai/dsh-client-ui-renderer/src/client/bind.ts'
 import chatCss from '@deepseek-ai/dsh-client-ui-chat/src/client/chat/ChatView.module.css'
 import { formatRunDuration } from '@deepseek-ai/dsh-client-ui-chat/src/client/chat/message-chrome.ts'
+import { createChatStore } from '@deepseek-ai/dsh-client-ui-chat/src/client/stores.ts'
 import { MobileChatNodeSeat } from './MobileChatNodeSeat.tsx'
 import { MobileChatHero } from './MobileChatHero.tsx'
 import { mobileChatT } from './mobile-conversation-t.ts'
@@ -41,6 +43,8 @@ export interface MobileChatFlowProps {
   listRef: RefObject<HTMLDivElement>
   /** Reader scroll handler for stick-to-bottom ownership. */
   onScroll: () => void
+  /** Session-authorized image URL loader. */
+  loadImage: MessageImageLoader
 }
 
 /** Pin the scrollport to the latest transcript row after layout settles. */
@@ -72,7 +76,7 @@ function TurnStatus({ startTime }: { startTime: number | null }): ReactNode {
   const showClock = elapsedMs >= 15_000
   return (
     <div className={chatCss.turnStatus} role="status" aria-live="polite">
-      {mobileConversationT('chat.deepDiving')}
+      {mobileChatT('chat.deepDiving')}
       {showClock && (
         <span className={chatCss.turnStatusClock} aria-hidden>
           {formatRunDuration(elapsedMs, mobileChatT)}
@@ -96,10 +100,14 @@ export function MobileChatFlow({
   showHero,
   listRef,
   onScroll,
+  loadImage,
 }: MobileChatFlowProps): JSX.Element {
   const order = useSession(s => s.chat.order)
   const running = useSession(s => s.running)
   const timeline = useSession(s => s.chat.timeline)
+  const historyIncomplete = useSession(s => s.session.hasMore)
+  const chatStore = useMemo(() => createChatStore().create(), [sessionId])
+  const useStore = useMemo(() => bindSnapshotSelector(chatStore), [chatStore])
   const runningTurnStart = useMemo(() => runningTurnStartTime(timeline), [timeline])
   const followSig = useSession(s => (
     `${s.openState}:${s.chat.order.length}:${s.chat.order.at(-1) ?? ''}:${s.running ? 1 : 0}:${optimisticText ?? ''}`
@@ -123,12 +131,6 @@ export function MobileChatFlow({
     }
     followSigRef.current = followSig
   }, [followSig, listRef, ready, showHero])
-
-  useEffect(() => {
-    openedRef.current = false
-    followSigRef.current = null
-    stickRef.current = true
-  }, [sessionId])
 
   useEffect(() => {
     const list = listRef.current
@@ -193,6 +195,10 @@ export function MobileChatFlow({
           sessionId={sessionId}
           useSession={useSession}
           useProjection={useProjection}
+          useStore={useStore}
+          actions={chatStore.actions}
+          historyIncomplete={historyIncomplete}
+          loadImage={loadImage}
         />
       ))}
       {optimisticText !== undefined && (

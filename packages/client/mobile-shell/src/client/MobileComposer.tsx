@@ -1,5 +1,5 @@
 import type { KeyboardEvent } from 'react'
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type ChangeEvent } from 'react'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { PermissionSelect as PermissionSelectValue } from '@deepseek-ai/dsh-permission-presets/client'
 import { IconCloseFill14 } from '@deepseek-ai/dsh-client-ui-primitives'
@@ -39,6 +39,12 @@ export interface MobileComposerProps {
   onCommandError?: ((message: string) => void) | undefined
   /** Called after the draft field relayouts (multi-line grow/shrink). */
   onLayoutChange?: (() => void) | undefined
+  /** Attach one image file from the album or camera. */
+  onAttachImage?: ((file: File) => void) | undefined
+  /** Preview URLs for pending composer images. */
+  pendingImageUrls?: readonly string[]
+  /** Remove one pending composer image by index. */
+  onRemoveImage?: ((index: number) => void) | undefined
 }
 
 /**
@@ -86,6 +92,9 @@ export function MobileComposer({
   onCommandSubmit,
   onCommandError,
   onLayoutChange,
+  onAttachImage,
+  pendingImageUrls = [],
+  onRemoveImage,
 }: MobileComposerProps): JSX.Element {
   const [modelOpen, setModelOpen] = useState(false)
   const [permissionOpen, setPermissionOpen] = useState(false)
@@ -122,7 +131,7 @@ export function MobileComposer({
   }, [claimed])
   const sendDisabled = primaryStops
     ? stopping
-    : sending || (!claimed && draft.trim() === '')
+    : sending || (!claimed && draft.trim() === '' && pendingImageUrls.length === 0)
 
   const onOpenSurface = (surface: MobileCommandSurface): void => {
     if (surface === 'model') {
@@ -136,6 +145,21 @@ export function MobileComposer({
 
   return (
     <div ref={cardRef} className={css.composerCard}>
+      {pendingImageUrls.length > 0 && (
+        <div className={css.composerImageRail}>
+          {pendingImageUrls.map((url, index) => (
+            <button
+              key={`${url}:${String(index)}`}
+              type="button"
+              className={css.composerImageThumb}
+              onClick={() => { onRemoveImage?.(index) }}
+              aria-label={mobileConversationT('input.removeImage')}
+            >
+              <img src={url} alt="" />
+            </button>
+          ))}
+        </div>
+      )}
       {claimed
         ? (
           <div className={css.composerClaimField}>
@@ -181,6 +205,23 @@ export function MobileComposer({
         )}
       <div className={css.composerRow}>
         <div className={css.composerTools}>
+          {onAttachImage !== undefined && (
+            <label className={css.composerAttach}>
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/gif"
+                capture="environment"
+                hidden
+                disabled={locked || claimed}
+                onChange={(event: ChangeEvent<HTMLInputElement>) => {
+                  const file = event.target.files?.[0]
+                  event.target.value = ''
+                  if (file !== undefined) onAttachImage(file)
+                }}
+              />
+              <span aria-label={mobileConversationT('input.attachImage')}>+</span>
+            </label>
+          )}
           <MobileCommandMenu
             sessionId={sessionId}
             locked={locked || claimed}

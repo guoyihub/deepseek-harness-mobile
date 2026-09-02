@@ -1,8 +1,30 @@
 /** Locale helpers for the mobile shell over {@link ./locales.ts}. */
 
-import { zh, type MobileKey } from './locales.ts'
+import { createContext, useContext } from 'react'
+import { en, zh, type MobileKey } from './locales.ts'
+import type { MobileLanguagePreference, MobileResolvedLanguage } from './mobile-language.ts'
 
 type Params = Record<string, string | number>
+
+/** Current resolved mobile language; pages subscribe via {@link useMobileLanguage}. */
+export const MobileLanguageContext = createContext<MobileResolvedLanguage>('zh')
+
+/** Persist and apply a language preference from settings. */
+export const MobileLanguageSetContext = createContext<(preference: MobileLanguagePreference) => void>(() => {})
+
+/**
+ * Resolved mobile language for the current render.
+ */
+export function useMobileLanguage(): MobileResolvedLanguage {
+  return useContext(MobileLanguageContext)
+}
+
+/**
+ * Language preference writer provided by the shell.
+ */
+export function useSetMobileLanguage(): (preference: MobileLanguagePreference) => void {
+  return useContext(MobileLanguageSetContext)
+}
 
 const PERMISSION_LABEL_KEYS = {
   'read-only': 'permission.readOnly',
@@ -28,7 +50,11 @@ export function mobilePermissionLabel(value: string, name: string): string {
  * @param params - optional `{name}` placeholders.
  */
 export function mobileConversationT(key: MobileKey | string, params?: Params): string {
-  const template = (zh as Record<string, string>)[key] ?? key
+  const language = typeof document !== 'undefined' && document.documentElement.lang.toLowerCase().startsWith('en')
+    ? 'en'
+    : 'zh'
+  const dict = language === 'en' ? en : zh
+  const template = (dict as Record<string, string>)[key] ?? (zh as Record<string, string>)[key] ?? key
   if (params === undefined) return template
   return Object.entries(params).reduce(
     (text, [name, value]) => text.replace(`{${name}}`, String(value)),

@@ -6,7 +6,7 @@ import type { QuestionComposerProps } from '@deepseek-ai/dsh-client-ui-user-ques
 import type { SnapshotSelectorHook } from '@deepseek-ai/dsh-client-ui-slots'
 import { createQuestionDraftStore } from '@deepseek-ai/dsh-client-ui-user-questions/src/client/draft-store.ts'
 import type { MobileSessionView } from './useMobileSession.ts'
-import { absentProjection, useMobileInputKit } from './mobile-framework-kit.ts'
+import { absentProjection, PassthroughSessionProvider, useMobileInputKit } from './mobile-framework-kit.ts'
 
 const emptyList = { byId: {}, order: [], current: undefined }
 const emptyConversation = { views: new Map() }
@@ -24,24 +24,7 @@ const questionDraftStore = createQuestionDraftStore().create('mobile-shell-quest
 export function useMobileComposerTakeoverKit(
   sessionId: SessionId,
   useSession: SnapshotSelectorHook<MobileSessionView>,
-): Pick<
-  ApprovalComposerProps,
-  | 'sessionId'
-  | 'session'
-  | 'pendingInteraction'
-  | 'useSession'
-  | 'useSessions'
-  | 'useSessionPendingInteraction'
-  | 'useWorkspaces'
-  | 'useConversation'
-  | 'useChat'
-  | 'useTrajectory'
-  | 'useProjection'
-  | 'useInput'
-  | 'inputActions'
-  | 'renderSlot'
-  | 'renderSlotChain'
-> & Pick<QuestionComposerProps, 'useStore' | 'actions'> {
+): Omit<ApprovalComposerProps, 'matched' | 't'> & Pick<QuestionComposerProps, 'useStore' | 'actions'> {
   const { useInput, inputActions } = useMobileInputKit()
   return {
     sessionId,
@@ -57,8 +40,8 @@ export function useMobileComposerTakeoverKit(
     useProjection: absentProjection,
     useInput: useInput as never,
     inputActions: inputActions as never,
+    SessionProvider: PassthroughSessionProvider,
     renderSlot: () => null,
-    renderSlotChain: () => null,
     useStore: selector => selector(questionDraftStore.getSnapshot()),
     actions: questionDraftStore.actions,
   }
