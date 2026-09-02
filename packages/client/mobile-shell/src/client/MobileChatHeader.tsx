@@ -11,6 +11,8 @@ export interface MobileChatHeaderProps {
   meta: string
   /** Optional tab-row control replacing the static workspace chip (e.g. blank-session picker). */
   metaSlot?: ReactNode
+  /** Read-only agent preset label rendered on the former conversation-tab row. */
+  presetLabel?: ReactNode
   /** Navigate back to the task list. */
   onBack: () => void
   /** Optional title-row actions (turn jump, schedules). */
@@ -18,10 +20,17 @@ export interface MobileChatHeaderProps {
 }
 
 /**
- * Chat header: back control, title, then tabs with the workspace chip on the right.
+ * Chat header: back control and title on the first row; agent preset then workspace on the tab row.
  * @param props - title copy and navigation.
  */
-export function MobileChatHeader({ title, meta, metaSlot, onBack, actions }: MobileChatHeaderProps): JSX.Element {
+export function MobileChatHeader({
+  title,
+  meta,
+  metaSlot,
+  presetLabel,
+  onBack,
+  actions,
+}: MobileChatHeaderProps): JSX.Element {
   const workspace = metaSlot ?? (
     <div className={css.chatHeaderMeta} title={meta}>
       <IconFolderOpen16 size={14} aria-hidden />
@@ -30,11 +39,16 @@ export function MobileChatHeader({ title, meta, metaSlot, onBack, actions }: Mob
   )
 
   return (
-    <header className={css.shellHeaderChatPinned}>
+    <header className={css.shellHeaderChatWithTabsPinned}>
       <MobileBackButton onClick={onBack} />
-      <h1 className={css.chatHeaderTitle}>{title}</h1>
+      <div className={css.chatHeaderMain}>
+        <h1 className={css.chatHeaderTitle}>{title}</h1>
+        <div className={css.chatHeaderTabRow}>
+          {presetLabel}
+          {workspace}
+        </div>
+      </div>
       {actions}
-      {workspace}
     </header>
   )
 }

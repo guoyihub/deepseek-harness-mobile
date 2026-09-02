@@ -53,7 +53,7 @@ import { readStoredServerUrl } from './mobile-server-config.ts'
 import { modelIdLabel } from './mobile-model-label.ts'
 import { agentPresetDisplayLabel, type AgentPresetLabelSource } from './mobile-host-preset-label.ts'
 import { mobileConversationT, useMobileLanguage, useSetMobileLanguage } from './mobile-locale.ts'
-import { mobileApi } from './mobile-api-client.ts'
+import { getMobileAgentPresets } from './mobile-host-metadata-cache.ts'
 import { isNativeShell } from '@deepseek-ai/dsh-client-connection/client'
 import css from './mobile-shell.module.css'
 
@@ -168,14 +168,14 @@ export function ConnectionPage({ onBack, onPair, onEditServer }: ConnectionPageP
       return
     }
     void (async () => {
-      const response = await mobileApi.agentPresets.list({})
-      if (!response.result.ok) {
+      try {
+        const response = await getMobileAgentPresets()
+        const preset = (response.presets as readonly (AgentPresetLabelSource & { isDefault?: boolean })[])
+          .find(item => item.isDefault === true)
+        setDefaultPresetLabel(preset === undefined ? undefined : agentPresetDisplayLabel(preset))
+      } catch {
         setDefaultPresetLabel(undefined)
-        return
       }
-      const preset = (response.result.value.presets as readonly (AgentPresetLabelSource & { isDefault?: boolean })[])
-        .find(item => item.isDefault === true)
-      setDefaultPresetLabel(preset === undefined ? undefined : agentPresetDisplayLabel(preset))
     })()
   }, [paired])
 

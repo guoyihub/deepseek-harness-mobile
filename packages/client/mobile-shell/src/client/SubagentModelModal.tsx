@@ -10,6 +10,11 @@ import {
   type SubagentModelCandidate,
 } from './mobile-subagent-models.ts'
 import { directoryFromModelCatalog } from './mobile-model-catalog.ts'
+import {
+  getMobileModelCatalog,
+  getMobileSettingsDescribe,
+  invalidateMobileSettingsDescribe,
+} from './mobile-host-metadata-cache.ts'
 import { mobileApi } from './mobile-api-client.ts'
 import { mobileConversationT } from './mobile-locale.ts'
 import css from './mobile-shell.module.css'
@@ -42,25 +47,23 @@ export function SubagentModelModal({ open, onClose }: SubagentModelModalProps): 
 
   const load = useCallback(async (): Promise<void> => {
     setStatus('loading')
-    const [describe, catalog] = await Promise.all([
-      mobileApi.settings.describe(),
-      mobileApi.sessions.modelCatalog(),
-    ])
-    if (!describe.result.ok) {
+    try {
+      const [describe, catalog] = await Promise.all([
+        getMobileSettingsDescribe(),
+        getMobileModelCatalog(),
+      ])
+      const ns = describe.namespaces.find(row => row.ns === NS)
+      const value = (ns?.value ?? { enabled: false, allowedModels: [] }) as SubagentSettings
+      setEnabled(value.enabled === true)
+      setStored(value.allowedModels ?? [])
+      setSelected(new Set((value.allowedModels ?? []).map(subagentModelKey)))
+      setRevision(ns?.revision)
+      setGroups(directoryFromModelCatalog(catalog).groups)
+      setStatus('ready')
+    } catch (loadError) {
       setStatus('error')
-      setErrorMessage(describe.result.error.message)
-      return
+      setErrorMessage(loadError instanceof Error ? loadError.message : String(loadError))
     }
-    const ns = describe.result.value.namespaces.find(row => row.ns === NS)
-    const value = (ns?.value ?? { enabled: false, allowedModels: [] }) as SubagentSettings
-    setEnabled(value.enabled === true)
-    setStored(value.allowedModels ?? [])
-    setSelected(new Set((value.allowedModels ?? []).map(subagentModelKey)))
-    setRevision(ns?.revision)
-    if (catalog.result.ok) {
-      setGroups(directoryFromModelCatalog(catalog.result.value).groups)
-    }
-    setStatus('ready')
   }, [])
 
   useEffect(() => {
@@ -100,6 +103,7 @@ export function SubagentModelModal({ open, onClose }: SubagentModelModalProps): 
       setErrorMessage(response.result.error.message)
       return
     }
+    invalidateMobileSettingsDescribe()
     onClose()
   }
 

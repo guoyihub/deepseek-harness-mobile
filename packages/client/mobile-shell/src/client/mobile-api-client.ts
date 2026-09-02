@@ -137,6 +137,11 @@ export const mobileApi = {
   agentPresets: {
     list: (_payload: Record<string, never> = {}, signal?: AbortSignal) =>
       invoke<{ presets: readonly unknown[]; authorable: boolean }>('agentPresets/list', {}, signal),
+    select: (payload: { sessionId: SessionId; agentPreset: string }, signal?: AbortSignal) =>
+      invoke<string>('agentPresets/select', {
+        agentId: payload.sessionId,
+        agentPreset: payload.agentPreset,
+      }, signal),
   },
   settings: {
     describe: (signal?: AbortSignal) =>

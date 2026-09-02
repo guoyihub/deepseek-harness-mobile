@@ -7,6 +7,7 @@ import type {
 import { IconChevronDownOutline14, Menu } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { MenuEntry } from '@deepseek-ai/dsh-client-ui-primitives'
 import { mobileApi } from './mobile-api-client.ts'
+import { getMobileModelCatalog } from './mobile-host-metadata-cache.ts'
 import { directoryFromModelCatalog, modelSelectionKey } from './mobile-model-catalog.ts'
 import { modelSelectionLabel } from './mobile-model-label.ts'
 import css from './mobile-shell.module.css'
@@ -65,14 +66,15 @@ export function MobileModelSelect({
   const load = useCallback(async (): Promise<void> => {
     const generation = ++generationRef.current
     setState(current => ({ ...current, status: 'loading' }))
-    const response = await mobileApi.sessions.models({ sessionId })
-    if (generation !== generationRef.current) return
-    if (!response.result.ok) {
+    try {
+      const catalog = await getMobileModelCatalog()
+      if (generation !== generationRef.current) return
+      setState({ ...directoryFromModelCatalog(catalog), status: 'ready' })
+    } catch {
+      if (generation !== generationRef.current) return
       setState(current => ({ ...current, status: 'error' }))
-      return
     }
-    setState({ ...directoryFromModelCatalog(response.result.value), status: 'ready' })
-  }, [sessionId])
+  }, [])
 
   const select = useCallback(async (selection: ModelSelection): Promise<void> => {
     if (locked) return

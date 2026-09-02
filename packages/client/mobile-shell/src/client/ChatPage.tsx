@@ -12,6 +12,8 @@ import type {} from '@deepseek-ai/dsh-schedule/client'
 import { deriveAgentWorkingFromSnapshot } from './chat-projection.ts'
 import { MobileChatFlow } from './MobileChatFlow.tsx'
 import { MobileChatHeader } from './MobileChatHeader.tsx'
+import { MobileAgentPresetLabel } from './MobileAgentPresetLabel.tsx'
+import { MobileAgentPresetSelect } from './MobileAgentPresetSelect.tsx'
 import { MobileComposer } from './MobileComposer.tsx'
 import { MobileComposerTakeover } from './MobileComposerTakeover.tsx'
 import { claimExecuteLine, type MobileComposerClaim } from './mobile-composer-claim.ts'
@@ -148,6 +150,7 @@ export function ChatPage({
   const sessionStats = useProjection('sessionStats')
   const permissions = useProjection('permissions') as PermissionSelectValue | undefined
   const scheduleRecords = useProjection('schedule')
+  const agentPresetProjection = useProjection('agentPreset')
   const turnItems = useSession(snapshot => snapshot.chat.navigation.items())
   const chatOrderLength = useSession(snapshot => snapshot.chat.order.length)
   const chatRunning = useSession(snapshot => snapshot.running)
@@ -179,6 +182,15 @@ export function ChatPage({
     () => sessionChatHeaderMeta(sessionId, workspaces),
     [sessionId, workspaces],
   )
+
+  const agentPresetId = useMemo((): string | undefined => {
+    if (typeof agentPresetProjection === 'string' && agentPresetProjection !== '') {
+      return agentPresetProjection
+    }
+    const values = sessionSummary?.projections?.values as { agentPreset?: unknown } | undefined
+    const fromList = values?.agentPreset
+    return typeof fromList === 'string' && fromList !== '' ? fromList : undefined
+  }, [agentPresetProjection, sessionSummary])
 
   const showHero = blank
     && chatOrder.length === 0
@@ -392,6 +404,18 @@ export function ChatPage({
         <MobileChatHeader
           title={title}
           meta={headerMeta}
+          presetLabel={newSessionHeader
+            ? (
+              <MobileAgentPresetSelect
+                sessionId={sessionId}
+                currentId={agentPresetId}
+                locked={agentWorking || sending}
+                onError={setError}
+              />
+            )
+            : agentPresetId === undefined
+              ? undefined
+              : <MobileAgentPresetLabel presetId={agentPresetId} />}
           metaSlot={newSessionHeader
             ? (
               <MobileWorkspaceSelect

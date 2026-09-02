@@ -27,3 +27,19 @@ export function agentPresetDisplayLabel(preset: AgentPresetLabelSource): string 
   }
   return preset.name ?? preset.id
 }
+
+/**
+ * Resolve a preset label from its id, using an optional roster row when present.
+ * @param presetId - session agent-preset projection value.
+ * @param roster - optional agentPresets/list rows.
+ */
+export function agentPresetLabelFromId(
+  presetId: string,
+  roster?: readonly AgentPresetLabelSource[],
+): string {
+  const entry = roster?.find(row => row.id === presetId)
+  if (entry !== undefined) return agentPresetDisplayLabel(entry)
+  const builtInKey = BUILT_IN_PRESET_LABEL_KEYS[presetId]
+  if (builtInKey !== undefined) return mobileConversationT(builtInKey)
+  return presetId
+}

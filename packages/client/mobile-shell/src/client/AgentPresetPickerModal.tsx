@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { IconCheckOutline16, Modal } from '@deepseek-ai/dsh-client-ui-primitives'
 import { mobileApi } from './mobile-api-client.ts'
+import { getMobileAgentPresets, invalidateMobileAgentPresets } from './mobile-host-metadata-cache.ts'
 import { agentPresetDisplayLabel } from './mobile-host-preset-label.ts'
 import { mobileConversationT } from './mobile-locale.ts'
 import css from './mobile-shell.module.css'
@@ -47,18 +48,18 @@ export function AgentPresetPickerModal({
   const load = useCallback(async (): Promise<void> => {
     const generation = ++generationRef.current
     setState({ presets: [], status: 'loading' })
-    const response = await mobileApi.agentPresets.list({})
-    if (generation !== generationRef.current) return
-    const listResult = response.result
-    if (!listResult.ok) {
+    try {
+      const listResult = await getMobileAgentPresets()
+      if (generation !== generationRef.current) return
+      setState({ presets: listResult.presets as readonly AgentPresetEntry[], status: 'ready' })
+    } catch (loadError) {
+      if (generation !== generationRef.current) return
       setState({
         presets: [],
         status: 'error',
-        errorMessage: listResult.error.message,
+        errorMessage: loadError instanceof Error ? loadError.message : String(loadError),
       })
-      return
     }
-    setState({ presets: listResult.value.presets as readonly AgentPresetEntry[], status: 'ready' })
   }, [])
 
   useEffect(() => {
@@ -93,6 +94,7 @@ export function AgentPresetPickerModal({
       presets: current.presets.map(row => ({ ...row, isDefault: row.id === preset.id })),
       status: 'ready',
     }))
+    invalidateMobileAgentPresets()
     onSelected()
     onClose()
   }, [onClose, onSelected])

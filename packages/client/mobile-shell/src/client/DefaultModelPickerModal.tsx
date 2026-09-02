@@ -6,6 +6,7 @@ import type {
 } from '@deepseek-ai/dsh-api-session-controller/types'
 import { IconCheckOutline16, Modal } from '@deepseek-ai/dsh-client-ui-primitives'
 import { mobileApi } from './mobile-api-client.ts'
+import { getMobileModelCatalog } from './mobile-host-metadata-cache.ts'
 import { directoryFromModelCatalog, modelSelectionKey } from './mobile-model-catalog.ts'
 import { modelSelectionLabel } from './mobile-model-label.ts'
 import { mobileConversationT } from './mobile-locale.ts'
@@ -61,19 +62,19 @@ export function DefaultModelPickerModal({
       })
       return
     }
-    const response = await mobileApi.sessions.models({ sessionId })
-    if (generation !== generationRef.current) return
-    const modelsResult = response.result
-    if (!modelsResult.ok) {
+    try {
+      const catalog = await getMobileModelCatalog()
+      if (generation !== generationRef.current) return
+      setState({ ...directoryFromModelCatalog(catalog), status: 'ready' })
+    } catch (loadError) {
+      if (generation !== generationRef.current) return
       setState({
         current: null,
         groups: [],
         status: 'error',
-        errorMessage: modelsResult.error.message,
+        errorMessage: loadError instanceof Error ? loadError.message : String(loadError),
       })
-      return
     }
-    setState({ ...directoryFromModelCatalog(modelsResult.value), status: 'ready' })
   }, [resolveSessionId])
 
   useEffect(() => {

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Modal } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { PluginInventorySnapshot } from '@deepseek-ai/dsh-api-remotes/client'
-import { mobileApi } from './mobile-api-client.ts'
+import { getMobilePluginInventory } from './mobile-host-metadata-cache.ts'
 import { agentPresetDisplayLabel } from './mobile-host-preset-label.ts'
 import {
   fallbackPluginPreset,
@@ -35,14 +35,14 @@ export function PluginInventoryModal({ open, onClose }: PluginInventoryModalProp
 
   const load = useCallback(async (): Promise<void> => {
     setStatus('loading')
-    const response = await mobileApi.pluginInventory.list()
-    if (!response.result.ok) {
+    try {
+      const snapshot = await getMobilePluginInventory()
+      setSnapshot(snapshot)
+      setStatus('ready')
+    } catch (loadError) {
       setStatus('error')
-      setErrorMessage(response.result.error.message)
-      return
+      setErrorMessage(loadError instanceof Error ? loadError.message : String(loadError))
     }
-    setSnapshot(response.result.value)
-    setStatus('ready')
   }, [])
 
   useEffect(() => {
