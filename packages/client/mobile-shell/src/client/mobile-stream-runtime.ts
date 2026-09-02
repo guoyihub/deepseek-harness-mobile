@@ -93,7 +93,7 @@ function parseReadyHost(value: unknown): ConnectionHostInfo {
 export const mobileSessionRemotes = createMobileSessionRemotes(
   mobileConnectionRpc(),
   streams,
-  generationSourceFace,
+  { generation: generationSourceFace },
 )
 
 /** Open workspace follow on the shared mux. */

@@ -2,7 +2,7 @@
 
 import type { PendingInteractionStatus } from './mobile-session-pending-tracker.ts'
 import type { StateDotState } from '@deepseek-ai/dsh-client-ui-primitives'
-import { relativeTime } from '@deepseek-ai/dsh-client-ui-workspace/src/client/tree.ts'
+import { relativeTime } from '@deepseek-ai/dsh-client-ui-primitives'
 import { zh as workspaceZh } from '@deepseek-ai/dsh-client-ui-workspace/src/client/locales.ts'
 
 type Params = Record<string, string | number>

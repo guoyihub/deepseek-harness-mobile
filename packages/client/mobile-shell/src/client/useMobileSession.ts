@@ -1,5 +1,5 @@
 /**
- * Per-session Session + Conversation fold for mobile chat and trajectory.
+ * Per-session Session + Conversation fold for mobile chat.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ConnectionState } from '@deepseek-ai/dsh-client-connection/client'
@@ -16,11 +16,9 @@ import { getMobileConversationRuntime } from './mobile-conversation-runtime.ts'
 import { bindMobileConversation } from './mobile-conversation-binding.ts'
 import { mobileSessionRemotes } from './mobile-stream-runtime.ts'
 import { useMobileConnection } from './MobileConnectionContext.tsx'
-
-const absentProjection: UseProjection = ((
-  _key: string,
-  selector?: (value: undefined) => unknown,
-) => (selector === undefined ? undefined : selector(undefined))) as UseProjection
+import { bindMobileUseProjection } from './mobile-projection-bind.ts'
+import { createMobileImageLoader } from './mobile-attachment.ts'
+import type { MessageImageLoader } from '@deepseek-ai/dsh-client-ui-conversation/client'
 
 const sessionCache = new Map<SessionId, Session>()
 const remotes = mobileSessionRemotes
@@ -80,6 +78,7 @@ function coldView(sessionId: SessionId, summary: SessionSummary | undefined): Mo
     blank: summary?.blank ?? false,
     lastAgentError: null,
     awaitingFirstTurn: false,
+    promptAttempted: false,
   }, EMPTY_CONVERSATION_SNAPSHOT)
 }
 
@@ -93,6 +92,42 @@ function coldObservable(
     subscribe: () => () => {},
   }
 }
+
+/**
+ * Session + conversation view with a stable {@link HostObservable.getSnapshot}
+ * reference until either input snapshot changes.
+ * @param session - open Session instance.
+ * @param conversation - bound conversation fold snapshot.
+ */
+function createLiveSessionViewObservable(
+  session: Pick<Session, 'getSnapshot' | 'subscribe'>,
+  conversation: ConversationSnapshot,
+): HostObservable<MobileSessionView> {
+  let cachedView: MobileSessionView | undefined
+  let cachedSessionSnap: SessionSnapshot | undefined
+  let cachedConversation: ConversationSnapshot | undefined
+
+  return {
+    getSnapshot: () => {
+      const sessionSnap = session.getSnapshot()
+      if (
+        cachedView !== undefined
+        && cachedSessionSnap === sessionSnap
+        && cachedConversation === conversation
+      ) {
+        return cachedView
+      }
+      cachedSessionSnap = sessionSnap
+      cachedConversation = conversation
+      cachedView = combineView(sessionSnap, conversation)
+      return cachedView
+    },
+    subscribe: listener => session.subscribe(listener),
+  }
+}
+
+/** @internal test-only export for snapshot stability coverage. */
+export const createLiveSessionViewObservableForTest = createLiveSessionViewObservable
 
 function applySummaryHints(session: Session, summary: SessionSummary | undefined): void {
   if (summary === undefined) return
@@ -112,10 +147,12 @@ export interface MobileSessionHandle {
   useProjection: UseProjection
   /** Page older history into the Session window. */
   loadOlder: () => Promise<boolean>
+  /** Session-authorized durable image loader. */
+  loadImage: MessageImageLoader
 }
 
 /**
- * Open a Session for Chat + Trajectory assembly.
+ * Open a Session for Chat assembly.
  * @param sessionId - active Host session.
  */
 export function useMobileSession(sessionId: SessionId): MobileSessionHandle {
@@ -219,10 +256,7 @@ export function useMobileSession(sessionId: SessionId): MobileSessionHandle {
 
   const liveObservable = useMemo((): HostObservable<MobileSessionView> => {
     if (session === undefined) return coldObservable(sessionId, summary)
-    return {
-      getSnapshot: () => combineView(session.getSnapshot(), conversation),
-      subscribe: listener => session.subscribe(listener),
-    }
+    return createLiveSessionViewObservable(session, conversation)
   }, [conversation, session, sessionId, summary])
 
   const useSession = useMemo(
@@ -237,11 +271,18 @@ export function useMobileSession(sessionId: SessionId): MobileSessionHandle {
     return session.getSnapshot().hasMore !== beforeHasMore
   }, [session])
 
+  const useProjection = useMemo(
+    () => bindMobileUseProjection(session?.projections),
+    [session],
+  )
+  const loadImage = useMemo(() => createMobileImageLoader(session), [session])
+
   return {
     ready,
     error,
     useSession,
-    useProjection: absentProjection,
+    useProjection,
     loadOlder,
+    loadImage,
   }
 }

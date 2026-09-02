@@ -1,6 +1,6 @@
 /** SessionRemotes over the mobile PWA Connection RPC and Remote stream mux. */
 
-import type { ClientConnectionRpc, ConnectionGeneration } from '@deepseek-ai/dsh-client-connection/client'
+import type { ClientConnectionRpc, ConnectionHandle } from '@deepseek-ai/dsh-client-connection/client'
 import {
   RemoteStream,
   RemoteStreamMuxClient,
@@ -25,7 +25,7 @@ function asRemoteResult<T>(value: unknown): RemoteResult<T> {
 export function createMobileSessionRemotes(
   rpc: ClientConnectionRpc,
   streams: RemoteStreamMuxClient,
-  generation: { getSnapshot(): ConnectionGeneration | undefined; subscribe(listener: () => void): () => void },
+  generation: Pick<ConnectionHandle, 'generation'>,
 ): SessionRemotes {
   const call = async <T>(
     endpoint: string,
@@ -58,8 +58,16 @@ export function createMobileSessionRemotes(
       canOpenWorkspacePath: () => call('session/canOpenWorkspacePath', {}),
       modelCatalog: () => call('session/modelCatalog', {}),
       page: (request, signal) => call('session/page', { request }, signal),
-      follow: (request, signal) => streams.open('session/follow', { args: { request } }, signal) as never,
-      control: signal => streams.open('session/control', { args: {} }, signal) as never,
+      follow: (request, signal) => streams.open(
+        'session/follow',
+        { args: { request } },
+        signal ?? new AbortController().signal,
+      ) as never,
+      control: signal => streams.open(
+        'session/control',
+        { args: {} },
+        signal ?? new AbortController().signal,
+      ) as never,
     } as SessionRemotes['session'],
     subagents: {
       list: (parentSessionId, signal) => call('subagents/list', { agentId: parentSessionId }, signal),

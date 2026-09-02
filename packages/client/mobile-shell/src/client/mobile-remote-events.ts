@@ -64,7 +64,7 @@ function settleApproval(
   clientId: RemoteEventClientId,
   deliverySignal: AbortSignal,
 ): void {
-  const sessionId = frame.agentId as SessionId
+  const sessionId = frame.agentId as unknown as SessionId
   const request = frame.request
   const toolName = request.toolName
   if (typeof toolName !== 'string') return
@@ -109,7 +109,7 @@ function settleQuestion(
   clientId: RemoteEventClientId,
   deliverySignal: AbortSignal,
 ): void {
-  const sessionId = frame.agentId as SessionId
+  const sessionId = frame.agentId as unknown as SessionId
   const questions = frame.request.questions
   if (!Array.isArray(questions)) return
   const pending = new PendingQuestion(

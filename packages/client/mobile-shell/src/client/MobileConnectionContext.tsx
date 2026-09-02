@@ -86,6 +86,8 @@ interface MobileConnectionContextValue {
   reloadPairing: () => void
   /** Refresh the cached Host model catalog snapshot. */
   refreshHostDescription: () => Promise<void>
+  /** Interrupt backoff and retry the Host generation immediately. */
+  reconnectNow: () => void
 }
 
 const MobileConnectionContext = createContext<MobileConnectionContextValue | undefined>(undefined)
@@ -290,6 +292,10 @@ export function MobileConnectionProvider({ children }: { children: ReactNode }):
     setError(undefined)
   }, [])
 
+  const reconnectNow = useCallback((): void => {
+    controllerRef.current?.reconnect()
+  }, [])
+
   useEffect(() => {
     if (!paired) {
       workspaceAbort.current?.abort()
@@ -387,6 +393,7 @@ export function MobileConnectionProvider({ children }: { children: ReactNode }):
     disconnect,
     reloadPairing,
     refreshHostDescription,
+    reconnectNow,
   }), [
     paired,
     hostBase,
@@ -407,6 +414,7 @@ export function MobileConnectionProvider({ children }: { children: ReactNode }):
     disconnect,
     reloadPairing,
     refreshHostDescription,
+    reconnectNow,
   ])
 
   return (

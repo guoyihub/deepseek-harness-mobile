@@ -24,8 +24,8 @@ export interface MobileConversationBinding {
 /**
  * Fold one Session event window into Conversation target snapshots.
  * @param feed - Session event source.
- * @param events - Chat/Trajectory event Definitions.
- * @param views - Chat/Trajectory view builders.
+ * @param events - Chat event Definitions.
+ * @param views - Chat view builders.
  */
 export function bindMobileConversation(
   feed: SessionEventSource,
