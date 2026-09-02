@@ -36,7 +36,7 @@ function declarations(source: string, selector: string): Map<string, string> | u
 
 describe('mobile task home session list', () => {
   it('uses touch-sized session rows and grouped list rhythm', () => {
-    expect(declarations(shellCss, '.taskHomeList')?.get('padding')).toBe('0 0 0 20px')
+    expect(declarations(shellCss, '.taskHomeList')?.get('padding')).toBe('0 0 0 24px')
     expect(declarations(shellCss, '.taskHomeList > li + li')?.get('margin-top')).toBe('4px')
     expect(declarations(rowsCss, '.sessionRow')?.get('height')).toBe('32px')
     expect(declarations(rowsCss, '.sessionRowMobile')?.get('height')).toBe('48px')

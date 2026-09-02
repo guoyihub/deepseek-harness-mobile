@@ -56,7 +56,17 @@ import { TaskHomeRenameModal } from './TaskHomeRenameModal.tsx'
 import { TaskHomeSelectDock } from './TaskHomeSelectDock.tsx'
 import { TaskHomeWorkspaceDeleteModal } from './TaskHomeWorkspaceDeleteModal.tsx'
 import { TASK_HOME_MOTION_MS } from './task-home-motion.ts'
+import { AgentPresetIcon } from './mobile-agent-preset-icon.tsx'
 import css from './mobile-shell.module.css'
+
+/**
+ * Title-leading agent-preset glyph when the list snapshot carries a preset id.
+ * @param presetId - `agentPreset` projection, or absent when the list row has none.
+ */
+function taskHomePresetLeading(presetId: string | undefined) {
+  if (presetId === undefined) return undefined
+  return <AgentPresetIcon presetId={presetId} size={16} />
+}
 
 /** Props for {@link HomePage}. */
 export interface HomePageProps {
@@ -497,6 +507,7 @@ export function HomePage({
                     result={result}
                     currentId={undefined}
                     surface="mobile"
+                    leading={taskHomePresetLeading(result.agentPreset)}
                     onOpen={(id) => { openChat(id) }}
                     t={mobileWorkspaceT}
                   />
@@ -568,6 +579,7 @@ export function HomePage({
                           currentId={undefined}
                           now={listNow}
                           surface="mobile"
+                          leading={taskHomePresetLeading(session.agentPreset)}
                           selecting={selecting}
                           selected={selectedIds.has(session.id)}
                           onToggleSelect={() => { toggleSelect(session.id) }}

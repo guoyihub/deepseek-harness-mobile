@@ -131,6 +131,17 @@
   color: var(--dsw-alias-label-tertiary);
 }
 
+.leading {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 20px;
+  margin-right: 2px;
+  color: var(--dsw-alias-label-secondary);
+}
+
 .visuallyHidden {
   position: absolute;
   width: 1px;
@@ -254,10 +265,12 @@
   height: 48px;
   min-height: 48px;
   box-sizing: border-box;
-  padding: 0 4px 0 8px;
+  gap: 4px;
+  padding: 0 4px 0 0;
 }
 
 .sessionRowMobile .title {
+  margin-left: 0;
   font-size: 17px;
   line-height: 24px;
   font-weight: 500;
@@ -271,6 +284,12 @@
 .sessionRowMobile .slot {
   width: 20px;
   height: 24px;
+}
+
+.sessionRowMobile .leading {
+  width: 20px;
+  height: 24px;
+  margin-right: 4px;
 }
 
 .sessionRowMobile .iconButton {
@@ -295,6 +314,11 @@
 .searchResultRowMobile {
   min-height: 64px;
   padding: 10px 8px;
+}
+
+.searchResultRowMobile .leading {
+  width: 20px;
+  height: 24px;
 }
 
 .searchResultRowMobile .searchResultTitle {

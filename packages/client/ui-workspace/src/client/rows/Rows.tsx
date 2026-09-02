@@ -5,7 +5,7 @@
  * except workspace Rename/Delete and session Rename/Fork/Archive; the session
  * and workspace hover cards are suppressed while a menu is open.
  */
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import clsx from 'clsx'
 import {
   HoverCard, IconAlarmClockOutline16, IconArchiveOutline20, IconBranchOutline16,
@@ -326,14 +326,17 @@ function SessionHoverContent({ node, now, t }: { node: SessionNode; now: number;
  * @param props.currentId - selected session id.
  * @param props.onOpen - open the selected session.
  * @param props.t - Workspace-browser translation seat.
+ * @param props.leading - optional title-leading glyph.
  * @returns the result button.
  */
-export function SearchResultItem({ result, currentId, onOpen, t, surface = 'desktop' }: {
+export function SearchResultItem({ result, currentId, onOpen, t, surface = 'desktop', leading }: {
   result: SearchResultNode
   currentId: string | undefined
   onOpen: (id: SearchResultNode['id']) => void
   t: RowTranslate
   surface?: 'desktop' | 'mobile' | undefined
+  /** Optional glyph immediately before the title (mobile agent-preset icon). */
+  leading?: ReactNode | undefined
 }) {
   const selected = result.id === currentId
   const statuses = sessionStatuses(result, t)
@@ -356,6 +359,7 @@ export function SearchResultItem({ result, currentId, onOpen, t, surface = 'desk
             <SessionStatusDots statuses={statuses} dotSize={dotSize} />
           )}
         </span>
+        {leading !== undefined && <span className={css.leading}>{leading}</span>}
         <span className={css.searchResultTitle}>{result.title}</span>
         {result.hasActiveSchedule && <ActiveScheduleIndicator t={t} search />}
       </span>
@@ -382,9 +386,10 @@ export function SearchResultItem({ result, currentId, onOpen, t, surface = 'desk
  * @param props.drag - optional draggable-row wiring.
  * @param props.flat - omit the empty status slot in the hierarchy-free flat list.
  * @param props.t - the browser root's locale seat.
+ * @param props.leading - optional title-leading glyph.
  * @returns the session row.
  */
-export function SessionNodeItem({ node, currentId, now, onOpen, onRename, onFork, onArchive, drag, flat = false, t, surface = 'desktop', selecting = false, selected: rowChecked = false, onToggleSelect, onEnterSelect, onPin }: {
+export function SessionNodeItem({ node, currentId, now, onOpen, onRename, onFork, onArchive, drag, flat = false, t, surface = 'desktop', selecting = false, selected: rowChecked = false, onToggleSelect, onEnterSelect, onPin, leading }: {
   node: SessionNode
   currentId: string | undefined
   now: number
@@ -411,6 +416,8 @@ export function SessionNodeItem({ node, currentId, now, onOpen, onRename, onFork
   onEnterSelect?: (() => void) | undefined
   /** Pin this session to the top of its workspace (mobile row menu action). */
   onPin?: ((id: SessionNode['id']) => void) | undefined
+  /** Optional glyph immediately before the title (mobile agent-preset icon). */
+  leading?: ReactNode | undefined
   t: RowTranslate
 }) {
   const row = node
@@ -491,11 +498,12 @@ export function SessionNodeItem({ node, currentId, now, onOpen, onRename, onFork
         >
           {rowChecked ? <IconCheckOutline14 size={14} /> : null}
         </span>
-      ) : ((!flat || showStatus) && (
+      ) : ((surface === 'mobile' ? showStatus : (!flat || showStatus)) && (
         <span className={css.slot}>
           {showStatus && <SessionStatusDots statuses={statuses} dotSize={dotSize} />}
         </span>
       ))}
+      {leading !== undefined && <span className={css.leading}>{leading}</span>}
       <span className={css.title}>{title}</span>
       {row.hasActiveSchedule && <ActiveScheduleIndicator t={t} />}
       {/* A blank New Session row is a provisional placeholder: nothing has

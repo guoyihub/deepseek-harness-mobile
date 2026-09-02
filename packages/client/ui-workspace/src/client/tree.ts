@@ -40,6 +40,8 @@ export interface SessionNode {
   completed: boolean
   /** The current list projection contains at least one active Schedule record. */
   hasActiveSchedule: boolean
+  /** Session `agentPreset` projection when the list snapshot carries a non-empty id. */
+  agentPreset?: string
   updatedAt: number
 }
 
@@ -79,6 +81,8 @@ export interface SearchResultNode {
   completed: boolean
   /** The current list projection contains at least one active Schedule record. */
   hasActiveSchedule: boolean
+  /** Session `agentPreset` projection when the list snapshot carries a non-empty id. */
+  agentPreset?: string
   snippet?: string
 }
 
@@ -241,12 +245,19 @@ function visiblePendingKind(kind: string | undefined): SessionPendingInteraction
   }
 }
 
+/** Non-empty `agentPreset` projection from a list snapshot row. */
+function sessionAgentPreset(s: SessionSummary): string | undefined {
+  const value = s.projectionValues?.agentPreset
+  return typeof value === 'string' && value !== '' ? value : undefined
+}
+
 function sessionNode(
   s: SessionSummary,
   descendants: ReadonlyMap<SessionId, SubagentDescendantSummary>,
   pendingInteractions: SessionPendingInteractions,
 ): SessionNode {
   const pendingInteraction = visiblePendingKind(pendingInteractions.get(s.id)?.kind)
+  const agentPreset = sessionAgentPreset(s)
   return {
     id: s.id,
     title: sessionTitle(s),
@@ -257,6 +268,7 @@ function sessionNode(
     hasActiveSchedule: hasActiveSchedule(s),
     updatedAt: s.updatedAt,
     ...(pendingInteraction === undefined ? {} : { pendingInteraction }),
+    ...(agentPreset === undefined ? {} : { agentPreset }),
   }
 }
 
@@ -408,6 +420,7 @@ export function deriveSearchResults(
     items: ordered.slice(0, limit).map((summary) => {
       const match = contentBySession.get(summary.id)
       const pendingInteraction = visiblePendingKind(pendingInteractions.get(summary.id)?.kind)
+      const agentPreset = sessionAgentPreset(summary)
       return {
         id: summary.id,
         title: sessionTitle(summary),
@@ -419,6 +432,7 @@ export function deriveSearchResults(
           : { pendingInteraction }),
         completed: summary.completed === true,
         hasActiveSchedule: hasActiveSchedule(summary),
+        ...(agentPreset === undefined ? {} : { agentPreset }),
         ...match === undefined ? {} : { snippet: match.snippet },
       }
     }),

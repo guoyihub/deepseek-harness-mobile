@@ -49,6 +49,28 @@ describe('deriveGroups', () => {
     expect(groups[0]!.sessions.map(session => session.id)).toEqual([sid('older'), sid('newer')])
   })
 
+  it('copies a non-empty agentPreset projection onto session and search rows', () => {
+    const coded = { ...summary('coded', 10), projectionValues: { agentPreset: 'code' } }
+    const groups = deriveGroups(
+      list(coded),
+      [workspace('w', ['coded'])],
+      noArchive,
+      noAttention,
+      view(['w']),
+    )
+    expect(groups[0]!.sessions[0]!.agentPreset).toBe('code')
+    const search = deriveSearchResults(
+      list(coded),
+      [workspace('w', ['coded'])],
+      'coded',
+      noArchive,
+      noAttention,
+      { items: [], hasMore: false },
+      10,
+    )
+    expect(search.items[0]!.agentPreset).toBe('code')
+  })
+
   it('projects pending-interaction state into grouped and flat rows', () => {
     const awaiting = { ...summary('awaiting', 10), running: true }
     const sessions = list(awaiting)
