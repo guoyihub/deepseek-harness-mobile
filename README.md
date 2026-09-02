@@ -31,8 +31,8 @@ DSH Mobile 把 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harnes
 
 | 端 | 地址 | 说明 |
 | --- | --- | --- |
-| 桌面 Host | `http://127.0.0.1:3080` | `pnpm dsh web`；侧栏 **手机连接** 展示二维码 |
-| Mobile PWA（本机） | `http://127.0.0.1:8030` | `pnpm dsh mobile`；**仅适合在电脑浏览器预览** |
+| 桌面 Host | `http://127.0.0.1:3080/?token=...` | 见下方「开发启动」；**须用终端打印的带 token 的 URL 首次打开**；侧栏 **手机连接** 展示二维码 |
+| Mobile PWA（本机） | `http://127.0.0.1:8030` | 见下方「开发启动」；**仅适合在电脑浏览器预览** |
 | Mobile PWA（局域网） | `http://<电脑 IP>:8030` | 手机请用此地址；`/api` 与 WebSocket 由 Vite 代理到 Host `:3080` |
 | Mobile PWA（穿透） | `https://<你的隧道域名>` | 只穿透 **8030**，不要穿透 Host `:3080` |
 
@@ -54,6 +54,7 @@ DSH Mobile 把 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harnes
 2. **只穿透 / 只访问 Host `:3080`**：配对页在 Mobile 上（`/mobile/pair`），且 `/api` 代理在 Vite 侧；手机直连 Host 会缺代理与配对路径。**穿透时只暴露 `:8030`。**
 3. **二维码里是电脑内网 IP，手机却不在同一局域网**：扫码后无法打开配对页。同网用局域网 IP；异地用穿透，并确保二维码 / 短码对应的是穿透后的 Mobile 地址。
 4. **电脑上 `127.0.0.1:8030` 能开、手机用穿透却配对失败**：确认隧道指向的是 Mobile（8030）而非 Host（3080）；本仓库 Vite 已对代理请求去掉 Origin/Referer，避免穿透来源被 Host 的 Origin 校验拦住。
+5. **直接打开 `http://127.0.0.1:3080/` 出现 401**：上游 dsh TAG5+ 引入浏览器认证。请用终端 1 里 `dsh web:` 打印的完整 URL（含 `?token=...`）首次登录；Mobile 用 `:8030`。
 
 更细的穿透与短码说明见 [手机端开发文档](docs/mobile/README.md)。
 
@@ -178,13 +179,17 @@ pnpm build:mobile   # 仅 Mobile PWA 生产包
 pnpm build:web      # 仅桌面 Web 前端
 pnpm build          # Web + Mobile 全部构建
 
-# 开发启动
-pnpm dsh web        # 仅 Host（:3080）
-pnpm dsh mobile     # 仅 Mobile PWA（:8030）
-pnpm dsh            # 同时启动 Host + Mobile（同一终端，Ctrl+C 停止两者）
+# 开发启动（两个终端，自行启动）
+
+```powershell
+# 终端 1 — Host（:3080）
+pnpm dsh web --no-open
+
+# 终端 2 — Mobile PWA（:8030）
+pnpm run dev:mobile
 ```
 
-服务器或无图形界面时，Host 建议加 `--no-open`：`pnpm dsh web --no-open`。
+Host 就绪后，用终端 1 里 `dsh web:` 打印的带 `?token=...` 的 URL 打开桌面 GUI；Mobile 打开 `http://127.0.0.1:8030/`。不要直接访问裸 `:3080`。
 
 生产构建输出：`pnpm build:web` → Web dist；`pnpm build:mobile` → `apps/mobile/dist`。包级测试与更多细节见 [手机端开发文档](docs/mobile/README.md) 与各包 README。
 

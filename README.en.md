@@ -31,8 +31,8 @@ Your phone and computer should be on the same LAN, or the phone should reach the
 
 | Surface | URL | Notes |
 | --- | --- | --- |
-| Desktop Host | `http://127.0.0.1:3080` | `pnpm dsh web`; open **手机连接** in the sidebar for the QR code |
-| Mobile PWA (loopback) | `http://127.0.0.1:8030` | `pnpm dsh mobile`; **desktop browser preview only** |
+| Desktop Host | `http://127.0.0.1:3080/?token=...` | See **Development** below; open **手机连接** in the sidebar for the QR code |
+| Mobile PWA (loopback) | `http://127.0.0.1:8030` | See **Development** below; desktop browser preview only |
 | Mobile PWA (LAN) | `http://<computer-ip>:8030` | Use this on the phone; Vite proxies `/api` and WebSocket to Host `:3080` |
 | Mobile PWA (tunnel) | `https://<your-tunnel-host>` | Tunnel **:8030 only** — do not expose Host `:3080` |
 
@@ -176,14 +176,19 @@ pnpm install
 pnpm build:mobile   # Mobile PWA production bundle only
 pnpm build:web      # Desktop Web frontend only
 pnpm build          # Web + Mobile
-
-# Dev servers
-pnpm dsh web        # Host only (:3080)
-pnpm dsh mobile     # Mobile PWA only (:8030)
-pnpm dsh            # Both Host + Mobile (one terminal; Ctrl+C stops both)
 ```
 
-On servers or headless hosts, pass `--no-open` to the web Host: `pnpm dsh web --no-open`.
+Dev servers (two terminals, start manually):
+
+```powershell
+# Terminal 1 — Host (:3080)
+pnpm dsh web --no-open
+
+# Terminal 2 — Mobile PWA (:8030)
+pnpm run dev:mobile
+```
+
+After the Host is ready, open the desktop GUI with the `dsh web:` token URL from terminal 1; open Mobile at `http://127.0.0.1:8030/`.
 
 Production output: `pnpm build:web` → Web dist; `pnpm build:mobile` → `apps/mobile/dist`. Package tests and more detail live in the [mobile development guide](docs/mobile/README.md) and package READMEs.
 

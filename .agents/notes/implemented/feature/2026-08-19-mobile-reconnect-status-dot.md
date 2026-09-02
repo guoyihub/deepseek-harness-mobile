@@ -10,7 +10,7 @@ A lost Host stream showed a full-width red reconnect banner on every mobile page
 
 ## Decision
 
-Mobile outages are a status-dot change, not a banner. `TaskHomeHeader` paints the avatar badge green while `connectionState === 'connected'` and red while paired but not connected. An empty task list shows `正在重连…` while reconnecting, and after give-up it shows a scan CTA. `ConnectionBanner` is not mounted on mobile shell pages. `ConnectionController` accepts optional `maxAttempts`; mobile starts the loop with `3`. After that many consecutive failed reconnects the controller stops, fires `onGiveUp`, and the shell clears pairing storage so the next connect is a scan.
+Mobile outages keep the task-home avatar badge: green while `connectionState === 'connected'`, red while paired but not connected. An empty task list shows `正在重连…` while reconnecting, and after give-up it shows a scan CTA. Desktop `ConnectionBanner` is still not mounted. A compact `MobileReconnectBanner` with Retry now sits on Home, Chat, and Connection while paired and not connected; see [mobile alpha feature parity](2026-09-01-mobile-alpha-feature-parity.md). `ConnectionController` accepts optional `maxAttempts`; mobile starts the loop with `3`. After that many consecutive failed reconnects the controller stops, fires `onGiveUp`, and the shell clears pairing storage so the next connect is a scan.
 
 Desktop `ctx.connection.start` omits `maxAttempts` and still retries until `stop()`.
 

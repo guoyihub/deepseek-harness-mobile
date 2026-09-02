@@ -23,13 +23,17 @@ pnpm build:mobile   # 仅 Mobile PWA
 pnpm build:web      # 仅桌面 Web
 pnpm build          # 全部
 
-# 开发启动
-pnpm dsh web        # Host（:3080）
-pnpm dsh mobile     # Mobile PWA（:8030）
-pnpm dsh            # 同时启动两者
+# 开发启动（两个终端，自行启动）
+
+```powershell
+# 终端 1 — Host（:3080）
+pnpm dsh web --no-open
+
+# 终端 2 — Mobile PWA（:8030）
+pnpm run dev:mobile
 ```
 
-服务器上 Host 建议：`pnpm dsh web --no-open`。
+Host 就绪后，用终端 1 里 `dsh web:` 打印的带 `?token=...` 的 URL 打开桌面 GUI；Mobile 打开 `http://127.0.0.1:8030/`。
 
 | 端 | 本机（电脑浏览器） | 手机可达 |
 |----|------|--------|

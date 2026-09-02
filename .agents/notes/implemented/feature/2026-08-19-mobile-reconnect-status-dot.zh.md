@@ -10,7 +10,7 @@ Host 流断开时，每个移动页面都会出现通栏红色重连条。它与
 
 ## 决策
 
-移动端断线只改状态点，不挂横幅。`TaskHomeHeader` 在 `connectionState === 'connected'` 时把头像角标画成绿色，已配对但未连接时画成红色。任务列表为空时重连中显示「正在重连…」，放弃后显示扫码入口。移动壳页面不挂载 `ConnectionBanner`。`ConnectionController` 接受可选 `maxAttempts`；移动端以 `3` 启动循环。连续重连失败达到该次数后控制器停止、触发 `onGiveUp`，壳层清除配对存储，下一次连接必须扫码。
+移动端断线仍改任务列表头像角标：`connectionState === 'connected'` 时为绿，已配对但未连接时为红。任务列表为空时重连中显示「正在重连…」，放弃后显示扫码入口。桌面 `ConnectionBanner` 仍不挂载。Home、Chat、连接页在已配对且未连接时显示带「立即重试」的紧凑 `MobileReconnectBanner`；见 [移动端 alpha 功能对齐](2026-09-01-mobile-alpha-feature-parity.zh.md)。`ConnectionController` 接受可选 `maxAttempts`；移动端以 `3` 启动循环。连续重连失败达到该次数后控制器停止、触发 `onGiveUp`，壳层清除配对存储，下一次连接必须扫码。
 
 桌面 `ctx.connection.start` 不传 `maxAttempts`，仍重试直到 `stop()`。
 
