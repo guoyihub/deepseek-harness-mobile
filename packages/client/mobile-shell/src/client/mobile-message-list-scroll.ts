@@ -5,7 +5,7 @@ export const MOBILE_MESSAGE_LIST_BOTTOM_THRESHOLD = 64
  * Pixels between the scrollport floor and the latest content.
  * @param list - chat scrollport element.
  */
-export function mobileMessageListDistanceFromBottom(list: HTMLDivElement): number {
+export function mobileMessageListDistanceFromBottom(list: HTMLElement): number {
   return list.scrollHeight - list.scrollTop - list.clientHeight
 }
 
@@ -15,7 +15,7 @@ export function mobileMessageListDistanceFromBottom(list: HTMLDivElement): numbe
  * @param threshold - distance treated as at-bottom; defaults to {@link MOBILE_MESSAGE_LIST_BOTTOM_THRESHOLD}.
  */
 export function isMobileMessageListAtBottom(
-  list: HTMLDivElement,
+  list: HTMLElement,
   threshold = MOBILE_MESSAGE_LIST_BOTTOM_THRESHOLD,
 ): boolean {
   return mobileMessageListDistanceFromBottom(list) <= threshold

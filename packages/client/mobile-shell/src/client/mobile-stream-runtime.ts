@@ -96,6 +96,16 @@ export const mobileSessionRemotes = createMobileSessionRemotes(
   { generation: generationSourceFace },
 )
 
+/** Latest connected Host generation, or undefined while disconnected. */
+export function getConnectionGeneration(): ConnectionGeneration | undefined {
+  return generation
+}
+
+/** Subscribe to Connection generation changes. */
+export function subscribeConnectionGeneration(listener: () => void): () => void {
+  return generationSourceFace.subscribe(listener)
+}
+
 /** Open workspace follow on the shared mux. */
 export function openMobileWorkspaceFollow(signal: AbortSignal): AsyncIterable<unknown> {
   return streams.open('workspace/follow', { args: {} }, signal)

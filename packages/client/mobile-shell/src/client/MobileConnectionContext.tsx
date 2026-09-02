@@ -35,6 +35,9 @@ import {
   resolveDefaultWorkspaceId,
 } from './mobile-workspace-connect.ts'
 import { prefetchMobileConversationRuntime } from './mobile-conversation-runtime.ts'
+import { clearMobileImageCache } from './mobile-attachment.ts'
+import { clearMobileHostMetadataCache, getMobileModelCatalog } from './mobile-host-metadata-cache.ts'
+import { clearMobileSessionCache } from './mobile-session-cache.ts'
 import { readSessionToken, readStoredHostBase } from './mobile-session.ts'
 import {
   readStoredDeviceId,
@@ -92,6 +95,12 @@ interface MobileConnectionContextValue {
 
 const MobileConnectionContext = createContext<MobileConnectionContextValue | undefined>(undefined)
 
+function clearMobileRuntimeCaches(): void {
+  clearMobileSessionCache()
+  clearMobileHostMetadataCache()
+  clearMobileImageCache()
+}
+
 function isUnauthorizedError(message: string): boolean {
   const lower = message.toLowerCase()
   return lower.includes('401') || lower.includes('unauthorized') || lower.includes('forbidden')
@@ -145,12 +154,14 @@ export function MobileConnectionProvider({ children }: { children: ReactNode }):
   const [pendingRevision, setPendingRevision] = useState(0)
   const controllerRef = useRef<ConnectionController | undefined>(undefined)
   const workspaceAbort = useRef<AbortController | undefined>(undefined)
+  const sessionsListInFlight = useRef<Promise<void> | undefined>(undefined)
 
   const handleAuthFailure = useCallback((message: string): void => {
     if (!isUnauthorizedError(message)) return
     clearPairingStorage()
     controllerRef.current?.stop()
     controllerRef.current = undefined
+    clearMobileRuntimeCaches()
     setRevoked(true)
     setPaired(false)
     setHostBase(undefined)
@@ -174,36 +185,19 @@ export function MobileConnectionProvider({ children }: { children: ReactNode }):
 
   const refreshHostDescription = useCallback(async (): Promise<void> => {
     const home = hostDescription?.home ?? ''
-    const response = await mobileApi.sessions.modelCatalog()
-    if (!response.result.ok) return
-    setHostDescription({
-      home,
-      provider: response.result.value.default.provider,
-      model: response.result.value.default.model,
-    })
+    try {
+      const catalog = await getMobileModelCatalog()
+      setHostDescription({
+        home,
+        provider: catalog.default.provider,
+        model: catalog.default.model,
+      })
+    } catch {
+      // Host metadata cache surfaces RPC errors to direct callers only.
+    }
   }, [hostDescription?.home])
 
-  const getPendingInteraction = useCallback((
-    sessionId: SessionId,
-  ): PendingInteractionStatus | undefined => mobilePendingInteraction(sessionId), [])
-
-  const getSessionCompleted = useCallback((
-    sessionId: SessionId,
-  ): boolean => mobileSessionCompleted(sessionId), [])
-
-  const markSessionViewed = useCallback((sessionId: SessionId | undefined): void => {
-    if (setMobileSelectedSession(sessionId)) {
-      setPendingRevision(revision => revision + 1)
-    }
-  }, [])
-
-  useEffect(() => {
-    if (syncMobileCompletedNotifications(sessions)) {
-      setPendingRevision(revision => revision + 1)
-    }
-  }, [sessions])
-
-  const refreshSessions = useCallback(async (): Promise<void> => {
+  const runRefreshSessions = useCallback(async (): Promise<void> => {
     if (readSessionToken() === undefined) {
       setSessions([])
       return
@@ -228,6 +222,33 @@ export function MobileConnectionProvider({ children }: { children: ReactNode }):
       setSessionsLoading(false)
     }
   }, [handleAuthFailure])
+
+  const refreshSessions = useCallback(async (): Promise<void> => {
+    sessionsListInFlight.current ??= runRefreshSessions().finally(() => {
+      sessionsListInFlight.current = undefined
+    })
+    return sessionsListInFlight.current
+  }, [runRefreshSessions])
+
+  const getPendingInteraction = useCallback((
+    sessionId: SessionId,
+  ): PendingInteractionStatus | undefined => mobilePendingInteraction(sessionId), [])
+
+  const getSessionCompleted = useCallback((
+    sessionId: SessionId,
+  ): boolean => mobileSessionCompleted(sessionId), [])
+
+  const markSessionViewed = useCallback((sessionId: SessionId | undefined): void => {
+    if (setMobileSelectedSession(sessionId)) {
+      setPendingRevision(revision => revision + 1)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (syncMobileCompletedNotifications(sessions)) {
+      setPendingRevision(revision => revision + 1)
+    }
+  }, [sessions])
 
   const prependBlankSession = useCallback((
     sessionId: SessionId,
@@ -281,6 +302,7 @@ export function MobileConnectionProvider({ children }: { children: ReactNode }):
     workspaceAbort.current = undefined
     controllerRef.current?.stop()
     controllerRef.current = undefined
+    clearMobileRuntimeCaches()
     setPaired(false)
     setHostBase(undefined)
     setHostDescription(undefined)
@@ -295,6 +317,10 @@ export function MobileConnectionProvider({ children }: { children: ReactNode }):
   const reconnectNow = useCallback((): void => {
     controllerRef.current?.reconnect()
   }, [])
+
+  useEffect(() => {
+    if (paired) prefetchMobileConversationRuntime()
+  }, [paired])
 
   useEffect(() => {
     if (!paired) {
@@ -331,13 +357,15 @@ export function MobileConnectionProvider({ children }: { children: ReactNode }):
         }
         void refreshSessions()
         void (async () => {
-          const catalog = await mobileApi.sessions.modelCatalog()
-          if (catalog.result.ok) {
+          try {
+            const catalog = await getMobileModelCatalog()
             setHostDescription({
               home: host.home,
-              provider: catalog.result.value.default.provider,
-              model: catalog.result.value.default.model,
+              provider: catalog.default.provider,
+              model: catalog.default.model,
             })
+          } catch {
+            // Host description keeps home-only facts until catalog resolves.
           }
         })()
         prefetchMobileConversationRuntime()

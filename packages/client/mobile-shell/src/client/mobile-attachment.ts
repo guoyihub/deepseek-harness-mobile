@@ -6,9 +6,37 @@ import type { ImageMediaType } from '@deepseek-ai/dsh-attachment/types'
 import type { EncodedImageAttachment } from '@deepseek-ai/dsh-attachment/types'
 import type { Session } from '@deepseek-ai/dsh-api-session-controller/src/client/sessions/session.ts'
 import { bytesToBase64 } from '@deepseek-ai/dsh-util-crypto'
+import {
+  getConnectionGeneration,
+  subscribeConnectionGeneration,
+} from './mobile-stream-runtime.ts'
 
 const cache = new Map<string, string>()
 const pending = new Map<string, Promise<string>>()
+
+let generationSubscribed = false
+let cachedGenerationId = -1
+
+function ensureGenerationSubscription(): void {
+  if (generationSubscribed) return
+  generationSubscribed = true
+  subscribeConnectionGeneration(() => {
+    const generation = getConnectionGeneration()
+    if (generation === undefined || generation.id !== cachedGenerationId) {
+      clearMobileImageCache()
+      cachedGenerationId = generation?.id ?? -1
+    }
+  })
+}
+
+function syncGeneration(): void {
+  ensureGenerationSubscription()
+  const generation = getConnectionGeneration()
+  const nextId = generation?.id ?? -1
+  if (nextId === cachedGenerationId) return
+  clearMobileImageCache()
+  cachedGenerationId = nextId
+}
 
 function cacheKey(sessionId: string, attachmentId: string): string {
   return `${sessionId}:${attachmentId}`
@@ -28,6 +56,7 @@ export function createMobileImageLoader(session: Session | undefined): MessageIm
     if (session === undefined) {
       throw new Error('mobile image loader: session is not open')
     }
+    syncGeneration()
     const key = cacheKey(session.sessionId, attachment.attachmentId)
     const hit = cache.get(key)
     if (hit !== undefined) return hit
@@ -59,6 +88,13 @@ export function createMobileImageLoader(session: Session | undefined): MessageIm
     return cache.get(cacheKey(session.sessionId, attachment.attachmentId))
   }
   return load
+}
+
+/** Revoke cached blob URLs after disconnect or generation change. */
+export function clearMobileImageCache(): void {
+  for (const url of cache.values()) releaseUrl(url)
+  cache.clear()
+  pending.clear()
 }
 
 const IMAGE_TYPES = new Set<string>(['image/png', 'image/jpeg', 'image/webp', 'image/gif'])

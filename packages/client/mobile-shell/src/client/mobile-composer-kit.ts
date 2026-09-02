@@ -11,7 +11,6 @@ import { absentProjection, PassthroughSessionProvider, useMobileInputKit } from 
 const emptyList = { byId: {}, order: [], current: undefined }
 const emptyConversation = { views: new Map() }
 const emptyChat = { order: [], nodes: new Map() }
-const emptyTrajectory = { order: [], nodes: new Map() }
 const emptyAttention = new Map<SessionId, unknown>()
 
 const questionDraftStore = createQuestionDraftStore().create('mobile-shell-question-drafts')
@@ -36,7 +35,6 @@ export function useMobileComposerTakeoverKit(
     useWorkspaces: selector => selector([] as never),
     useConversation: selector => selector(emptyConversation as never),
     useChat: selector => selector(emptyChat as never),
-    useTrajectory: selector => selector(emptyTrajectory as never),
     useProjection: absentProjection,
     useInput: useInput as never,
     inputActions: inputActions as never,

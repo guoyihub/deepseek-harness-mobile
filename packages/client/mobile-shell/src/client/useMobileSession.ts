@@ -1,8 +1,7 @@
 /**
  * Per-session Session + Conversation fold for mobile chat.
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { ConnectionState } from '@deepseek-ai/dsh-client-connection/client'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { SessionSummary } from '@deepseek-ai/dsh-api-session-controller/types'
 import type { SessionSnapshot, UseProjection } from '@deepseek-ai/dsh-api-session-controller/client'
@@ -12,16 +11,16 @@ import { EMPTY_CONVERSATION_SNAPSHOT } from '@deepseek-ai/dsh-client-ui-conversa
 import { EMPTY_CHAT_SNAPSHOT, type ChatSnapshot } from '@deepseek-ai/dsh-client-ui-chat/src/client/contract/snapshot.ts'
 import type { HostObservable, SnapshotSelectorHook } from '@deepseek-ai/dsh-client-ui-slots'
 import { bindSnapshotSelector } from '@deepseek-ai/dsh-client-ui-renderer/src/client/bind.ts'
-import { getMobileConversationRuntime } from './mobile-conversation-runtime.ts'
-import { bindMobileConversation } from './mobile-conversation-binding.ts'
-import { mobileSessionRemotes } from './mobile-stream-runtime.ts'
+import {
+  acquireMobileSession,
+  getCachedMobileSession,
+  releaseMobileSession,
+  sessionReadyFromCache,
+} from './mobile-session-cache.ts'
 import { useMobileConnection } from './MobileConnectionContext.tsx'
 import { bindMobileUseProjection } from './mobile-projection-bind.ts'
 import { createMobileImageLoader } from './mobile-attachment.ts'
 import type { MessageImageLoader } from '@deepseek-ai/dsh-client-ui-conversation/client'
-
-const sessionCache = new Map<SessionId, Session>()
-const remotes = mobileSessionRemotes
 
 /** Combined Session lifecycle and Chat target used by the mobile transcript. */
 export interface MobileSessionView {
@@ -45,8 +44,7 @@ function sessionReadyInstant(
   sessionId: SessionId,
   sessions: readonly SessionSummary[],
 ): boolean {
-  const cached = sessionCache.get(sessionId)
-  if (cached?.getSnapshot().openState === 'open') return true
+  if (sessionReadyFromCache(sessionId)) return true
   return sessionSummaryBlank(sessionId, sessions)
 }
 
@@ -156,60 +154,43 @@ export interface MobileSessionHandle {
  * @param sessionId - active Host session.
  */
 export function useMobileSession(sessionId: SessionId): MobileSessionHandle {
-  const { sessions, connectionState } = useMobileConnection()
+  const { sessions } = useMobileConnection()
   const summary = useMemo(
     () => sessions.find(item => item.sessionId === sessionId),
     [sessionId, sessions],
   )
-  const [session, setSession] = useState<Session | undefined>(() => sessionCache.get(sessionId))
+  const [session, setSession] = useState<Session | undefined>(() => getCachedMobileSession(sessionId))
   const [conversation, setConversation] = useState<ConversationSnapshot>(EMPTY_CONVERSATION_SNAPSHOT)
   const [ready, setReady] = useState(() => sessionReadyInstant(sessionId, sessions))
   const [error, setError] = useState<string | undefined>(undefined)
-  const sessionRef = useRef<Session | undefined>(undefined)
-  const prevConnectionState = useRef<ConnectionState | null>(null)
-
-  sessionRef.current = session
 
   useEffect(() => {
     let cancelled = false
-    let disposeConversation: (() => void) | undefined
+    let unsubscribeBinding: (() => void) | undefined
     const currentSummary = sessions.find(item => item.sessionId === sessionId)
-    const cached = sessionCache.get(sessionId)
-    if (cached?.getSnapshot().openState === 'open') {
-      applySummaryHints(cached, currentSummary)
-      setSession(cached)
-      setReady(true)
-      setError(undefined)
-      return () => {}
-    }
-
     const optimisticBlank = currentSummary?.blank === true
-    if (!optimisticBlank) setReady(false)
+    if (!optimisticBlank && !sessionReadyFromCache(sessionId)) setReady(false)
     setError(undefined)
 
     void (async () => {
       try {
-        const runtime = await getMobileConversationRuntime()
-        if (cancelled) return
-        let next = sessionCache.get(sessionId)
-        if (next === undefined) {
-          next = new Session(sessionId, remotes)
-          sessionCache.set(sessionId, next)
+        const acquired = await acquireMobileSession(sessionId)
+        if (cancelled) {
+          releaseMobileSession(sessionId)
+          return
         }
-        applySummaryHints(next, currentSummary)
-        setSession(next)
-        const binding = bindMobileConversation(next.eventSource, runtime.events, runtime.views)
-        disposeConversation = () => { binding.dispose() }
+        applySummaryHints(acquired.session, currentSummary)
+        setSession(acquired.session)
         const publishConversation = (): void => {
-          if (!cancelled) setConversation(binding.snapshot.getSnapshot())
+          if (!cancelled) setConversation(acquired.binding.snapshot.getSnapshot())
         }
         publishConversation()
-        binding.snapshot.subscribe(publishConversation)
+        unsubscribeBinding = acquired.binding.snapshot.subscribe(publishConversation)
 
         if (optimisticBlank) {
           if (!cancelled) setReady(true)
           try {
-            await next.open()
+            await acquired.session.open()
           } catch (openError) {
             if (!cancelled) {
               setError(openError instanceof Error ? openError.message : String(openError))
@@ -218,7 +199,12 @@ export function useMobileSession(sessionId: SessionId): MobileSessionHandle {
           return
         }
 
-        await next.open()
+        if (acquired.session.getSnapshot().openState === 'open') {
+          if (!cancelled) setReady(true)
+          return
+        }
+
+        await acquired.session.open()
         if (cancelled) return
         setReady(true)
       } catch (openError) {
@@ -228,9 +214,11 @@ export function useMobileSession(sessionId: SessionId): MobileSessionHandle {
         }
       }
     })()
+
     return () => {
       cancelled = true
-      disposeConversation?.()
+      unsubscribeBinding?.()
+      releaseMobileSession(sessionId)
     }
   }, [sessionId])
 
@@ -239,15 +227,6 @@ export function useMobileSession(sessionId: SessionId): MobileSessionHandle {
       setReady(current => current || true)
     }
   }, [sessionId, sessions])
-
-  useEffect(() => {
-    const prev = prevConnectionState.current
-    prevConnectionState.current = connectionState
-    if (connectionState !== 'connected' || prev !== 'connecting') return
-    const active = sessionRef.current
-    if (active === undefined || active.getSnapshot().openState !== 'open') return
-    void active.resync()
-  }, [connectionState])
 
   useEffect(() => {
     if (session === undefined) return
