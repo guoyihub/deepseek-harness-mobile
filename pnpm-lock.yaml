@@ -487,6 +487,12 @@ importers:
       '@deepseek-ai/dsh-client-ui-theme':
         specifier: workspace:^
         version: link:../../packages/client/ui-theme
+      '@tanstack/react-virtual':
+        specifier: ^3.14.9
+        version: 3.14.9(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      diff:
+        specifier: ^9.0.0
+        version: 9.0.0
       jsqr:
         specifier: ^1.4.0
         version: 1.4.0
@@ -496,6 +502,9 @@ importers:
       react-dom:
         specifier: ^18.2.0
         version: 18.3.1(react@18.3.1)
+      use-sync-external-store:
+        specifier: 1.2.0
+        version: 1.2.0(react@18.3.1)
     devDependencies:
       '@capacitor/cli':
         specifier: ^7.2.0
@@ -1871,6 +1880,9 @@ importers:
       '@deepseek-ai/dsh-api-gateway':
         specifier: workspace:^
         version: link:../../api/gateway
+      '@deepseek-ai/dsh-api-remotes':
+        specifier: workspace:^
+        version: link:../../api/remotes
       '@deepseek-ai/dsh-api-session-controller':
         specifier: workspace:^
         version: link:../../api/session-controller
@@ -1907,6 +1919,9 @@ importers:
       '@deepseek-ai/dsh-client-ui-renderer':
         specifier: workspace:^
         version: link:../ui-renderer
+      '@deepseek-ai/dsh-client-ui-schedule':
+        specifier: workspace:^
+        version: link:../ui-schedule
       '@deepseek-ai/dsh-client-ui-session':
         specifier: workspace:^
         version: link:../ui-session
@@ -1916,9 +1931,6 @@ importers:
       '@deepseek-ai/dsh-client-ui-tool':
         specifier: workspace:^
         version: link:../ui-tool
-      '@deepseek-ai/dsh-client-ui-trajectory':
-        specifier: workspace:^
-        version: link:../ui-trajectory
       '@deepseek-ai/dsh-client-ui-user-questions':
         specifier: workspace:^
         version: link:../ui-user-questions
@@ -1943,6 +1955,9 @@ importers:
       '@deepseek-ai/dsh-plan-mode':
         specifier: workspace:^
         version: link:../../plan/plan-mode
+      '@deepseek-ai/dsh-schedule':
+        specifier: workspace:^
+        version: link:../../schedule/schedule
       '@deepseek-ai/dsh-session':
         specifier: workspace:^
         version: link:../../core/session

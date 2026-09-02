@@ -222,7 +222,6 @@
       "@deepseek-ai/dsh-client-locale": ["./packages/client/locale/src"],
       "@deepseek-ai/dsh-client-web": ["./packages/client/web/src"],
       "@deepseek-ai/dsh-schedule/client": ["./packages/schedule/schedule/src/client.ts"],
-      "@deepseek-ai/dsh-client-ui-directory-picker-browse": ["./packages/client/ui-directory-picker-browse/src"],
       "@deepseek-ai/dsh-client-ui-directory-picker-native": ["./packages/client/ui-directory-picker-native/src"],
       // sdk/ folders are role-named without their npm-side sdk/jsonrpc prefixes,
       // so their names do not match their directories and the generated aliases
