@@ -23,6 +23,7 @@ export function MobilePairModal({ open, onClose }: MobilePairModalProps): JSX.El
       open={open}
       onClose={onClose}
       title="手机连接"
+      closeLabel="关闭"
       description="用手机扫描二维码即可连接。"
       footer={<Button variant="outline" onClick={onClose}>关闭</Button>}
     >

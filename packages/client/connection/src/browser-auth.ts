@@ -14,6 +14,38 @@ const DAY_MILLISECONDS = 24 * 60 * 60 * 1000
 const SECRET_BYTES = 32
 const TOKEN_QUERY = 'token'
 const COOKIE_PREFIX = 'dsh-auth-'
+/** Plain-text body for non-HTML index clients. */
+export const UNAUTHORIZED_INDEX_PLAIN =
+  'dsh web authentication required; reopen the URL printed by dsh web.\n'
+const UNAUTHORIZED_INDEX_HTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Authentication required — dsh web</title>
+<style>
+:root{color-scheme:light dark}
+body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.5;max-width:36rem;margin:4rem auto;padding:0 1.5rem;color:#1a1a1a;background:#fafafa}
+@media (prefers-color-scheme:dark){body{color:#e8e8e8;background:#121212}code{background:#2a2a2a}}
+h1{font-size:1.25rem;font-weight:600;margin:0 0 .75rem}
+p{margin:0 0 .75rem}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.9em;background:#eee;padding:.1em .35em;border-radius:.25rem}
+ol{margin:0;padding-left:1.25rem}
+li{margin-bottom:.5rem}
+</style>
+</head>
+<body>
+<h1>Authentication required</h1>
+<p>This dsh web Host requires a one-time login URL. Opening the bare host address without <code>?token=...</code> returns this page.</p>
+<ol>
+<li>Find the URL printed when you started <code>dsh web --no-open</code> — it includes <code>?token=...</code>.</li>
+<li>Open that full URL once; the browser stores a session cookie and redirects to <code>/</code>.</li>
+<li>Do not bookmark the bare host URL; each restart prints a new token.</li>
+</ol>
+<p>For DSH Mobile, open the Mobile PWA address (for example <code>:8030</code>) instead of the desktop Host port.</p>
+</body>
+</html>
+`
 const COOKIE_PAYLOAD_VERSION = 1
 const STORED_SECRET_VERSION = 1
 const BASE64URL_PATTERN = /^[A-Za-z0-9_-]*$/
@@ -302,12 +334,25 @@ export class BrowserAuth {
   }
 
   private writeUnauthorized(req: ConnectionIndexRequest, res: ConnectionIndexResponse): void {
+    const html = prefersHtml(req.headers)
     res.writeHead(401, {
       'cache-control': 'no-store',
-      'content-type': 'text/plain; charset=utf-8',
+      'content-type': html ? 'text/html; charset=utf-8' : 'text/plain; charset=utf-8',
     })
     res.end(req.method === 'HEAD'
       ? undefined
-      : 'dsh web authentication required; reopen the URL printed by dsh web.\n')
+      : html ? UNAUTHORIZED_INDEX_HTML : UNAUTHORIZED_INDEX_PLAIN)
   }
+}
+
+/** True when the client is likely a browser navigation rather than an API probe. */
+function prefersHtml(headers: ConnectionTrustRequest['headers']): boolean {
+  const accept = header(headers, 'accept')
+  if (accept === undefined || accept === '*/*') return true
+  if (!/\btext\/html\b/i.test(accept)) return false
+  const htmlMatch = /text\/html(?:;\s*q=([0-9.]+))?/i.exec(accept)
+  const plainMatch = /text\/plain(?:;\s*q=([0-9.]+))?/i.exec(accept)
+  const htmlQuality = htmlMatch?.[1] !== undefined ? Number(htmlMatch[1]) : 1
+  const plainQuality = plainMatch?.[1] !== undefined ? Number(plainMatch[1]) : plainMatch !== null ? 1 : 0
+  return htmlQuality >= plainQuality
 }

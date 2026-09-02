@@ -311,6 +311,7 @@ export {
   readStoredFingerprint,
   readStoredHostBase,
   readStoredServerUrl,
+  writeStoredServerUrl,
   writePairingResult,
   writeStoredDeviceLabel,
   writeStoredHostBase,

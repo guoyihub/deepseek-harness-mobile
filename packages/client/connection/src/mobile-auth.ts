@@ -1,6 +1,6 @@
 /** Mobile sessionToken extraction and validation helpers (Host side). */
 
-import type { IncomingHttpHeaders } from 'node:http'
+import type { ConnectionTrustRequest } from './rpc.ts'
 
 /** Minimal mobilePairing surface required for token validation. */
 export interface MobileSessionValidator {
@@ -17,7 +17,7 @@ export interface MobileSessionValidator {
  * @param headers - Node or Fetch request headers.
  * @returns the opaque token, or undefined when absent.
  */
-export function parseBearerToken(headers: IncomingHttpHeaders | Headers): string | undefined {
+export function parseBearerToken(headers: ConnectionTrustRequest['headers']): string | undefined {
   const raw = header(headers, 'authorization')
   if (raw === undefined) return undefined
   const match = /^Bearer\s+(\S+)\s*$/i.exec(raw)
@@ -52,7 +52,7 @@ export function isMobileSessionAuthorized(
   return validator.validateSessionToken(token) !== undefined
 }
 
-function header(headers: IncomingHttpHeaders | Headers, name: string): string | undefined {
+function header(headers: ConnectionTrustRequest['headers'], name: string): string | undefined {
   if (headers instanceof Headers) return headers.get(name) ?? undefined
   const value = headers[name]
   return typeof value === 'string' ? value : undefined

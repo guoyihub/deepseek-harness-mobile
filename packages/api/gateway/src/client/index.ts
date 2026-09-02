@@ -32,7 +32,7 @@ import {
   type RemoteStreamOptions,
 } from './remote-stream.ts'
 
-export { RemoteStreamCarrierError } from './stream-client.ts'
+export { RemoteStreamCarrierError, RemoteStreamMuxClient } from './stream-client.ts'
 export { RemoteJournalStream } from './journal-stream.ts'
 export type {
   RemoteJournalChange,

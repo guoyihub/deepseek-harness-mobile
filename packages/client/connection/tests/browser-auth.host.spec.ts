@@ -3,7 +3,7 @@
 import { createHmac } from 'node:crypto'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { CredentialProvider } from '@deepseek-ai/dsh-credentials'
-import { BrowserAuth } from '../src/browser-auth.ts'
+import { BrowserAuth, UNAUTHORIZED_INDEX_PLAIN } from '../src/browser-auth.ts'
 import type { ConnectionIndexRequest, ConnectionIndexResponse } from '../src/rpc.ts'
 import { RecordCredentials } from './browser-credentials.ts'
 
@@ -62,6 +62,7 @@ function createAuth(
 function request(url: string, authority = '127.0.0.1:3080', init?: {
   cookie?: string
   method?: string
+  accept?: string
 }): ConnectionIndexRequest {
   return {
     method: init?.method ?? 'GET',
@@ -69,6 +70,7 @@ function request(url: string, authority = '127.0.0.1:3080', init?: {
     headers: {
       host: authority,
       ...init?.cookie === undefined ? {} : { cookie: init.cookie },
+      ...init?.accept === undefined ? {} : { accept: init.accept },
     },
   }
 }
@@ -159,12 +161,24 @@ describe('BrowserAuth', () => {
       expect(denied.state.status).toBe(401)
       expect(denied.state.headers).toEqual({
         'cache-control': 'no-store',
-        'content-type': 'text/plain; charset=utf-8',
+        'content-type': 'text/html; charset=utf-8',
       })
-      expect(denied.state.body).toBe(candidate.method === 'HEAD'
-        ? undefined
-        : 'dsh web authentication required; reopen the URL printed by dsh web.\n')
+      if (candidate.method === 'HEAD') {
+        expect(denied.state.body).toBeUndefined()
+      } else {
+        expect(denied.state.body).toContain('Authentication required')
+      }
     }
+
+    const plainDenied = response()
+    expect(auth.authorizeIndex(request('/', '127.0.0.1:3080', {
+      accept: 'text/plain',
+    }), plainDenied.value)).toBe(false)
+    expect(plainDenied.state.headers).toEqual({
+      'cache-control': 'no-store',
+      'content-type': 'text/plain; charset=utf-8',
+    })
+    expect(plainDenied.state.body).toBe(UNAUTHORIZED_INDEX_PLAIN)
   })
 
   it('rejects tampering, expiry, future issuance, and a longer lifetime than configured', async () => {

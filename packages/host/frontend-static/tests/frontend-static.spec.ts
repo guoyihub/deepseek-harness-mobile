@@ -117,11 +117,12 @@ describe('real Loader composition', () => {
       return { ...init, headers }
     }
 
-    expect(await request(port, '/')).toMatchObject({
+    const unauthenticated = await request(port, '/')
+    expect(unauthenticated).toMatchObject({
       status: 401,
-      type: 'text/plain; charset=utf-8',
-      body: 'dsh web authentication required; reopen the URL printed by dsh web.\n',
+      type: 'text/html; charset=utf-8',
     })
+    expect(unauthenticated.body).toContain('Authentication required')
 
     // Real assets with their MIME types; a live rebuild is served on the next read.
     expect(await request(port, '/app.js')).toMatchObject({ status: 200, type: 'text/javascript; charset=utf-8', body: 'export {}' })

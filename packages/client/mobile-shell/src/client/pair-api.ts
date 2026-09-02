@@ -1,7 +1,10 @@
 /** Mobile pairing HTTP helpers (plain JSON, not RPC envelope). */
 
-import { normalizeHostBaseUrl, resolveMobileApiBase } from '@deepseek-ai/dsh-client-connection/client'
-import { randomUUID } from '@deepseek-ai/dsh-util-crypto'
+import {
+  createWebConnectionRpc,
+  normalizeHostBaseUrl,
+  resolveMobileApiBase,
+} from '@deepseek-ai/dsh-client-connection/client'
 
 /** Parsed QR or manual pairing input. */
 export interface PairingInput {
@@ -310,26 +313,21 @@ export async function pairShortCodeWithPolling(
 }
 
 /**
- * Verify connectivity with session/modelCatalog after pairing.
- * @param baseUrl - Host base URL.
+ * Verify Host RPC after pairing, using the official Connection envelope and
+ * the newly issued pairing Bearer (not the desktop cookie).
+ * @param _baseUrl - Host base URL; origin resolution still follows pairing storage.
  * @param sessionToken - issued opaque token.
  */
-export async function verifyHostDescribe(baseUrl: string, sessionToken: string): Promise<void> {
-  const message = {
-    type: 'client-request',
-    rpcId: randomUUID(),
-    method: 'session/modelCatalog',
-    payload: { args: {} },
-  }
-  const response = await globalThis.fetch(`${resolveMobileApiBase(baseUrl)}/api/session/modelCatalog`, {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      authorization: `Bearer ${sessionToken}`,
-    },
-    body: JSON.stringify(message),
+export async function verifyHostDescribe(_baseUrl: string, sessionToken: string): Promise<void> {
+  const rpc = createWebConnectionRpc(async (input, init) => {
+    const headers = new Headers(init.headers)
+    headers.set('authorization', `Bearer ${sessionToken}`)
+    return globalThis.fetch(input, { ...init, headers })
   })
-  if (!response.ok) throw new Error(`session/modelCatalog 失败: HTTP ${String(response.status)}`)
+  const result = await rpc.call('/api', 'session/modelCatalog', { args: {} })
+  if (!result.ok) {
+    throw new Error(`session/modelCatalog 失败: ${result.error.code}: ${result.error.message}`)
+  }
 }
 
 function sleep(ms: number): Promise<void> {

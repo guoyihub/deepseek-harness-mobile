@@ -42,6 +42,8 @@ export {
 export { HostConnectionService } from './rpc-host.ts'
 
 export { API_PATH } from './api-path.ts'
+export { isTrustedApiRequest, assertTrustedAuthority } from './api-request-trust.ts'
+export { isLoopbackHostname } from './loopback-hostname.ts'
 export {
   isMobileSessionAuthorized,
   parseAccessTokenFromUrl,
@@ -97,8 +99,8 @@ export const Config: z<ConnectionConfig> = z.object({
 
 /**
  * Mounts the API gateway under the browser transport prefix. Every request on
- * the prefix passes the Host/Origin browser-trust fence and persistent browser
- * authentication before dispatch.
+ * the prefix passes the Host/Origin browser-trust fence, then either the
+ * official browser cookie or a live DSHM mobile pairing Bearer / access_token.
  * @param ctx - Host plugin context.
  * @param config - resolved plugin config (schema defaults applied).
  */

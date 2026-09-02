@@ -238,6 +238,36 @@ describe('connection node half', () => {
     await dispose()
   })
 
+  it('accepts a live DSHM pairing Bearer when the official cookie is absent', async () => {
+    const ctx = new Context()
+    const routes: WebRoute[] = []
+    provideBrowserCredentials(ctx)
+    ctx.provide('webServer', fakeHttpServer(routes, []) as WebServer)
+    ctx.provide('mobilePairing', {
+      validateSessionToken: (token: string) => token === 'pair-live' ? { deviceId: 'phone' } : undefined,
+    })
+    const fiber = ctx.plugin({ inject: [...inject], apply })
+    await fiber.await()
+    const connection = ctx.get('connection') as HostConnectionHandle
+
+    expect(connection.requestRejection(fakeRequest({
+      host: '127.0.0.1:3080',
+    }))).toBe(401)
+    expect(connection.requestRejection(fakeRequest({
+      host: '127.0.0.1:3080',
+      authorization: 'Bearer dead',
+    }))).toBe(401)
+    expect(connection.requestRejection(fakeRequest({
+      host: '127.0.0.1:3080',
+      authorization: 'Bearer pair-live',
+    }))).toBeUndefined()
+    expect(connection.requestRejection(fakeRequest(
+      { host: '127.0.0.1:3080' },
+      `${API_PATH}/events.mux?access_token=pair-live`,
+    ))).toBeUndefined()
+    await fiber.dispose()
+  })
+
   it('provides a disposable dedicated RPC channel', async () => {
     const ctx = new Context()
     const routes: WebRoute[] = []

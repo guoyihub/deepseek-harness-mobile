@@ -97,7 +97,7 @@ export class HostConnectionService extends Service implements HostConnectionHand
     }
   }
 
-  /** Apply the configured Host/Origin fence, then cookie or mobile pairing authentication. */
+  /** Apply the Host/Origin fence, then official cookie or DSHM pairing authentication. */
   requestRejection(request: ConnectionTrustRequest): ConnectionRequestRejection {
     if (!isTrustedApiRequest(request, this.trustedHosts)) return 403
     if (this.browserAuth.isAuthenticated(request)) return undefined

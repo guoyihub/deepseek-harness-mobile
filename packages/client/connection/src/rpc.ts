@@ -171,8 +171,9 @@ export interface HostConnectionHandle {
   createSharedFetchHandler(channel: '/api'): ConnectionFetchHandler
 
   /**
-   * Apply Connection's Host/Origin checks and browser authentication to
-   * another Web route.
+   * Apply Connection's Host/Origin checks and authentication to another Web route.
+   * Official DSH accepts the browser cookie. DSHM also accepts a live mobile
+   * pairing Bearer header or WebSocket `access_token` query.
    * @param request - request headers from the HTTP or upgrade request.
    * @returns rejection status, or undefined when the route may accept the request.
    */

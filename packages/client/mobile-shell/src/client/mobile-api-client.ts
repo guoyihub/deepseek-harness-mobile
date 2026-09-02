@@ -8,7 +8,9 @@ import {
 } from '@deepseek-ai/dsh-client-connection/client'
 import type { EncodedImageAttachment } from '@deepseek-ai/dsh-attachment/types'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
-import type { WorkspaceId } from '@deepseek-ai/dsh-workspace/types'
+import type { ModelCatalog } from '@deepseek-ai/dsh-api-session-controller/types'
+import type { DirectoryListing, PluginInventorySnapshot } from '@deepseek-ai/dsh-api-remotes/client'
+import type { WorkspaceId, WorkspaceView } from '@deepseek-ai/dsh-api-workspace-controller/client'
 import { randomUUID } from '@deepseek-ai/dsh-util-crypto'
 import type { JsonValue } from '@deepseek-ai/dsh-util-values'
 
@@ -86,24 +88,19 @@ export const mobileApi = {
         signal,
       ),
     models: (_payload: { sessionId: SessionId }, signal?: AbortSignal) =>
-      invoke<unknown>('session/modelCatalog', {}, signal),
+      invoke<ModelCatalog>('session/modelCatalog', {}, signal),
     modelCatalog: (signal?: AbortSignal) =>
-      invoke<{
-        default: { provider: string; model: string }
-        routableProviders: readonly string[]
-        groups: readonly unknown[]
-        failures: readonly unknown[]
-      }>('session/modelCatalog', {}, signal),
+      invoke<ModelCatalog>('session/modelCatalog', {}, signal),
   },
   workspace: {
     create: (payload: { path: string }, signal?: AbortSignal) =>
-      invoke<{ workspace: unknown; created: boolean }>(
+      invoke<{ workspace: WorkspaceView; created: boolean }>(
         'workspace/create',
         { request: payload },
         signal,
       ),
     rename: (payload: { workspaceId: WorkspaceId; title: string }, signal?: AbortSignal) =>
-      invoke<{ workspace: unknown }>('workspace/rename', { request: payload }, signal),
+      invoke<{ workspace: WorkspaceView }>('workspace/rename', { request: payload }, signal),
     delete: (payload: { workspaceId: WorkspaceId }, signal?: AbortSignal) =>
       invoke<{ deleted: true }>('workspace/delete', { request: payload }, signal),
     archiveSession: (payload: { sessionId: SessionId }, signal?: AbortSignal) =>
@@ -117,7 +114,7 @@ export const mobileApi = {
       sessionId: SessionId
       beforeSessionId?: SessionId
     }, signal?: AbortSignal) =>
-      invoke<{ workspace: unknown }>('workspace/insertSessionBefore', { request: payload }, signal),
+      invoke<{ workspace: WorkspaceView }>('workspace/insertSessionBefore', { request: payload }, signal),
   },
   commands: {
     list: (payload: { sessionId: SessionId }, signal?: AbortSignal) =>
@@ -142,6 +139,15 @@ export const mobileApi = {
       invoke<{ presets: readonly unknown[]; authorable: boolean }>('agentPresets/list', {}, signal),
   },
   settings: {
+    describe: (signal?: AbortSignal) =>
+      invoke<{
+        namespaces: readonly {
+          ns: string
+          value: unknown
+          revision: number
+        }[]
+        writable: boolean
+      }>('settings/describe', {}, signal),
     update: (payload: {
       ns: string
       patch: Record<string, JsonValue>
@@ -153,9 +159,13 @@ export const mobileApi = {
         expectedRevision: payload.expectedRevision,
       }, signal),
   },
+  pluginInventory: {
+    list: (signal?: AbortSignal) =>
+      invoke<PluginInventorySnapshot>('pluginInventory/list', {}, signal),
+  },
   host: {
     listDirectory: (payload: { path?: string } | undefined, signal?: AbortSignal) =>
-      invoke<unknown>('directoryPicker/list', { path: payload?.path }, signal),
+      invoke<DirectoryListing>('directoryPicker/list', { path: payload?.path }, signal),
     createDirectory: (payload: { path: string; name: string }, signal?: AbortSignal) =>
       invoke<{ path: string }>('directoryPicker/createDirectory', payload, signal),
   },

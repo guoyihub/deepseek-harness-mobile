@@ -19,6 +19,9 @@ import { MobileSettingsRow } from './MobileSettingsRow.tsx'
 import { MobileSettingsSheet } from './MobileSettingsSheet.tsx'
 import { SavedConnectionEmptyHint, SavedConnectionList } from './SavedConnectionList.tsx'
 import { ThemePickerModal } from './ThemePickerModal.tsx'
+import { PluginInventoryModal } from './PluginInventoryModal.tsx'
+import { SubagentModelModal } from './SubagentModelModal.tsx'
+import { MobileReconnectBanner } from './MobileReconnectBanner.tsx'
 import {
   clearPairingStorage,
   connectionHistoryId,
@@ -33,15 +36,23 @@ import {
   type SavedMobileConnection,
 } from './mobile-session.ts'
 import {
+  applyMobileFontSize,
   applyMobileTheme,
+  readMobileFontSize,
   readMobileThemePreference,
+  writeMobileFontSize,
   writeMobileThemePreference,
+  type MobileFontSize,
   type MobileThemePreference,
 } from './mobile-theme.ts'
+import {
+  readMobileLanguagePreference,
+  type MobileLanguagePreference,
+} from './mobile-language.ts'
 import { readStoredServerUrl } from './mobile-server-config.ts'
 import { modelIdLabel } from './mobile-model-label.ts'
-import { agentPresetDisplayLabel } from './mobile-host-preset-label.ts'
-import { mobileConversationT } from './mobile-locale.ts'
+import { agentPresetDisplayLabel, type AgentPresetLabelSource } from './mobile-host-preset-label.ts'
+import { mobileConversationT, useMobileLanguage, useSetMobileLanguage } from './mobile-locale.ts'
 import { mobileApi } from './mobile-api-client.ts'
 import { isNativeShell } from '@deepseek-ai/dsh-client-connection/client'
 import css from './mobile-shell.module.css'
@@ -80,13 +91,15 @@ function shortenUrl(url: string, max = 28): string {
 }
 
 /** Host settings sections that are desktop-only on mobile. */
-type HostSettingsHint = 'general' | 'plugins'
+type HostSettingsHint = 'general'
 
 /**
  * Connection settings sheet using the consumer mobile settings list pattern.
  * @param props - navigation callbacks.
  */
 export function ConnectionPage({ onBack, onPair, onEditServer }: ConnectionPageProps): JSX.Element {
+  useMobileLanguage()
+  const setLanguagePreference = useSetMobileLanguage()
   const {
     paired,
     hostBase,
@@ -101,6 +114,12 @@ export function ConnectionPage({ onBack, onPair, onEditServer }: ConnectionPageP
     refreshHostDescription,
   } = useMobileConnection()
   const [theme, setTheme] = useState<MobileThemePreference>(() => readMobileThemePreference())
+  const [fontSize, setFontSize] = useState<MobileFontSize>(() => readMobileFontSize())
+  const [language, setLanguage] = useState<MobileLanguagePreference>(() => readMobileLanguagePreference())
+  const [languageModalOpen, setLanguageModalOpen] = useState(false)
+  const [fontModalOpen, setFontModalOpen] = useState(false)
+  const [pluginsModalOpen, setPluginsModalOpen] = useState(false)
+  const [subagentModalOpen, setSubagentModalOpen] = useState(false)
   const [deviceLabel, setDeviceLabel] = useState(() => resolveDeviceLabel())
   const [savedConnections, setSavedConnections] = useState(() => readMobileConnectionHistory())
   const [reconnectingId, setReconnectingId] = useState<string | undefined>(undefined)
@@ -154,7 +173,7 @@ export function ConnectionPage({ onBack, onPair, onEditServer }: ConnectionPageP
         setDefaultPresetLabel(undefined)
         return
       }
-      const preset = (response.result.value.presets as readonly { isDefault?: boolean }[])
+      const preset = (response.result.value.presets as readonly (AgentPresetLabelSource & { isDefault?: boolean })[])
         .find(item => item.isDefault === true)
       setDefaultPresetLabel(preset === undefined ? undefined : agentPresetDisplayLabel(preset))
     })()
@@ -174,6 +193,23 @@ export function ConnectionPage({ onBack, onPair, onEditServer }: ConnectionPageP
     writeMobileThemePreference(next)
     applyMobileTheme(next)
   }
+
+  const onFontChange = (next: MobileFontSize): void => {
+    setFontSize(next)
+    writeMobileFontSize(next)
+    applyMobileFontSize(next)
+  }
+
+  const languageLabel = language === 'en'
+    ? mobileConversationT('language.en')
+    : language === 'zh'
+      ? mobileConversationT('language.zh')
+      : mobileConversationT('language.system')
+  const fontLabel = fontSize === 13
+    ? mobileConversationT('font.small')
+    : fontSize === 16
+      ? mobileConversationT('font.large')
+      : mobileConversationT('font.medium')
 
   const onDisconnect = (): void => {
     clearPairingStorage()
@@ -202,7 +238,7 @@ export function ConnectionPage({ onBack, onPair, onEditServer }: ConnectionPageP
 
   const statusLabel = revoked
     ? mobileConversationT('connection.revoked')
-    : connectionState === 'reconnecting'
+    : connectionState === 'connecting'
       ? mobileConversationT('connection.reconnecting')
       : connectionState === 'connected'
         ? mobileConversationT('connection.connected')
@@ -228,6 +264,7 @@ export function ConnectionPage({ onBack, onPair, onEditServer }: ConnectionPageP
         {panelError !== undefined && panelError !== '' && (
           <div className={css.mSetAlert} role="alert">{panelError}</div>
         )}
+        <MobileReconnectBanner />
 
         <section className={css.mSetProfile} aria-label={mobileConversationT('connection.current')}>
           <div className={css.mSetAvatar} data-online={statusOnline || undefined}>
@@ -300,6 +337,18 @@ export function ConnectionPage({ onBack, onPair, onEditServer }: ConnectionPageP
             value={themeLabel(theme)}
             onClick={() => { setThemeModalOpen(true) }}
           />
+          <MobileSettingsRow
+            icon={<IconPersonalizationOutline16 size={22} />}
+            label={mobileConversationT('settings.fontSize')}
+            value={fontLabel}
+            onClick={() => { setFontModalOpen(true) }}
+          />
+          <MobileSettingsRow
+            icon={<IconGlobeOutline14 size={22} />}
+            label={mobileConversationT('settings.language')}
+            value={languageLabel}
+            onClick={() => { setLanguageModalOpen(true) }}
+          />
         </MobileSettingsCard>
 
         <section className={css.mSetSection}>
@@ -324,12 +373,21 @@ export function ConnectionPage({ onBack, onPair, onEditServer }: ConnectionPageP
               }}
             />
             <MobileSettingsRow
+              icon={<IconDataOutline16 size={22} />}
+              label={mobileConversationT('subagent.title')}
+              value={paired ? undefined : mobileConversationT('connection.connectFirst')}
+              disabled={!paired}
+              onClick={() => {
+                openHostSetting(() => { setSubagentModalOpen(true) })
+              }}
+            />
+            <MobileSettingsRow
               icon={<IconPersonalizationOutline16 size={22} />}
               label={mobileConversationT('settings.plugins')}
               value={paired ? undefined : mobileConversationT('connection.connectFirst')}
               disabled={!paired}
               onClick={() => {
-                openHostSetting(() => { setHostSettingsHint('plugins') })
+                openHostSetting(() => { setPluginsModalOpen(true) })
               }}
             />
             <MobileSettingsRow
@@ -372,7 +430,35 @@ export function ConnectionPage({ onBack, onPair, onEditServer }: ConnectionPageP
         value={theme}
         options={themeOptions()}
         onClose={() => { setThemeModalOpen(false) }}
-        onSelect={onThemeChange}
+        onSelect={(value) => { onThemeChange(value as MobileThemePreference) }}
+      />
+      <ThemePickerModal
+        open={fontModalOpen}
+        title={mobileConversationT('settings.fontSize')}
+        value={String(fontSize)}
+        options={[
+          { id: '13', label: mobileConversationT('font.small') },
+          { id: '14', label: mobileConversationT('font.medium') },
+          { id: '16', label: mobileConversationT('font.large') },
+        ]}
+        onClose={() => { setFontModalOpen(false) }}
+        onSelect={(value) => { onFontChange(Number(value) as MobileFontSize) }}
+      />
+      <ThemePickerModal
+        open={languageModalOpen}
+        title={mobileConversationT('settings.language')}
+        value={language}
+        options={[
+          { id: 'system', label: mobileConversationT('language.system') },
+          { id: 'zh', label: mobileConversationT('language.zh') },
+          { id: 'en', label: mobileConversationT('language.en') },
+        ]}
+        onClose={() => { setLanguageModalOpen(false) }}
+        onSelect={(value) => {
+          const preference = value as MobileLanguagePreference
+          setLanguage(preference)
+          setLanguagePreference(preference)
+        }}
       />
 
       <DefaultModelPickerModal
@@ -388,17 +474,19 @@ export function ConnectionPage({ onBack, onPair, onEditServer }: ConnectionPageP
         onSelected={refreshDefaultPresetLabel}
       />
 
+      <PluginInventoryModal
+        open={pluginsModalOpen}
+        onClose={() => { setPluginsModalOpen(false) }}
+      />
+      <SubagentModelModal
+        open={subagentModalOpen}
+        onClose={() => { setSubagentModalOpen(false) }}
+      />
+
       <HostSettingsDesktopHintModal
         open={hostSettingsHint === 'general'}
         title={mobileConversationT('settings.general')}
         body={mobileConversationT('settings.generalHint')}
-        onClose={() => { setHostSettingsHint(undefined) }}
-      />
-
-      <HostSettingsDesktopHintModal
-        open={hostSettingsHint === 'plugins'}
-        title={mobileConversationT('settings.plugins')}
-        body={mobileConversationT('settings.pluginsHint')}
         onClose={() => { setHostSettingsHint(undefined) }}
       />
     </MobileSettingsSheet>
