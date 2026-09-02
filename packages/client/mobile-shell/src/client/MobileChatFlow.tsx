@@ -4,7 +4,7 @@
  */
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
-import type { ConversationTimelineSnapshot, MessageImageLoader } from '@deepseek-ai/dsh-client-ui-conversation/client'
+import type { MessageImageLoader } from '@deepseek-ai/dsh-client-ui-conversation/client'
 import type { UseProjection } from '@deepseek-ai/dsh-api-session-controller/client'
 import { MessageText } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { SnapshotSelectorHook } from '@deepseek-ai/dsh-client-ui-slots'
@@ -14,6 +14,7 @@ import { formatRunDuration } from '@deepseek-ai/dsh-client-ui-chat/src/client/ch
 import { createChatStore } from '@deepseek-ai/dsh-client-ui-chat/src/client/stores.ts'
 import { MobileChatNodeSeat } from './MobileChatNodeSeat.tsx'
 import { MobileChatHero } from './MobileChatHero.tsx'
+import { latestOpenTurnStartTime } from './chat-projection.ts'
 import { mobileChatT } from './mobile-conversation-t.ts'
 import { mobileConversationT } from './mobile-locale.ts'
 import {
@@ -50,14 +51,6 @@ export interface MobileChatFlowProps {
 /** Pin the scrollport to the latest transcript row after layout settles. */
 function scrollListToBottom(list: HTMLDivElement): void {
   scrollMobileMessageListToBottom(list)
-}
-
-function runningTurnStartTime(timeline: ConversationTimelineSnapshot): number | null {
-  let latest: number | null = null
-  for (const turn of timeline.turns.values()) {
-    if (turn.status === 'open' && turn.start !== undefined) latest = turn.start.time
-  }
-  return latest
 }
 
 /** Turn-level activity label matching the desktop ChatView status line. */
@@ -103,14 +96,13 @@ export function MobileChatFlow({
   loadImage,
 }: MobileChatFlowProps): JSX.Element {
   const order = useSession(s => s.chat.order)
-  const running = useSession(s => s.running)
   const timeline = useSession(s => s.chat.timeline)
   const historyIncomplete = useSession(s => s.session.hasMore)
   const chatStore = useMemo(() => createChatStore().create(), [sessionId])
   const useStore = useMemo(() => bindSnapshotSelector(chatStore), [chatStore])
-  const runningTurnStart = useMemo(() => runningTurnStartTime(timeline), [timeline])
+  const runningTurnStart = useMemo(() => latestOpenTurnStartTime(timeline), [timeline])
   const followSig = useSession(s => (
-    `${s.openState}:${s.chat.order.length}:${s.chat.order.at(-1) ?? ''}:${s.running ? 1 : 0}:${optimisticText ?? ''}`
+    `${s.openState}:${s.chat.order.length}:${s.chat.order.at(-1) ?? ''}:${latestOpenTurnStartTime(s.chat.timeline) === null ? 0 : 1}:${optimisticText ?? ''}`
   ))
   const stickRef = useRef(true)
   const openedRef = useRef(false)
@@ -208,7 +200,9 @@ export function MobileChatFlow({
           </div>
         </div>
       )}
-      {running && <TurnStatus startTime={runningTurnStart} />}
+      {(runningTurnStart !== null || optimisticText !== undefined) && (
+        <TurnStatus startTime={runningTurnStart} />
+      )}
     </div>
   )
 }
