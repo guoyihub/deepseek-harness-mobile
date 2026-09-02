@@ -82,7 +82,10 @@ export function MessageIconActions({
     })
   }, [copied, text])
   const clockEl = time === undefined ? null : (
-    <span className={clock === 'start' ? css.timeStart : css.timeEnd}>
+    <span
+      className={clock === 'start' ? css.timeStart : css.timeEnd}
+      data-message-clock
+    >
       {formatMessageClock(time, t, day)}
     </span>
   )
