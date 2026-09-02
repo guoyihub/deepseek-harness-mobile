@@ -4,12 +4,13 @@ import { randomUUID } from 'node:crypto'
 import type { Context } from '@deepseek-ai/cordis'
 import { brandString } from '@deepseek-ai/dsh-brand'
 import type { Agent, ModelSelection as AgentModelSelection } from '@deepseek-ai/dsh-agent'
-import { AttachmentError, admitEncodedImages } from '@deepseek-ai/dsh-attachment'
+import { AttachmentError, admitPromptContent } from '@deepseek-ai/dsh-attachment'
 import type { ImageAttachmentRef } from '@deepseek-ai/dsh-attachment'
 import {
   ReasoningEffortId, createUserMessage, freezeMessage,
 } from '@deepseek-ai/dsh-llm'
-import type { ContentBlock, MessageSource } from '@deepseek-ai/dsh-llm'
+import type { MessageSource } from '@deepseek-ai/dsh-llm'
+import { SessionLogOffset, SessionSeq } from '@deepseek-ai/dsh-session'
 import type { SessionEvent, SessionHeader, SessionId, UserMessage } from '@deepseek-ai/dsh-session'
 import { SessionQueryError, type SessionObservation } from '@deepseek-ai/dsh-session-query'
 import { SessionTitleInvalidError } from '@deepseek-ai/dsh-session-title'
@@ -48,7 +49,7 @@ import type {
 interface SessionReadState {
   readonly id: SessionId
   readonly header: SessionHeader
-  readonly events: SessionEvent[]
+  readonly events: readonly SessionEvent[]
 }
 
 /** Implements Session business commands delegated by the Session Controller Remote service. */
@@ -185,9 +186,11 @@ export class SessionCommandController {
    * @returns the new Session identity.
    */
   async fork(request: SessionForkRequest): Promise<SessionForkValue> {
-    if (request.atSeq !== undefined
-      && (!Number.isInteger(request.atSeq) || request.atSeq < 0)) {
-      throw new RemoteError('gateway/bad-request', 'atSeq must be a non-negative integer', {})
+    let atSeq: ReturnType<typeof SessionSeq> | undefined
+    try {
+      atSeq = request.atSeq === undefined ? undefined : SessionSeq(request.atSeq)
+    } catch {
+      throw new RemoteError('gateway/bad-request', 'atSeq must be a non-negative safe integer', {})
     }
     let observed: SessionObservation
     try {
@@ -207,7 +210,6 @@ export class SessionCommandController {
     }
     using source = observed
     const lastSeq = source.events.at(-1)?.seq ?? -1
-    const atSeq = request.atSeq
     const anchoredBoundary = atSeq === undefined
       ? undefined
       : source.events.find(event => event.type === 'turn/end' && event.seq >= atSeq)
@@ -224,8 +226,10 @@ export class SessionCommandController {
         { sessionId: request.sessionId },
       )
     }
-    let cut = boundary.seq + 1
-    while (cut < source.events.length && source.events[cut]?.type !== 'turn/start') cut++
+    let cut = SessionLogOffset(boundary.seq + 1)
+    while (cut < source.events.length && source.events[cut]?.type !== 'turn/start') {
+      cut = SessionLogOffset(cut + 1)
+    }
     let workspace: Workspace | undefined
     try {
       workspace = await this.forkWorkspace(source.header)
@@ -243,10 +247,11 @@ export class SessionCommandController {
       await this.ctx.agents.create({
         sessionId: childId,
         seed: source.events.slice(0, cut),
+        inheritedEventCount: cut,
         meta: {
           ...(source.header.cwd === undefined ? {} : { cwd: source.header.cwd }),
           parentSession: source.header.id,
-          seedLength: cut,
+          isSeeded: true,
           ...(composition.agentPreset === undefined
             ? {}
             : { agentPreset: composition.agentPreset }),
@@ -319,7 +324,7 @@ export class SessionCommandController {
             )
           }
         }
-        const content = await durablePromptContent(this.ctx, request.content)
+        const content = await admitPromptContent(this.ctx.attachments, request.content)
         const message: UserMessage = createUserMessage({ content, source })
         if (request.mode === 'steer') agent.steer(message)
         else agent.followup(message)
@@ -473,7 +478,7 @@ export class SessionCommandController {
   private async readSessionState(sessionId: SessionId): Promise<SessionReadState> {
     const attached = this.ctx.sessions.get(sessionId)
     if (attached !== undefined) {
-      return { id: attached.id, header: attached.header, events: [...attached.events] }
+      return { id: attached.id, header: attached.header, events: attached.snapshotEvents() }
     }
     const inspected = await inspectApiSession(this.ctx, sessionId)
     return { id: inspected.meta.id, header: inspected.meta, events: inspected.events }
@@ -490,21 +495,6 @@ export class SessionCommandController {
     }
     return undefined
   }
-}
-
-async function durablePromptContent(
-  ctx: Context,
-  content: readonly SessionPromptRequest['content'][number][],
-): Promise<ContentBlock[]> {
-  if (content.every(part => part.type === 'text')) {
-    return content.map(part => ({ type: 'text', text: part.text }))
-  }
-  const refs = await admitEncodedImages(ctx.attachments, content.filter(part => part.type === 'image'))
-  let next = 0
-  return content.map(part => part.type === 'text'
-    ? { type: 'text', text: part.text }
-    // admitEncodedImages returns one reference per image part in order.
-    : { type: 'image', attachment: refs[next++] as ImageAttachmentRef })
 }
 
 function imageBlockIn(

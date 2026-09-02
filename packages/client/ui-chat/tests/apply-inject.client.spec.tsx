@@ -15,7 +15,7 @@ import {
 import {
   apply as applyChat, inject as injectChat, type ChatViewInjected, type DetailsInjected,
 } from '@deepseek-ai/dsh-client-ui-chat/client'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import { SessionSeq, type SessionId } from '@deepseek-ai/dsh-session/types'
 import { createChatStore } from '../src/client/stores.ts'
 
 usePinnedBrowserLanguages('zh-CN')
@@ -35,6 +35,7 @@ type ChatActions = ChatInstance['actions']
 function sessionFakeFor() {
   return {
     loadOlder: vi.fn<ISession['loadOlder']>(() => Promise.resolve()),
+    loadThrough: vi.fn<ISession['loadThrough']>(() => Promise.resolve()),
     readAttachment: vi.fn<ISession['readAttachment']>(() => Promise.resolve({
       ok: true,
       value: { attachment: ATTACHMENT, data: Uint8Array.of(1) },
@@ -91,6 +92,9 @@ describe('Chat inject API', () => {
     const { injected } = b.chatViewApi(ROOT)
     injected.loadOlder()
     expect(b.session.loadOlder).toHaveBeenCalledOnce()
+
+    void injected.loadThrough(SessionSeq(42))
+    expect(b.session.loadThrough).toHaveBeenCalledWith(42)
 
     injected.forkAt(17)
     await vi.waitFor(() => {
