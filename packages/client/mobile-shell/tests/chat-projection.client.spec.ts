@@ -13,7 +13,7 @@ function turn(status: TurnLocation['status'], time?: number): TurnLocation {
     end: status === 'closed' ? { time: (time ?? 0) + 1 } as TurnLocation['end'] : undefined,
     status,
     steps: [],
-    data: { get: () => undefined },
+    data: { get: () => undefined, source: () => ({ getSnapshot: () => undefined, subscribe: () => () => {} }) },
   }
 }
 

@@ -15,6 +15,9 @@ import { ConversationNodeAssembler } from '@deepseek-ai/dsh-client-ui-conversati
 import type { ConversationEventRegistry } from '@deepseek-ai/dsh-client-ui-conversation/src/client/conversation/event-registry.ts'
 import type { ConversationViewRegistry } from '@deepseek-ai/dsh-client-ui-conversation/src/client/conversation/view-registry.ts'
 
+/** Registered chat target activated for every mobile Session binding. */
+const MOBILE_CHAT_TARGET = 'chat'
+
 /** Observable Conversation fold bound to one Session event source. */
 export interface MobileConversationBinding {
   readonly snapshot: ObservableSnapshot<ConversationSnapshot>
@@ -47,6 +50,11 @@ class BoundMobileConversation implements MobileConversationBinding {
   ) {
     this.snapshot = createSnapshotStore(this.currentSnapshot())
     this.replace(feed.getSnapshot())
+    // Desktop activates `chat` when ChatView subscribes to binding.target('chat').
+    // Mobile binds the fold directly, so activate here once per binding lifetime.
+    if (this.assembler.activateTarget(MOBILE_CHAT_TARGET)) {
+      this.snapshot.set(this.currentSnapshot())
+    }
     this.disposeFeed = feed.subscribe(() => {
       this.accept(feed.getSnapshot())
     })
@@ -107,7 +115,7 @@ class BoundMobileConversation implements MobileConversationBinding {
   private currentSnapshot(): ConversationSnapshot {
     return {
       views: this.assembler,
-      activeTargets: this.assembler.activeTargets(),
+      activeTargets: this.assembler.activityTargets(),
     }
   }
 }
