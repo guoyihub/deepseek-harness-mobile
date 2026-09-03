@@ -15,6 +15,11 @@ export interface QrCameraScannerProps {
   onReady?: (() => void) | undefined
 }
 
+/** Whether this browser context can open a live camera for QR scanning. */
+export function mobileQrCameraAvailable(): boolean {
+  return globalThis.isSecureContext && navigator.mediaDevices?.getUserMedia !== undefined
+}
+
 /**
  * Acquire a camera stream, preferring the rear camera then falling back.
  * @returns live media stream.

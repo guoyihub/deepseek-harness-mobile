@@ -14,7 +14,7 @@ import {
   verifyHostDescribe,
 } from './pair-api.ts'
 import { HostFingerprintBadge } from './HostFingerprintBadge.tsx'
-import { QrCameraScanner } from './QrCameraScanner.tsx'
+import { QrCameraScanner, mobileQrCameraAvailable } from './QrCameraScanner.tsx'
 import { decodeQrFromFile } from './qr-decode.ts'
 import { mobileConversationT } from './mobile-locale.ts'
 import css from './mobile-shell.module.css'
@@ -48,12 +48,17 @@ export function PairPage({
   const [pairPassword, setPairPassword] = useState('')
   const [passwordRequired, setPasswordRequired] = useState(false)
   const [pendingDecoded, setPendingDecoded] = useState<string | undefined>(undefined)
-  const [cameraActive, setCameraActive] = useState(autoStartCamera && initialPairingRaw === undefined)
+  const cameraAllowed = mobileQrCameraAvailable()
+  const [cameraActive, setCameraActive] = useState(
+    autoStartCamera && initialPairingRaw === undefined && cameraAllowed,
+  )
   const [phase, setPhase] = useState<PairPhase>('idle')
   const [status, setStatus] = useState(
     autoStartCamera && initialPairingRaw === undefined
-      ? '正在打开摄像头…'
-      : '对准二维码，或点右下角从相册选择',
+      ? (cameraAllowed
+        ? '正在打开摄像头…'
+        : mobileConversationT('pair.cameraUseAlbum'))
+      : mobileConversationT('pair.scanHint'),
   )
   const [successFingerprint, setSuccessFingerprint] = useState<string | undefined>(undefined)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -63,7 +68,7 @@ export function PairPage({
     if (input === undefined) {
       setPhase('error')
       setStatus('QR 内容无法识别，请重新扫码或换一张图片')
-      setCameraActive(true)
+      setCameraActive(cameraAllowed)
       return
     }
     const needsPassword = input.passwordRequired || passwordRequired
@@ -104,11 +109,11 @@ export function PairPage({
         setPhase('pendingDesktop')
       } else {
         setPhase('error')
-        setCameraActive(true)
+        setCameraActive(cameraAllowed)
       }
       setStatus(message)
     }
-  }, [onPaired, pairPassword, passwordRequired, reloadPairing])
+  }, [cameraAllowed, onPaired, pairPassword, passwordRequired, reloadPairing])
 
   const onCameraDecode = useCallback((decoded: string): void => {
     setStatus('已识别二维码，正在配对…')
@@ -117,8 +122,12 @@ export function PairPage({
 
   const onCameraError = useCallback((message: string): void => {
     setCameraActive(false)
-    setPhase('error')
-    setStatus(message)
+    setPhase('idle')
+    if (message.includes('HTTPS') || message.includes('安全上下文')) {
+      setStatus(mobileConversationT('pair.cameraUseAlbum'))
+      return
+    }
+    setStatus(`${message}。${mobileConversationT('pair.scanHint')}`)
   }, [])
 
   const onCameraReady = useCallback((): void => {
@@ -135,7 +144,7 @@ export function PairPage({
     if (input === undefined) {
       setPhase('error')
       setStatus('链接无法识别，请改用摄像头或相册扫码')
-      setCameraActive(true)
+      setCameraActive(cameraAllowed)
       return
     }
     if (input.passwordRequired) {
@@ -157,14 +166,14 @@ export function PairPage({
       if (decoded === undefined) {
         setPhase('error')
         setStatus('未在图片中识别到 QR 码')
-        setCameraActive(true)
+        setCameraActive(cameraAllowed)
         return
       }
       await finishPair(decoded)
     } catch (error) {
       setPhase('error')
       setStatus(error instanceof Error ? error.message : String(error))
-      setCameraActive(true)
+      setCameraActive(cameraAllowed)
     }
   }
 
@@ -180,7 +189,6 @@ export function PairPage({
 
   const busy = phase === 'pairing' || phase === 'pendingDesktop' || phase === 'success'
   const showPasswordSheet = pendingDecoded !== undefined && !busy
-  const showErrorSheet = phase === 'error' && !cameraActive
 
   return (
     <div className={css.page}>
@@ -246,43 +254,23 @@ export function PairPage({
           onChange={(event) => { void onPickImage(event.target.files?.[0]) }}
         />
 
-        {(showPasswordSheet || showErrorSheet) && (
+        {showPasswordSheet && (
           <div className={css.scanSheet}>
-            {showErrorSheet && (
-              <>
-                <p className={css.scanSheetError}>{status}</p>
-                <button
-                  type="button"
-                  className={css.settingsPrimaryBtn}
-                  onClick={() => {
-                    setPhase('idle')
-                    setStatus('正在打开摄像头…')
-                    setCameraActive(true)
-                  }}
-                >
-                  {mobileConversationT('pair.reopenCamera')}
-                </button>
-              </>
-            )}
-            {showPasswordSheet && (
-              <>
-                <p className={css.scanSheetCopy}>{mobileConversationT('pair.passwordRequired')}</p>
-                <input
-                  className={css.pairInput}
-                  type="password"
-                  value={pairPassword}
-                  placeholder={mobileConversationT('pair.passwordLabel')}
-                  onChange={(event) => { setPairPassword(event.target.value) }}
-                />
-                <button
-                  type="button"
-                  className={css.settingsPrimaryBtn}
-                  onClick={onContinueWithPassword}
-                >
-                  {mobileConversationT('pair.continue')}
-                </button>
-              </>
-            )}
+            <p className={css.scanSheetCopy}>{mobileConversationT('pair.passwordRequired')}</p>
+            <input
+              className={css.pairInput}
+              type="password"
+              value={pairPassword}
+              placeholder={mobileConversationT('pair.passwordLabel')}
+              onChange={(event) => { setPairPassword(event.target.value) }}
+            />
+            <button
+              type="button"
+              className={css.settingsPrimaryBtn}
+              onClick={onContinueWithPassword}
+            >
+              {mobileConversationT('pair.continue')}
+            </button>
             <button
               type="button"
               className={css.settingsDangerBtn}
@@ -291,8 +279,8 @@ export function PairPage({
                 reloadPairing()
                 setPendingDecoded(undefined)
                 setPhase('idle')
-                setStatus('已清除本地连接信息')
-                setCameraActive(true)
+                setStatus(cameraAllowed ? '正在打开摄像头…' : mobileConversationT('pair.cameraUseAlbum'))
+                setCameraActive(cameraAllowed)
               }}
             >
               {mobileConversationT('pair.clearLocal')}
