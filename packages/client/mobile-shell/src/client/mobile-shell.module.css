@@ -263,21 +263,6 @@ html.mobile-standalone .viewportShell:not([data-mobile-keyboard-open]) {
   background: var(--dsw-alias-bg-base);
 }
 
-.chatHeaderChrome::after {
-  content: '';
-  position: absolute;
-  right: 0;
-  bottom: calc(-1 * var(--mobile-chrome-feather));
-  left: 0;
-  height: var(--mobile-chrome-feather);
-  background: linear-gradient(
-    to bottom,
-    var(--dsw-alias-bg-base),
-    transparent
-  );
-  pointer-events: none;
-}
-
 .shellHeaderChatPinned {
   composes: chatHeaderChrome;
   display: flex;
@@ -300,7 +285,7 @@ html.mobile-standalone .viewportShell:not([data-mobile-keyboard-open]) {
   padding:
     calc(12px + env(safe-area-inset-top, 0px))
     calc(16px + env(safe-area-inset-right, 0px))
-    8px
+    1px
     calc(16px + env(safe-area-inset-left, 0px));
 }
 
@@ -1916,6 +1901,9 @@ button.mSetRow:disabled,
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  /* Pull the scrollport under the sticky header feather without shifting list rows at rest. */
+  margin-top: calc(-1 * var(--mobile-chrome-feather));
+  padding-top: var(--mobile-chrome-feather);
 }
 
 .pullToRefresh {
@@ -2005,12 +1993,12 @@ button.mSetRow:disabled,
   min-height: 0;
   min-width: 0;
   overflow: hidden;
-  --dsh-composer-height: 128px;
+  --dsh-composer-height: 112px;
 }
 
 .scrollToBottomSlot {
   position: absolute;
-  bottom: calc(var(--dsh-composer-height, 128px) + 12px);
+  bottom: calc(var(--dsh-composer-height, 112px) + 12px);
   left: 50%;
   z-index: 8;
   transform: translateX(-50%);
@@ -2036,12 +2024,36 @@ button.mSetRow:disabled,
   flex: none;
 }
 
-/* Assistant/user message footer: touch-sized icons; metrics wrap on narrow widths. */
-.chatPage .flowItem {
+/* Assistant/user message footer: touch-sized icons; metrics wrap on narrow widths.
+   Attribute selectors — ChatView's .flowItem is a foreign CSS-module hash. */
+.chatPage [data-chat-flow-key] {
   container-type: inline-size;
   min-width: 0;
   max-width: 100%;
   overflow: visible;
+}
+
+/* hidden="until-found" stays in flex layout (content-visibility), so messageList
+   gap stacks empty slots. Force display:none so collapsed process rows release height. */
+.chatPage [data-chat-flow-key][hidden],
+.chatPage [data-turn-process-hidden],
+.chatPage [data-turn-process-inline][hidden] {
+  display: none !important;
+}
+
+.chatPage [data-turn-process] {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.chatPage [data-disclosure-row][data-expandable] {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.chatPage button.leading {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .chatPage [data-message-actions] {
@@ -2068,8 +2080,63 @@ button.mSetRow:disabled,
   line-height: 16px;
 }
 
+.chatPage [data-turn-tail] [data-message-actions] {
+  gap: 4px;
+  min-height: 28px;
+  margin-left: -4px;
+  padding: 0;
+}
+
+.chatPage [data-turn-tail] [data-message-actions] > button {
+  width: 28px;
+  height: 28px;
+  padding: 5px;
+  flex: none;
+}
+
+.chatPage [data-turn-tail] [data-message-actions] > button svg {
+  width: 14px;
+  height: 14px;
+}
+
+.chatPage [data-turn-tail] [data-message-actions] > span {
+  display: inline-flex;
+  flex: none;
+}
+
+.chatPage [data-turn-tail] [data-message-actions] span:has(> button[aria-haspopup='dialog']) + span:has(> button[aria-haspopup='dialog']) {
+  margin-left: -4px;
+}
+
+.chatPage [data-turn-tail] [data-message-actions] button[aria-haspopup='dialog'] {
+  height: 24px;
+  padding: 3px 5px;
+  gap: 3px;
+  max-width: none;
+  flex: none;
+  font-size: 11px;
+  line-height: 14px;
+  border-radius: 24px;
+}
+
+.chatPage [data-turn-tail] [data-message-actions] button[aria-haspopup='dialog'] svg {
+  width: 13px;
+  height: 13px;
+  flex: none;
+}
+
+.chatPage [data-turn-tail] [data-message-actions] button[aria-haspopup='dialog'] > span {
+  overflow: visible;
+  text-overflow: clip;
+  flex: none;
+}
+
 .chatPage [data-turn-tail] [data-message-actions] [data-message-clock] {
-  flex: 1 1 auto;
+  flex: none;
+  overflow: visible;
+  text-overflow: clip;
+  font-size: 11px;
+  line-height: 14px;
 }
 
 .chatPage [data-message-actions] [data-run-dot] {
@@ -2114,6 +2181,11 @@ button.mSetRow:disabled,
   padding-bottom: 2px;
 }
 
+/* Closing assistant reply → turn-tail metrics: tighter than the default flow gap. */
+.chatPage [data-chat-flow-kind='assistant-step'] + [data-chat-flow-kind='turn-tail'] {
+  margin-top: -10px;
+}
+
 .chatPage [data-chat-flow-kind='user'] [data-time-hover-root],
 .chatPage [data-chat-flow-kind='steering'] [data-time-hover-root] {
   display: flex;
@@ -2145,9 +2217,14 @@ button.mSetRow:disabled,
     column-gap: 6px;
   }
 
+  .chatPage [data-turn-tail] [data-message-actions] {
+    flex-wrap: nowrap;
+    column-gap: 4px;
+  }
+
   .chatPage [data-turn-tail] [data-message-actions] [data-message-clock] {
-    flex: 1 1 100%;
-    max-width: 100%;
+    flex: none;
+    max-width: none;
     padding-left: 0;
     padding-right: 0;
   }
@@ -2188,8 +2265,8 @@ button.mSetRow:disabled,
   flex-direction: column;
   gap: 16px;
   padding-top: 8px;
-  padding-bottom: 24px;
-  scroll-padding-bottom: 12px;
+  padding-bottom: 12px;
+  scroll-padding-bottom: 6px;
   -webkit-overflow-scrolling: touch;
 }
 
@@ -2491,7 +2568,7 @@ button.mSetRow:disabled,
   width: 100%;
   max-width: 100%;
   min-width: 0;
-  padding: 6px 0 4px;
+  padding: 3px 0 2px;
   border-top: none;
 }
 
@@ -2518,13 +2595,13 @@ button.mSetRow:disabled,
 .composerCard {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   box-sizing: border-box;
   width: 100%;
   max-width: 100%;
   min-width: 0;
   min-height: 0;
-  padding-top: 10px;
+  padding-top: 6px;
   border: 1px solid var(--dsw-alias-border-l2-darkmode-thin);
   border-radius: 24px;
   background: var(--dsw-specific-input-major);
@@ -2635,7 +2712,7 @@ button.mSetRow:disabled,
   width: 100%;
   max-width: 100%;
   min-width: 0;
-  padding: 0 10px 8px;
+  padding: 0 10px 6px;
   overflow-x: hidden;
   overflow-y: visible;
 }
@@ -2703,6 +2780,28 @@ button.mSetRow:disabled,
   line-height: 18px;
 }
 
+.composerMenuDrillLabel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+}
+
+.composerMenuDrillLabelText {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.composerMenuDrillChevron {
+  flex: none;
+  color: var(--dsw-alias-label-tertiary);
+}
+
 .composerTrigger {
   display: inline-flex;
   align-items: center;
@@ -2727,6 +2826,18 @@ button.mSetRow:disabled,
 .composerTriggerToolbar {
   flex: 0 1 auto;
   max-width: min(148px, 42vw);
+}
+
+.composerModelTrigger {
+  flex: 0 1 auto;
+  max-width: min(176px, 54vw);
+  justify-content: flex-end;
+  padding: 0 2px 0 6px;
+}
+
+.composerModelTrigger .composerTriggerLabel {
+  flex: 1 1 auto;
+  text-align: right;
 }
 
 .composerTriggerToolbar .composerTriggerLabel {
@@ -2893,7 +3004,7 @@ button.mSetRow:disabled,
   max-width: 100%;
   overflow: hidden;
   margin: 0;
-  padding: 4px 14px;
+  padding: 2px 14px;
   border: none;
   background: transparent;
   color: var(--dsw-alias-label-tertiary);
@@ -2949,17 +3060,6 @@ button.mSetRow:disabled,
   line-height: 18px;
 }
 
-.composerAttach {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  color: var(--dsw-alias-label-secondary);
-  font-size: 20px;
-  line-height: 20px;
-}
 
 .composerImageRail {
   display: flex;
@@ -3015,7 +3115,7 @@ button.mSetRow:disabled,
 
 .mobileTurnNav {
   position: absolute;
-  inset: 0 calc(env(safe-area-inset-right, 0px)) var(--dsh-composer-height, 128px) 0;
+  inset: 0 calc(env(safe-area-inset-right, 0px)) var(--dsh-composer-height, 112px) 0;
   z-index: 6;
   pointer-events: none;
 }
@@ -3293,6 +3393,10 @@ button.mSetRow:disabled,
 
   .composerTriggerToolbar {
     max-width: min(112px, 36vw);
+  }
+
+  .composerModelTrigger {
+    max-width: min(144px, 48vw);
   }
 }
 
@@ -3751,6 +3855,10 @@ button.mSetRow:disabled,
   min-width: 0;
   overflow: hidden;
   border-radius: 0;
+  /* Fixed header sits outside `.page`; inherit chrome tokens from this surface. */
+  --mobile-chrome-blur: blur(12px);
+  --mobile-chrome-bottom-fill: color-mix(in srgb, var(--dsw-alias-bg-base) 94%, transparent);
+  --mobile-chrome-feather: 20px;
 }
 
 .chatSurfaceHeader {
@@ -3761,8 +3869,29 @@ button.mSetRow:disabled,
   width: 100%;
   max-width: 480px;
   flex: none;
+  overflow: visible;
   pointer-events: none;
   transform: translateX(-50%);
+}
+
+/* Feather sits on the fixed wrapper so scroll content can slide beneath it.
+   Fallbacks keep the band visible even if a parent drops the chrome tokens. */
+.chatSurfaceHeader::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: calc(-1 * var(--mobile-chrome-feather, 20px));
+  left: 0;
+  z-index: 1;
+  height: var(--mobile-chrome-feather, 20px);
+  background: linear-gradient(
+    to bottom,
+    var(--dsw-alias-bg-base) 0%,
+    color-mix(in srgb, var(--dsw-alias-bg-base) 90%, transparent) 28%,
+    color-mix(in srgb, var(--dsw-alias-bg-base) 50%, transparent) 58%,
+    transparent 100%
+  );
+  pointer-events: none;
 }
 
 .chatSurfaceHeader > * {
@@ -3782,7 +3911,7 @@ button.mSetRow:disabled,
 }
 
 .chatSurface:has(.shellHeaderChatWithTabsPinned) {
-  --mobile-chat-header-body: 86px;
+  --mobile-chat-header-body: 71px;
 }
 
 .chatSurface:has(.shellHeaderMinimal) {
@@ -3793,10 +3922,10 @@ button.mSetRow:disabled,
   --mobile-chat-header-body: 54px;
 }
 
-/* Session stack sits below the absolute header; keyboard lift does not move the title. */
+/* Session body fills the surface; header inset lives in the scrollport padding. */
 .chatSurface .chatContent {
   box-sizing: border-box;
-  padding-top: calc(var(--mobile-chat-header-body, 80px) + env(safe-area-inset-top, 0px));
+  padding-top: 0;
 }
 
 .chatSurface .chatKeyboardBody {
@@ -3809,6 +3938,9 @@ button.mSetRow:disabled,
   min-width: 0;
   overflow: hidden;
   box-sizing: border-box;
+  /* Tuck the scrollport under the header feather without shifting transcript rows at rest. */
+  margin-top: calc(-1 * var(--mobile-chrome-feather, 20px));
+  padding-top: var(--mobile-chrome-feather, 20px);
   padding-bottom: var(--mobile-keyboard-lift, 0px);
   contain: layout;
 }
@@ -3824,14 +3956,31 @@ button.mSetRow:disabled,
 }
 
 .chatSurface .chatPage .messageList {
-  padding-top: 4px;
-  scroll-padding-top: 0;
-  padding-bottom: calc(24px + var(--mobile-chrome-feather));
+  box-sizing: border-box;
+  padding-top: calc(
+    var(--mobile-chat-header-body, 71px)
+    + env(safe-area-inset-top, 0px)
+    + var(--mobile-chrome-feather, 20px)
+    + 1px
+  );
+  scroll-padding-top: calc(
+    var(--mobile-chat-header-body, 71px)
+    + env(safe-area-inset-top, 0px)
+  );
+  padding-bottom: calc(12px + var(--mobile-chrome-feather, 20px) / 2);
 }
 
 .chatSurface .chatPageBlank .messageList {
-  padding-top: 4px;
-  scroll-padding-top: 0;
+  padding-top: calc(
+    var(--mobile-chat-header-body, 71px)
+    + env(safe-area-inset-top, 0px)
+    + var(--mobile-chrome-feather, 20px)
+    + 1px
+  );
+  scroll-padding-top: calc(
+    var(--mobile-chat-header-body, 71px)
+    + env(safe-area-inset-top, 0px)
+  );
 }
 
 .chatPageBlank .chatHero {
