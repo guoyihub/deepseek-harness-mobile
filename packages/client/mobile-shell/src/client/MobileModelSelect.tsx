@@ -144,7 +144,7 @@ export function MobileModelSelect({
   const selectedId = modelSelectionKey(state.current)
 
   const buttonClass = variant === 'toolbar'
-    ? `${css.composerTrigger} ${css.composerTriggerToolbar}`
+    ? `${css.composerTrigger} ${css.composerTriggerToolbar} ${css.composerModelTrigger}`
     : variant === 'pill'
       ? css.composerChipBlank
       : css.composerChip
