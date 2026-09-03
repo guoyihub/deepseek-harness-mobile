@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
-import type { TurnNavigationItem } from '@deepseek-ai/dsh-client-ui-chat/client'
+import type { TurnRailItem } from '@deepseek-ai/dsh-client-ui-chat/src/client/chat/turn-rail-items.ts'
 import { activeTurnAtScroll } from './mobile-turn-navigation.ts'
 
 /** Active-turn state for the viewport-fixed mobile turn rail. */
@@ -22,11 +22,11 @@ export interface MobileActiveTurnSeat {
  */
 export function useMobileActiveTurn(
   listRef: RefObject<HTMLDivElement | null>,
-  turnItems: readonly TurnNavigationItem[],
+  turnItems: readonly TurnRailItem[],
   sessionId: SessionId,
   contentRevision: string,
 ): MobileActiveTurnSeat {
-  const lastTurn = turnItems.filter(item => item.anchorKey.length > 0).at(-1)?.turn ?? null
+  const lastTurn = turnItems.at(-1)?.turn ?? null
   const [activeTurn, setActiveTurn] = useState<number | null>(() => lastTurn)
   const activeFrameRef = useRef<number | null>(null)
 

@@ -1,11 +1,21 @@
 import { describe, expect, it } from 'vitest'
-import type { TurnNavigationItem } from '@deepseek-ai/dsh-client-ui-chat/client'
+import { SessionSeq } from '@deepseek-ai/dsh-session/types'
+import type { TurnRailItem } from '@deepseek-ai/dsh-client-ui-chat/src/client/chat/turn-rail-items.ts'
 import { visibleTurnWindow } from '../src/client/mobile-turn-navigation.ts'
 
-function item(turn: number): TurnNavigationItem {
+function loaded(turn: number): TurnRailItem {
   return {
     turn,
-    anchorKey: `user:${turn}`,
+    anchor: { kind: 'loaded', key: `user:${turn}` },
+    prompt: `prompt ${turn}`,
+    response: '',
+  }
+}
+
+function unloaded(turn: number): TurnRailItem {
+  return {
+    turn,
+    anchor: { kind: 'unloaded', seq: SessionSeq(turn * 10) },
     prompt: `prompt ${turn}`,
     response: '',
   }
@@ -13,39 +23,38 @@ function item(turn: number): TurnNavigationItem {
 
 describe('visibleTurnWindow', () => {
   it('returns every loaded turn when three or fewer are navigable', () => {
-    expect(visibleTurnWindow([item(1), item(2)], 1)).toEqual([item(1), item(2)])
+    expect(visibleTurnWindow([loaded(1), loaded(2)], 1)).toEqual([loaded(1), loaded(2)])
   })
 
   it('shows the first turn plus the next two at the start', () => {
-    expect(visibleTurnWindow([item(1), item(2), item(3), item(4)], 1)).toEqual([
-      item(1),
-      item(2),
-      item(3),
+    expect(visibleTurnWindow([loaded(1), loaded(2), loaded(3), loaded(4)], 1)).toEqual([
+      loaded(1),
+      loaded(2),
+      loaded(3),
     ])
   })
 
   it('shows the previous, current, and next turn in the middle', () => {
-    expect(visibleTurnWindow([item(1), item(2), item(3), item(4), item(5)], 3)).toEqual([
-      item(2),
-      item(3),
-      item(4),
+    expect(visibleTurnWindow([loaded(1), loaded(2), loaded(3), loaded(4), loaded(5)], 3)).toEqual([
+      loaded(2),
+      loaded(3),
+      loaded(4),
     ])
   })
 
   it('shows the last three turns at the end', () => {
-    expect(visibleTurnWindow([item(1), item(2), item(3), item(4), item(5)], 5)).toEqual([
-      item(3),
-      item(4),
-      item(5),
+    expect(visibleTurnWindow([loaded(1), loaded(2), loaded(3), loaded(4), loaded(5)], 5)).toEqual([
+      loaded(3),
+      loaded(4),
+      loaded(5),
     ])
   })
 
-  it('ignores turns without anchors', () => {
-    const pending = { ...item(4), anchorKey: '' }
-    expect(visibleTurnWindow([item(1), item(2), item(3), pending], 3)).toEqual([
-      item(1),
-      item(2),
-      item(3),
+  it('includes unloaded turns in the window', () => {
+    expect(visibleTurnWindow([loaded(1), loaded(2), loaded(3), unloaded(4)], 3)).toEqual([
+      loaded(2),
+      loaded(3),
+      unloaded(4),
     ])
   })
 })
