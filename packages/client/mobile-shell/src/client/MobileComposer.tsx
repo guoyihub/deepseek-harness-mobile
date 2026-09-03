@@ -1,5 +1,5 @@
 import type { KeyboardEvent } from 'react'
-import { useEffect, useLayoutEffect, useRef, useState, type ChangeEvent } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { PermissionSelect as PermissionSelectValue } from '@deepseek-ai/dsh-permission-presets/client'
 import { IconCloseFill14 } from '@deepseek-ai/dsh-client-ui-primitives'
@@ -205,23 +205,6 @@ export function MobileComposer({
         )}
       <div className={css.composerRow}>
         <div className={css.composerTools}>
-          {onAttachImage !== undefined && (
-            <label className={css.composerAttach}>
-              <input
-                type="file"
-                accept="image/png,image/jpeg,image/webp,image/gif"
-                capture="environment"
-                hidden
-                disabled={locked || claimed}
-                onChange={(event: ChangeEvent<HTMLInputElement>) => {
-                  const file = event.target.files?.[0]
-                  event.target.value = ''
-                  if (file !== undefined) onAttachImage(file)
-                }}
-              />
-              <span aria-label={mobileConversationT('input.attachImage')}>+</span>
-            </label>
-          )}
           <MobileCommandMenu
             sessionId={sessionId}
             locked={locked || claimed}
@@ -233,6 +216,7 @@ export function MobileComposer({
             onOpenSurface={onOpenSurface}
             onCommandSubmit={onCommandSubmit}
             onCommandError={onCommandError}
+            onAttachImage={onAttachImage}
           />
           <div className={css.composerModes}>
             {planActive && (
