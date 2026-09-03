@@ -106,5 +106,11 @@ function pruneExpiredSessions(snapshot: MobilePairingSnapshot, now: number): Mob
     if (session.expiresAt !== PAIR_TOKEN_NO_EXPIRY_MS && session.expiresAt <= now) continue
     sessions[token] = session
   }
-  return { ...snapshot, sessions }
+  const devices: Record<string, PersistedDeviceRecord> = {}
+  for (const [deviceId, device] of Object.entries(snapshot.devices)) {
+    if (device.revoked) continue
+    const hasLiveSession = Object.values(sessions).some(session => session.deviceId === deviceId)
+    if (hasLiveSession) devices[deviceId] = device
+  }
+  return { ...snapshot, sessions, devices }
 }

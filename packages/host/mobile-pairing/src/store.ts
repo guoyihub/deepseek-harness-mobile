@@ -262,8 +262,7 @@ export class MobilePairingStore {
     const session = this.sessions.get(token)
     if (session === undefined) return undefined
     if (session.expiresAt !== PAIR_TOKEN_NO_EXPIRY_MS && session.expiresAt <= Date.now()) {
-      this.sessions.delete(token)
-      this.schedulePersist()
+      this.pruneStalePairingState()
       return undefined
     }
     const device = this.devices.get(session.deviceId)
@@ -280,9 +279,8 @@ export class MobilePairingStore {
    * @returns true when the device existed.
    */
   revokeDevice(deviceId: string): boolean {
-    const device = this.devices.get(deviceId)
-    if (device === undefined) return false
-    device.revoked = true
+    if (!this.devices.has(deviceId)) return false
+    this.devices.delete(deviceId)
     for (const [token, session] of this.sessions) {
       if (session.deviceId === deviceId) this.sessions.delete(token)
     }
@@ -336,12 +334,45 @@ export class MobilePairingStore {
 
   /** Registered paired devices for desktop management UI. */
   listDevices(): readonly PairedDeviceView[] {
+    this.pruneStalePairingState()
     return [...this.devices.entries()].map(([deviceId, device]) => ({
       deviceId,
       label: device.label,
-      revoked: device.revoked,
+      revoked: false,
       issuedAt: new Date(device.issuedAt).toISOString(),
     }))
+  }
+
+  /** Drop expired sessions and device rows with no live credential. */
+  pruneStalePairingState(now = Date.now()): void {
+    let changed = false
+    for (const [token, session] of this.sessions) {
+      if (this.isSessionLive(session, now)) continue
+      this.sessions.delete(token)
+      changed = true
+    }
+    for (const deviceId of [...this.devices.keys()]) {
+      const device = this.devices.get(deviceId)
+      if (device === undefined) continue
+      if (device.revoked || !this.deviceHasLiveSession(deviceId, now)) {
+        this.devices.delete(deviceId)
+        changed = true
+      }
+    }
+    if (changed) this.schedulePersist()
+  }
+
+  private deviceHasLiveSession(deviceId: string, now: number): boolean {
+    for (const session of this.sessions.values()) {
+      if (session.deviceId === deviceId && this.isSessionLive(session, now)) return true
+    }
+    return false
+  }
+
+  private isSessionLive(session: SessionRecord, now: number): boolean {
+    if (session.expiresAt !== PAIR_TOKEN_NO_EXPIRY_MS && session.expiresAt <= now) return false
+    const device = this.devices.get(session.deviceId)
+    return device !== undefined && !device.revoked
   }
 
   private attemptPairRecord(

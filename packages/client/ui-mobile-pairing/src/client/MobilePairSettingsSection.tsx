@@ -38,8 +38,6 @@ export function MobilePairSettingsSection(_props: MobilePairSettingsSectionProps
     onRevoke,
   } = useMobilePairing(true)
 
-  const activeDevices = devices.filter(item => !item.revoked)
-
   return (
     <div className={css.section}>
       <h2 className={css.heading}>DSH 移动端</h2>
@@ -144,21 +142,23 @@ export function MobilePairSettingsSection(_props: MobilePairSettingsSectionProps
 
       <section className={css.group}>
         <h3 className={css.groupHead}>已连接设备</h3>
-        {activeDevices.length === 0
-          ? <p className={css.empty}>暂无已配对设备</p>
-          : (
-            <ul className={css.list}>
-              {activeDevices.map(item => (
-                <li key={item.deviceId} className={css.rowCard}>
-                  <div className={css.rowMeta}>
-                    <span className={css.rowTitle}>{item.label}</span>
-                    <span className={css.rowSub}>{item.deviceId.slice(0, 8)} · {item.issuedAt}</span>
-                  </div>
-                  <Button variant="outline" onClick={() => { void onRevoke(item.deviceId) }}>吊销</Button>
-                </li>
-              ))}
-            </ul>
-          )}
+        <div className={css.devicePanel}>
+          {devices.length === 0
+            ? <p className={css.empty}>暂无已配对设备</p>
+            : (
+              <ul className={css.deviceScrollList}>
+                {devices.map(item => (
+                  <li key={item.deviceId} className={css.rowCard}>
+                    <div className={css.rowMeta}>
+                      <span className={css.rowTitle}>{item.label}</span>
+                      <span className={css.rowSub}>{item.deviceId.slice(0, 8)} · {item.issuedAt}</span>
+                    </div>
+                    <Button variant="outline" onClick={() => { void onRevoke(item.deviceId) }}>吊销</Button>
+                  </li>
+                ))}
+              </ul>
+            )}
+        </div>
       </section>
     </div>
   )

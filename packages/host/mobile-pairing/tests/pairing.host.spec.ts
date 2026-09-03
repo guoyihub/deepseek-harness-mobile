@@ -204,7 +204,26 @@ describe('MobilePairingStore', () => {
     ])
     store.revokeDevice(paired.value.deviceId)
     expect(store.validateSessionToken(paired.value.sessionToken)).toBeUndefined()
-    expect(store.listDevices()[0]?.revoked).toBe(true)
+    expect(store.listDevices()).toEqual([])
+  })
+
+  it('drops expired device rows from listDevices', () => {
+    vi.useFakeTimers()
+    const store = new MobilePairingStore({
+      publicScheme: 'http',
+      confirmMode: 'off',
+      pairTokenTtlMs: 60_000,
+      sessionTokenTtlMs: 60_000,
+      fingerprint: 'abc12345',
+      hostDisplayName: 'test-host',
+    })
+    const offer = store.createPairing('192.168.1.10', 3080)
+    const paired = store.attemptPair(offer.pairToken, 'Phone', 'mobile/0.1.0')
+    if (paired.kind !== 'success') throw new Error('expected success')
+    expect(store.listDevices()).toHaveLength(1)
+    vi.advanceTimersByTime(60_001)
+    expect(store.listDevices()).toEqual([])
+    vi.useRealTimers()
   })
 
   it('expires no-password sessions after the configured TTL', () => {
