@@ -1302,6 +1302,16 @@ describe('ChatView', () => {
     expect(toggle.getAttribute('aria-expanded')).toBe('true')
     expect(members.map(member => member.getAttribute('hidden'))).toEqual([null, null, null])
 
+    members[1]?.focus()
+    fireEvent.click(toggle)
+    expect(toggle.getAttribute('aria-expanded')).toBe('false')
+    expect(members.map(member => member.getAttribute('hidden')))
+      .toEqual(['until-found', 'until-found', 'until-found'])
+
+    fireEvent.click(toggle)
+    expect(toggle.getAttribute('aria-expanded')).toBe('true')
+    expect(members.map(member => member.getAttribute('hidden'))).toEqual([null, null, null])
+
     fireEvent.click(toggle)
     expect(members.map(member => member.getAttribute('hidden')))
       .toEqual(['until-found', 'until-found', 'until-found'])

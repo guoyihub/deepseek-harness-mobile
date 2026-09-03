@@ -15,8 +15,8 @@ export function useSearchableHidden(
     const element = ref.current
     if (element === null) return
     if (hidden && element.contains(element.ownerDocument.activeElement)) {
-      reveal()
-      return
+      const active = element.ownerDocument.activeElement
+      if (active instanceof HTMLElement) active.blur()
     }
     if (hidden) element.setAttribute('hidden', 'until-found')
     else element.removeAttribute('hidden')
