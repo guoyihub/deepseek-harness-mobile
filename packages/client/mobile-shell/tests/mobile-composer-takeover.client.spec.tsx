@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
-import { render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import { PendingApproval } from '@deepseek-ai/dsh-client-ui-approval/src/client/contract/slots.ts'
+import { PendingQuestion } from '@deepseek-ai/dsh-client-ui-user-questions/src/client/contract/slots.ts'
 import { bindSnapshotSelector } from '@deepseek-ai/dsh-client-ui-renderer/src/client/bind.ts'
 import { MobileComposerTakeover } from '../src/client/MobileComposerTakeover.tsx'
 import type { MobileSessionView } from '../src/client/useMobileSession.ts'
@@ -12,6 +13,8 @@ import { EMPTY_CONVERSATION_SNAPSHOT } from '@deepseek-ai/dsh-client-ui-conversa
 const SID = 'session-1' as SessionId
 
 const stableSessionView = sessionView()
+
+afterEach(cleanup)
 
 function sessionView(): MobileSessionView {
   return {
@@ -63,5 +66,31 @@ describe('MobileComposerTakeover', () => {
     expect(screen.getByText('fixture approval')).toBeTruthy()
     expect(screen.getByRole('button', { name: '允许一次' })).toBeTruthy()
     expect(screen.getByRole('button', { name: '拒绝' })).toBeTruthy()
+  })
+
+  it('enables submit after selecting a question option', () => {
+    const pending = new PendingQuestion(SID, [{
+      id: 'scope',
+      question: 'Which scope should I inspect?',
+      options: [{ label: 'Capabilities' }, { label: 'Project code' }],
+    }])
+    void pending.result.catch(() => {})
+    const useSession = bindSnapshotSelector({
+      getSnapshot: () => stableSessionView,
+      subscribe: () => () => {},
+    })
+    render((
+      <MobileComposerTakeover
+        sessionId={SID}
+        pendingInteraction={pending}
+        useSession={useSession}
+        useProjection={vi.fn() as never}
+      />
+    ))
+
+    const submit = screen.getByRole('button', { name: '提交' })
+    expect(submit.hasAttribute('disabled')).toBe(true)
+    fireEvent.click(screen.getByRole('radio', { name: 'Project code' }))
+    expect(submit.hasAttribute('disabled')).toBe(false)
   })
 })

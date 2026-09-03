@@ -4,6 +4,7 @@ import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { ApprovalComposerProps } from '@deepseek-ai/dsh-client-ui-approval/client'
 import type { QuestionComposerProps } from '@deepseek-ai/dsh-client-ui-user-questions/client'
 import type { SnapshotSelectorHook } from '@deepseek-ai/dsh-client-ui-slots'
+import { bindSnapshotSelector } from '@deepseek-ai/dsh-client-ui-renderer/src/client/bind.ts'
 import { createQuestionDraftStore } from '@deepseek-ai/dsh-client-ui-user-questions/src/client/draft-store.ts'
 import type { MobileSessionView } from './useMobileSession.ts'
 import { absentProjection, PassthroughSessionProvider, useMobileInputKit } from './mobile-framework-kit.ts'
@@ -14,6 +15,7 @@ const emptyChat = { order: [], nodes: new Map() }
 const emptyAttention = new Map<SessionId, unknown>()
 
 const questionDraftStore = createQuestionDraftStore().create('mobile-shell-question-drafts')
+const useQuestionDraftStore = bindSnapshotSelector(questionDraftStore)
 
 /**
  * Build the shared runtime kit required by approval and question composer takeovers.
@@ -40,7 +42,7 @@ export function useMobileComposerTakeoverKit(
     inputActions: inputActions as never,
     SessionProvider: PassthroughSessionProvider,
     renderSlot: () => null,
-    useStore: selector => selector(questionDraftStore.getSnapshot()),
+    useStore: useQuestionDraftStore,
     actions: questionDraftStore.actions,
   }
 }
