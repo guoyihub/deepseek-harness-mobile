@@ -62,12 +62,12 @@
     "@deepseek-ai/dsh-util-values": "workspace:^",
     "@deepseek-ai/dsh-workspace": "workspace:^",
     "jsqr": "^1.4.0",
-    "react": "^18.2.0"
+    "react": "^19.2.8"
   },
   "devDependencies": {
     "@deepseek-ai/dsh-invariants": "workspace:^",
     "@testing-library/react": "^16.1.0",
-    "@types/react": "~18.3.1",
+    "@types/react": "~19.2.18",
     "typescript": "^6.0.3"
   },
   "peerDependencies": {
