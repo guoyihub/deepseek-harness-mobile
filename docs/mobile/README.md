@@ -1,6 +1,6 @@
 # DeepSeek Harness 手机端
 
-DeepSeek Harness Mobile（`@deepseek-ai/deepseek-harness-mobile`）是手机端 PWA：通过本机局域网二维码扫码配对桌面 Host，无需账号。
+DeepSeek Harness Mobile（`@deepseek-ai/deepseek-harness-mobile`）是手机端 PWA：通过本机局域网二维码扫码配对桌面 Host，无需账号。配对成功后可在手机上浏览任务、进入 Agent 会话并发送消息；运行时能力仍来自桌面 Host，手机壳负责配对、连接与移动 UI。
 
 ## 相关代码
 
