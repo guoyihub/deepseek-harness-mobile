@@ -65,7 +65,30 @@ describe('mobile task home session rows', () => {
     expect(row?.children[1]?.textContent).toBe('sess-1')
   })
 
-  it('keeps the status slot only while the session is running', () => {
+  it('replaces the preset icon with the warning dot while waiting for an answer', () => {
+    const { container } = render(
+      <SessionNodeItem
+        node={{ ...node, pendingInteraction: 'question', agentPreset: 'code' }}
+        currentId={undefined}
+        now={Date.now()}
+        surface="mobile"
+        leading={<AgentPresetIcon presetId="code" size={16} />}
+        onOpen={vi.fn()}
+        onRename={vi.fn()}
+        onFork={vi.fn()}
+        onArchive={vi.fn()}
+        t={mobileWorkspaceT}
+      />,
+    )
+
+    const row = container.querySelector('[role="treeitem"]')
+    expect(row?.children.length).toBe(4)
+    expect(row?.children[0]?.className).toMatch(/leading/u)
+    expect(row?.children[0]?.querySelector('[data-state="warning"]')).not.toBeNull()
+    expect([...row?.children ?? []].some(child => child.className.match(/slot/u))).toBe(false)
+  })
+
+  it('replaces the preset icon with the ongoing dot while the session is running', () => {
     const { container } = render(
       <SessionNodeItem
         node={{ ...node, running: true, agentPreset: 'code' }}
@@ -82,8 +105,10 @@ describe('mobile task home session rows', () => {
     )
 
     const row = container.querySelector('[role="treeitem"]')
-    expect(row?.children[0]?.className).toMatch(/slot/u)
-    expect(row?.children[1]?.className).toMatch(/leading/u)
+    expect(row?.children.length).toBe(4)
+    expect(row?.children[0]?.className).toMatch(/leading/u)
+    expect(row?.children[0]?.querySelector('[data-state="ongoing"]')).not.toBeNull()
+    expect([...row?.children ?? []].some(child => child.className.match(/slot/u))).toBe(false)
   })
 
   it('swaps the status slot for a checkbox while selecting', () => {

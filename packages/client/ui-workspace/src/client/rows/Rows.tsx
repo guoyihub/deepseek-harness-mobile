@@ -284,6 +284,30 @@ function SessionStatusDots({ statuses, dotSize = 10 }: {
   )
 }
 
+/**
+ * Mobile task rows fold the status dot into the leading slot when both would
+ * show, so preset glyphs never stack beside a separate status marker.
+ */
+function mobileLeadingWithStatus(
+  surface: 'desktop' | 'mobile' | undefined,
+  leading: ReactNode | undefined,
+  statuses: readonly [SessionStatus, ...SessionStatus[]],
+  dotSize: number,
+  showStatus: boolean,
+): { leading: ReactNode | undefined; showStatusSlot: boolean } {
+  const swap = surface === 'mobile' && leading !== undefined && showStatus
+  if (!swap) return { leading, showStatusSlot: true }
+  return {
+    leading: (
+      <>
+        <StateDot state={statuses[0].state} size={dotSize} />
+        <span className={css.visuallyHidden}>{statuses[0].label}</span>
+      </>
+    ),
+    showStatusSlot: false,
+  }
+}
+
 /** Non-interactive active-Schedule marker; the enclosing row remains the only action. */
 function ActiveScheduleIndicator({ t, search = false }: { t: RowTranslate; search?: boolean }) {
   const label = t('schedule.active')
@@ -342,6 +366,8 @@ export function SearchResultItem({ result, currentId, onOpen, t, surface = 'desk
   const statuses = sessionStatuses(result, t)
   const primaryStatus = statuses[0]
   const dotSize = surface === 'mobile' ? 12 : 10
+  const showStatus = primaryStatus.state !== 'done' || result.completed
+  const mobileLeading = mobileLeadingWithStatus(surface, leading, statuses, dotSize, showStatus)
   return (
     <button
       type="button"
@@ -355,11 +381,11 @@ export function SearchResultItem({ result, currentId, onOpen, t, surface = 'desk
     >
       <span className={css.searchResultHeading}>
         <span className={css.slot}>
-          {(primaryStatus.state !== 'done' || result.completed) && (
+          {mobileLeading.showStatusSlot && (showStatus && (
             <SessionStatusDots statuses={statuses} dotSize={dotSize} />
-          )}
+          ))}
         </span>
-        {leading !== undefined && <span className={css.leading}>{leading}</span>}
+        {mobileLeading.leading !== undefined && <span className={css.leading}>{mobileLeading.leading}</span>}
         <span className={css.searchResultTitle}>{result.title}</span>
         {result.hasActiveSchedule && <ActiveScheduleIndicator t={t} search />}
       </span>
@@ -427,6 +453,8 @@ export function SessionNodeItem({ node, currentId, now, onOpen, onRename, onFork
   const showStatus = primaryStatus.state !== 'done' || row.completed
   const [menuOpen, setMenuOpen] = useState(false)
   const dotSize = surface === 'mobile' ? 12 : 10
+  const mobileLeading = mobileLeadingWithStatus(surface, leading, statuses, dotSize, showStatus)
+  const showStatusSlot = showStatus && mobileLeading.showStatusSlot
   // Archive hides the row through the registry-global archive set and never
   // touches the session log, so it is not styled as destructive and needs no
   // confirmation dialog.
@@ -498,12 +526,12 @@ export function SessionNodeItem({ node, currentId, now, onOpen, onRename, onFork
         >
           {rowChecked ? <IconCheckOutline14 size={14} /> : null}
         </span>
-      ) : ((surface === 'mobile' ? showStatus : (!flat || showStatus)) && (
+      ) : ((surface === 'mobile' ? showStatusSlot : (!flat || showStatus)) && (
         <span className={css.slot}>
           {showStatus && <SessionStatusDots statuses={statuses} dotSize={dotSize} />}
         </span>
       ))}
-      {leading !== undefined && <span className={css.leading}>{leading}</span>}
+      {mobileLeading.leading !== undefined && <span className={css.leading}>{mobileLeading.leading}</span>}
       <span className={css.title}>{title}</span>
       {row.hasActiveSchedule && <ActiveScheduleIndicator t={t} />}
       {/* A blank New Session row is a provisional placeholder: nothing has
