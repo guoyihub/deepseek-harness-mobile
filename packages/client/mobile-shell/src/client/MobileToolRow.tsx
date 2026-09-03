@@ -11,6 +11,7 @@ import {
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { ToolCallBlock } from '@deepseek-ai/dsh-client-ui-conversation/client'
 import {
+  formatToolBody,
   toolRowModel,
   type ToolRowState,
   type ToolRowVariant,
@@ -70,7 +71,8 @@ export function MobileToolRow({ toolName, block }: MobileToolRowProps): JSX.Elem
   const summary = model.state === 'error' && model.errorSummary !== null
     ? model.errorSummary
     : model.summary
-  const expandable = model.body !== null || model.output !== null
+  const body = model.bodyRaw === null ? null : formatToolBody(model.variant, model.bodyRaw)
+  const expandable = body !== null || model.output !== null
   const a11y = stateStatus(model.state)
 
   return (
@@ -92,10 +94,10 @@ export function MobileToolRow({ toolName, block }: MobileToolRowProps): JSX.Elem
           </>
         )}
       >
-        {model.body !== null && (
+        {body !== null && (
           <div className={css.toolSection}>
             <div className={css.toolSectionLabel}>{mobileConversationT('tool.in')}</div>
-            <pre className={css.toolSectionBody}>{model.body}</pre>
+            <pre className={css.toolSectionBody}>{body}</pre>
           </div>
         )}
         {model.output !== null && (

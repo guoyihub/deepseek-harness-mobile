@@ -7,6 +7,7 @@ import {
   IconSettingsOutline16,
   IconUserOutline16,
 } from '@deepseek-ai/dsh-client-ui-primitives'
+import type {} from '@deepseek-ai/dsh-session-turn-outline/client'
 import { verifyHostDescribe } from './pair-api.ts'
 import { AgentPresetPickerModal } from './AgentPresetPickerModal.tsx'
 import { useMobileConnection } from './MobileConnectionContext.tsx'
@@ -22,6 +23,13 @@ import { ThemePickerModal } from './ThemePickerModal.tsx'
 import { PluginInventoryModal } from './PluginInventoryModal.tsx'
 import { SubagentModelModal } from './SubagentModelModal.tsx'
 import { MobileReconnectBanner } from './MobileReconnectBanner.tsx'
+import {
+  adoptMobileBusyEnterFromHost,
+  readMobileBusyEnter,
+  writeMobileBusyEnter,
+} from './mobile-busy-enter.ts'
+import { mobileSubmissionPolicy } from './mobile-submission-policy.ts'
+import type { BusyEnterBehavior } from '@deepseek-ai/dsh-client-ui-conversation/src/submission-settings.ts'
 import {
   clearPairingStorage,
   connectionHistoryId,
@@ -128,6 +136,8 @@ export function ConnectionPage({ onBack, onPair, onEditServer }: ConnectionPageP
   const [themeModalOpen, setThemeModalOpen] = useState(false)
   const [modelModalOpen, setModelModalOpen] = useState(false)
   const [presetModalOpen, setPresetModalOpen] = useState(false)
+  const [enterModalOpen, setEnterModalOpen] = useState(false)
+  const [enterBehavior, setEnterBehavior] = useState<BusyEnterBehavior>(() => readMobileBusyEnter())
   const [hostSettingsHint, setHostSettingsHint] = useState<HostSettingsHint | undefined>(undefined)
   const [defaultPresetLabel, setDefaultPresetLabel] = useState<string | undefined>(undefined)
   const closeSheetRef = useRef<(afterClose?: () => void) => void>(() => {})
@@ -182,6 +192,18 @@ export function ConnectionPage({ onBack, onPair, onEditServer }: ConnectionPageP
   useEffect(() => {
     refreshDefaultPresetLabel()
   }, [refreshDefaultPresetLabel, connectionState])
+
+  useEffect(() => {
+    if (!paired) return
+    void adoptMobileBusyEnterFromHost().then((behavior) => {
+      setEnterBehavior(behavior)
+      mobileSubmissionPolicy.setBusyEnter(behavior)
+    })
+  }, [connectionState, paired])
+
+  const enterBehaviorLabel = enterBehavior === 'queue'
+    ? mobileConversationT('settings.enter.queue')
+    : mobileConversationT('settings.enter.steer')
 
   const openHostSetting = useCallback((action: () => void): void => {
     if (!paired) return
@@ -349,6 +371,12 @@ export function ConnectionPage({ onBack, onPair, onEditServer }: ConnectionPageP
             value={languageLabel}
             onClick={() => { setLanguageModalOpen(true) }}
           />
+          <MobileSettingsRow
+            icon={<IconSettingsOutline16 size={22} />}
+            label={mobileConversationT('settings.enter.title')}
+            value={enterBehaviorLabel}
+            onClick={() => { setEnterModalOpen(true) }}
+          />
         </MobileSettingsCard>
 
         <section className={css.mSetSection}>
@@ -458,6 +486,22 @@ export function ConnectionPage({ onBack, onPair, onEditServer }: ConnectionPageP
           const preference = value as MobileLanguagePreference
           setLanguage(preference)
           setLanguagePreference(preference)
+        }}
+      />
+      <ThemePickerModal
+        open={enterModalOpen}
+        title={mobileConversationT('settings.enter.title')}
+        value={enterBehavior}
+        options={[
+          { id: 'queue', label: mobileConversationT('settings.enter.queue') },
+          { id: 'steer', label: mobileConversationT('settings.enter.steer') },
+        ]}
+        onClose={() => { setEnterModalOpen(false) }}
+        onSelect={(value) => {
+          const behavior = value as BusyEnterBehavior
+          setEnterBehavior(behavior)
+          mobileSubmissionPolicy.setBusyEnter(behavior)
+          void writeMobileBusyEnter(behavior)
         }}
       />
 
