@@ -2,7 +2,7 @@
  * Per-session Session + Conversation fold for mobile chat.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import type { SessionId, SessionSeq } from '@deepseek-ai/dsh-session/types'
 import type { SessionSummary } from '@deepseek-ai/dsh-api-session-controller/types'
 import type { SessionSnapshot, UseProjection } from '@deepseek-ai/dsh-api-session-controller/client'
 import { Session } from '@deepseek-ai/dsh-api-session-controller/src/client/sessions/session.ts'
@@ -20,7 +20,9 @@ import {
 import { useMobileConnection } from './MobileConnectionContext.tsx'
 import { bindMobileUseProjection } from './mobile-projection-bind.ts'
 import { createMobileImageLoader } from './mobile-attachment.ts'
+import { bindKeyedSnapshotSelector } from './mobile-keyed-selector.ts'
 import type { MessageImageLoader } from '@deepseek-ai/dsh-client-ui-conversation/client'
+import type { UseChatNode, UseChatNodeProcess } from '@deepseek-ai/dsh-client-ui-chat/src/client/contract/slots.ts'
 
 /** Combined Session lifecycle and Chat target used by the mobile transcript. */
 export interface MobileSessionView {
@@ -139,12 +141,20 @@ export interface MobileSessionHandle {
   ready: boolean
   /** Open / history error message. */
   error: string | undefined
+  /** Open Session instance; undefined while cold. */
+  session: Session | undefined
   /** uSES selector over the combined session + chat view. */
   useSession: SnapshotSelectorHook<MobileSessionView>
   /** Framework seat required by ConvViewProps. */
   useProjection: UseProjection
+  /** Per-node keyed selector for ChatNodeSeat. */
+  useChatNode: UseChatNode
+  /** Per-node Turn-process presentation selector. */
+  useChatNodeProcess: UseChatNodeProcess
   /** Page older history into the Session window. */
   loadOlder: () => Promise<boolean>
+  /** Jump loader: page backwards until the window covers seq. */
+  loadThrough: (seq: SessionSeq) => Promise<void>
   /** Session-authorized durable image loader. */
   loadImage: MessageImageLoader
 }
@@ -250,18 +260,40 @@ export function useMobileSession(sessionId: SessionId): MobileSessionHandle {
     return session.getSnapshot().hasMore !== beforeHasMore
   }, [session])
 
+  const loadThrough = useCallback(async (seq: SessionSeq): Promise<void> => {
+    if (session === undefined) return
+    await session.loadThrough(seq)
+  }, [session])
+
   const useProjection = useMemo(
     () => bindMobileUseProjection(session?.projections),
     [session],
   )
   const loadImage = useMemo(() => createMobileImageLoader(session), [session])
 
+  const useChatNode = useMemo(
+    () => bindKeyedSnapshotSelector(
+      (key: string) => liveObservable.getSnapshot().chat.nodes.source(key),
+    ) as UseChatNode,
+    [liveObservable],
+  )
+  const useChatNodeProcess = useMemo(
+    () => bindKeyedSnapshotSelector(
+      (key: string) => liveObservable.getSnapshot().chat.nodes.processSource(key),
+    ) as UseChatNodeProcess,
+    [liveObservable],
+  )
+
   return {
     ready,
     error,
+    session,
     useSession,
     useProjection,
+    useChatNode,
+    useChatNodeProcess,
     loadOlder,
+    loadThrough,
     loadImage,
   }
 }

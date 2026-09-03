@@ -2,21 +2,28 @@
  * Mobile chat transcript: ordered Chat Nodes from the shared Session fold,
  * rendered with the desktop conversation node views.
  */
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
-import type { MessageImageLoader } from '@deepseek-ai/dsh-client-ui-conversation/client'
+import type { MessageImageLoader, RenderMessageImages } from '@deepseek-ai/dsh-client-ui-conversation/client'
 import type { UseProjection } from '@deepseek-ai/dsh-api-session-controller/client'
-import { MessageText } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { SnapshotSelectorHook } from '@deepseek-ai/dsh-client-ui-slots'
 import { bindSnapshotSelector } from '@deepseek-ai/dsh-client-ui-renderer/src/client/bind.ts'
 import chatCss from '@deepseek-ai/dsh-client-ui-chat/src/client/chat/ChatView.module.css'
 import { formatRunDuration } from '@deepseek-ai/dsh-client-ui-chat/src/client/chat/message-chrome.ts'
 import { createChatStore } from '@deepseek-ai/dsh-client-ui-chat/src/client/stores.ts'
+import type { UseChatNode, UseChatNodeProcess } from '@deepseek-ai/dsh-client-ui-chat/src/client/contract/slots.ts'
+import {
+  PendingSteeringBubble,
+  PendingSubmissionBubble,
+} from '@deepseek-ai/dsh-client-ui-chat/src/client/chat/MessageItem.tsx'
 import { MobileChatNodeSeat } from './MobileChatNodeSeat.tsx'
 import { MobileChatHero } from './MobileChatHero.tsx'
+import { MobileMessageImages } from './MobileMessageImages.tsx'
 import { latestOpenTurnStartTime } from './chat-projection.ts'
 import { mobileChatT } from './mobile-conversation-t.ts'
 import { mobileConversationT } from './mobile-locale.ts'
+import { visibleMobileSubmissions } from './mobile-chat-pending.ts'
+import { getMobileSessionChatStore } from './mobile-session-cache.ts'
 import {
   isMobileMessageListAtBottom,
   scrollMobileMessageListToBottom,
@@ -30,14 +37,16 @@ export interface MobileChatFlowProps {
   sessionId: SessionId
   /** Shared Session face from {@link useMobileSession}. */
   useSession: SnapshotSelectorHook<MobileSessionView>
+  /** Per-node keyed selector for ChatNodeSeat. */
+  useChatNode: UseChatNode
+  /** Per-node Turn-process presentation selector. */
+  useChatNodeProcess: UseChatNodeProcess
   /** Framework projection reader (absent on mobile). */
   useProjection: UseProjection
   /** Whether Session.open has finished. */
   ready: boolean
   /** Session open / history error. */
   error: string | undefined
-  /** Optimistic user text while the matching mux user node is pending. */
-  optimisticText: string | undefined
   /** Whether the blank-chat hero should show. */
   showHero: boolean
   /** Scrollport ref owned by the page (composer follow / stick-to-bottom). */
@@ -46,6 +55,8 @@ export interface MobileChatFlowProps {
   onScroll: () => void
   /** Session-authorized image URL loader. */
   loadImage: MessageImageLoader
+  /** Page older history into the Session window. */
+  loadOlder: () => Promise<boolean>
 }
 
 /** Pin the scrollport to the latest transcript row after layout settles. */
@@ -81,32 +92,59 @@ function TurnStatus({ startTime }: { startTime: number | null }): ReactNode {
 
 /**
  * Render the mobile conversation transcript from Chat Conversation Nodes.
- * @param props - session face, hero/optimistic chrome, and scroll ownership.
+ * @param props - session face, hero chrome, and scroll ownership.
  */
 export function MobileChatFlow({
   sessionId,
   useSession,
+  useChatNode,
+  useChatNodeProcess,
   useProjection,
   ready,
   error,
-  optimisticText,
   showHero,
   listRef,
   onScroll,
   loadImage,
+  loadOlder,
 }: MobileChatFlowProps): JSX.Element {
   const order = useSession(s => s.chat.order)
   const timeline = useSession(s => s.chat.timeline)
   const historyIncomplete = useSession(s => s.session.hasMore)
-  const chatStore = useMemo(() => createChatStore().create(), [sessionId])
+  const loadingOlder = useSession(s => s.session.loadingOlder)
+  const chatNodes = useSession(s => s.chat.nodes)
+  const queue = useSession(s => s.session.queue)
+  const pendingSubmissions = useSession(s => s.session.pendingSubmissions)
+  const running = useSession(s => s.running)
+  const chatStore = useMemo(
+    () => getMobileSessionChatStore(sessionId) ?? createChatStore().create(sessionId),
+    [sessionId],
+  )
   const useStore = useMemo(() => bindSnapshotSelector(chatStore), [chatStore])
   const runningTurnStart = useMemo(() => latestOpenTurnStartTime(timeline), [timeline])
+  const visibleSubmissions = useMemo(
+    () => visibleMobileSubmissions(pendingSubmissions, order, chatNodes, queue),
+    [chatNodes, order, pendingSubmissions, queue],
+  )
+  const pendingSteering = useMemo(
+    () => queue.filter(item => item.placement === 'steering'),
+    [queue],
+  )
+  const lastSubmissionId = visibleSubmissions.at(-1)?.requestId ?? ''
   const followSig = useSession(s => (
-    `${s.openState}:${s.chat.order.length}:${s.chat.order.at(-1) ?? ''}:${latestOpenTurnStartTime(s.chat.timeline) === null ? 0 : 1}:${optimisticText ?? ''}`
+    `${s.openState}:${s.chat.order.length}:${s.chat.order.at(-1) ?? ''}:${latestOpenTurnStartTime(s.chat.timeline) === null ? 0 : 1}:${lastSubmissionId}`
   ))
   const stickRef = useRef(true)
   const openedRef = useRef(false)
   const followSigRef = useRef<string | null>(null)
+
+  const renderMessageImages = useCallback<RenderMessageImages>(owner => (
+    <MobileMessageImages {...owner} loadImage={loadImage} />
+  ), [loadImage])
+
+  const onLoadOlder = (): void => {
+    void loadOlder()
+  }
 
   useLayoutEffect(() => {
     const list = listRef.current
@@ -180,12 +218,21 @@ export function MobileChatFlow({
 
   return (
     <div ref={listRef} className={css.messageList} onScroll={onListScroll}>
+      {historyIncomplete && (
+        <div className={chatCss.older}>
+          <button type="button" disabled={loadingOlder} onClick={onLoadOlder}>
+            {loadingOlder ? mobileChatT('loading') : mobileChatT('chat.loadOlder')}
+          </button>
+        </div>
+      )}
       {order.map(nodeKey => (
         <MobileChatNodeSeat
           key={nodeKey}
           nodeKey={nodeKey}
           sessionId={sessionId}
           useSession={useSession}
+          useChatNode={useChatNode}
+          useChatNodeProcess={useChatNodeProcess}
           useProjection={useProjection}
           useStore={useStore}
           actions={chatStore.actions}
@@ -193,16 +240,23 @@ export function MobileChatFlow({
           loadImage={loadImage}
         />
       ))}
-      {optimisticText !== undefined && (
-        <div className={css.userRow} data-optimistic-user>
-          <div className={css.userBubble}>
-            <MessageText text={optimisticText} />
-          </div>
-        </div>
-      )}
-      {(runningTurnStart !== null || optimisticText !== undefined) && (
-        <TurnStatus startTime={runningTurnStart} />
-      )}
+      {pendingSteering.map(item => (
+        <PendingSteeringBubble
+          key={item.id}
+          content={item.content}
+          renderMessageImages={renderMessageImages}
+          t={mobileChatT}
+        />
+      ))}
+      {visibleSubmissions.map(submission => (
+        <PendingSubmissionBubble
+          key={submission.requestId}
+          submission={submission}
+          renderMessageImages={renderMessageImages}
+          t={mobileChatT}
+        />
+      ))}
+      {running && <TurnStatus startTime={runningTurnStart} />}
     </div>
   )
 }

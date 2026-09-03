@@ -67,6 +67,10 @@ export interface MobileChatNodeSeatProps {
   sessionId: SessionId
   /** uSES selector over the conversation snapshot. */
   useSession: SnapshotSelectorHook<MobileSessionView>
+  /** Per-node keyed selector for ChatNodeSeat. */
+  useChatNode: ChatViewSlotProps['useChatNode']
+  /** Per-node Turn-process presentation selector. */
+  useChatNodeProcess: ChatViewSlotProps['useChatNodeProcess']
   /** Framework projection reader. */
   useProjection: UseProjection
   /** Compact-transcript Turn-process store. */
@@ -95,6 +99,8 @@ export const MobileChatNodeSeat = memo(function MobileChatNodeSeat({
   nodeKey,
   sessionId,
   useSession,
+  useChatNode,
+  useChatNodeProcess,
   useProjection,
   useStore,
   actions,
@@ -110,11 +116,6 @@ export const MobileChatNodeSeat = memo(function MobileChatNodeSeat({
     }),
     [hostDescription],
   )
-
-  const useChat: ChatViewSlotProps['useChat'] = useCallback((
-    selector: (snapshot: MobileSessionView['chat']) => unknown,
-    eq?: (left: unknown, right: unknown) => boolean,
-  ) => useSession(mobile => selector(mobile.chat), eq as never), [useSession]) as ChatViewSlotProps['useChat']
 
   const renderMessageImages = useCallback<RenderMessageImages>(owner => (
     <MobileMessageImages {...owner} loadImage={loadImage} />
@@ -253,7 +254,8 @@ export const MobileChatNodeSeat = memo(function MobileChatNodeSeat({
       nodeKey={nodeKey}
       historyIncomplete={historyIncomplete}
       compactTranscript
-      useChat={useChat}
+      useChatNode={useChatNode}
+      useChatNodeProcess={useChatNodeProcess}
       useStore={useStore}
       actions={actions}
       selectedCallId={undefined}

@@ -7,6 +7,7 @@ import { EMPTY_CHAT_SNAPSHOT } from '@deepseek-ai/dsh-client-ui-chat/src/client/
 import { EMPTY_CONVERSATION_SNAPSHOT } from '@deepseek-ai/dsh-client-ui-conversation/client'
 import { bindSnapshotSelector } from '@deepseek-ai/dsh-client-ui-renderer/src/client/bind.ts'
 import { createChatStore } from '@deepseek-ai/dsh-client-ui-chat/src/client/stores.ts'
+import { bindKeyedSnapshotSelector } from '../src/client/mobile-keyed-selector.ts'
 import { MobileChatNodeSeat } from '../src/client/MobileChatNodeSeat.tsx'
 import type { MobileSessionView } from '../src/client/useMobileSession.ts'
 
@@ -54,6 +55,14 @@ function view(): MobileSessionView {
       order: [KEY],
       nodes: {
         get: (key: string) => key === KEY ? node : undefined,
+        source: (key: string) => ({
+          getSnapshot: () => key === KEY ? node : undefined,
+          subscribe: () => () => {},
+        }),
+        processSource: () => ({
+          getSnapshot: () => undefined,
+          subscribe: () => () => {},
+        }),
         values: () => [node],
       },
     },
@@ -70,6 +79,8 @@ describe('MobileChatNodeSeat system-prompt', () => {
       getSnapshot: () => snapshot,
       subscribe: () => () => {},
     })
+    const useChatNode = bindKeyedSnapshotSelector((key: string) => snapshot.chat.nodes.source(key))
+    const useChatNodeProcess = bindKeyedSnapshotSelector((key: string) => snapshot.chat.nodes.processSource(key))
     const chatStore = createChatStore().create()
     const loadImage = Object.assign(async () => '', { peek: () => undefined })
     render((
@@ -77,6 +88,8 @@ describe('MobileChatNodeSeat system-prompt', () => {
         nodeKey={KEY}
         sessionId={SID}
         useSession={useSession}
+        useChatNode={useChatNode}
+        useChatNodeProcess={useChatNodeProcess}
         useProjection={vi.fn() as never}
         useStore={bindSnapshotSelector(chatStore)}
         actions={chatStore.actions}

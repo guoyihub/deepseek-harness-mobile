@@ -2,6 +2,7 @@
 
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import { Session } from '@deepseek-ai/dsh-api-session-controller/src/client/sessions/session.ts'
+import { createChatStore } from '@deepseek-ai/dsh-client-ui-chat/src/client/stores.ts'
 import { getMobileConversationRuntime } from './mobile-conversation-runtime.ts'
 import {
   bindMobileConversation,
@@ -15,9 +16,12 @@ import {
 
 const MAX_ENTRIES = 8
 
+type MobileChatStore = ReturnType<ReturnType<typeof createChatStore>['create']>
+
 interface MobileSessionEntry {
   session: Session
   binding: MobileConversationBinding | undefined
+  chatStore: MobileChatStore
   generationId: number
   pinCount: number
   lastUsed: number
@@ -118,6 +122,7 @@ export async function acquireMobileSession(sessionId: SessionId): Promise<Acquir
     entry = {
       session: new Session(sessionId, mobileSessionRemotes),
       binding: undefined,
+      chatStore: createChatStore().create(sessionId),
       generationId,
       pinCount: 0,
       lastUsed: Date.now(),
@@ -156,9 +161,14 @@ export function releaseMobileSession(sessionId: SessionId): void {
   touchEntry(entry)
 }
 
-/** Read a cached Session without pinning it. */
+/** Read the cached Session without pinning it. */
 export function getCachedMobileSession(sessionId: SessionId): Session | undefined {
   return entries.get(sessionId)?.session
+}
+
+/** Session-scoped Chat selection store (Turn-process fold state). */
+export function getMobileSessionChatStore(sessionId: SessionId): MobileChatStore | undefined {
+  return entries.get(sessionId)?.chatStore
 }
 
 /** Whether a cached Session is already open. */
